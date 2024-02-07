@@ -53,6 +53,7 @@ import {
   imageType,
   internalRelationship,
   defaultBorderStyles,
+  defaultPercentageMarginValue
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
@@ -310,7 +311,17 @@ const fixupMargin = (marginString) => {
     const matchedParts = marginString.match(pixelRegex);
     // convert pixels to half point
     return pixelToTWIP(matchedParts[1]);
+  } else if (cmRegex.test(marginString)) {
+    const matchedParts = marginString.match(cmRegex);
+    return cmToTWIP(matchedParts[1]);
+  } else if (inchRegex.test(marginString)) {
+    const matchedParts = marginString.match(inchRegex);
+    return inchToTWIP(matchedParts[1]);
   }
+
+  // else we are provided margins in percentage form
+  // TODO: Decide what to do with percentage margins
+  return defaultPercentageMarginValue;
 };
 
 const cssBorderParser = (borderString) => {
@@ -433,6 +444,60 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           : null
       );
     }
+
+    if (vNode.properties.style['margin']) {
+      const marginParts = vNode.properties.style['margin'].split(' ').map(fixupMargin);
+      const margins = {
+        top: marginParts[0] || 0,
+        right: marginParts[1] || marginParts[0] || 0,
+        bottom: marginParts[2] || marginParts[0] || 0,
+        left: marginParts[3] || marginParts[1] || marginParts[0] || 0
+      };
+
+      const { top, left, right, bottom } = margins;
+
+      if (left || right) {
+        modifiedAttributes.indentation = { left, right };
+      }
+      if (bottom) {
+        modifiedAttributes.afterSpacing = bottom;
+      }
+      if (top) {
+        modifiedAttributes.beforeSpacing = top;
+      }
+    }
+
+    if (vNode.properties.style['padding']) {
+      const paddingParts = vNode.properties.style['padding'].split(' ').map(fixupMargin);
+      const paddings = {
+        top: paddingParts[0] || 0,
+        right: paddingParts[1] || paddingParts[0] || 0,
+        bottom: paddingParts[2] || paddingParts[0] || 0,
+        left: paddingParts[3] || paddingParts[1] || paddingParts[0] || 0
+      };
+
+      const { top, bottom } = paddings;
+
+      modifiedAttributes.indentation = modifiedAttributes.indentation || {};
+
+      ['left', 'right'].forEach((direction) => {
+        if (paddings[direction]) {
+          modifiedAttributes.indentation[direction] = isNaN(modifiedAttributes.indentation[direction])
+            ? paddings[direction]
+            : modifiedAttributes.indentation[direction] + paddings[direction];
+        }
+      });
+
+      ['beforeSpacing', 'afterSpacing'].forEach((spacing, index) => {
+        const paddingValue = index === 0 ? top : bottom;
+        if (paddingValue) {
+          modifiedAttributes[spacing] = isNaN(modifiedAttributes[spacing])
+            ? paddingValue
+            : modifiedAttributes[spacing] + paddingValue;
+        }
+      });
+    }
+
     if (vNode.properties.style['margin-left'] || vNode.properties.style['margin-right']) {
       const leftMargin = fixupMargin(vNode.properties.style['margin-left']);
       const rightMargin = fixupMargin(vNode.properties.style['margin-right']);
@@ -448,10 +513,55 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
       }
     }
 
-    // list elements might have margin-bottom style and happens in list where a p node exist for each list item
-    // copy the margin-bottom (if applicable) to the afterSpacing attribute
-    if (vNode.tagName === 'p' && vNode.properties.style['margin-bottom']) {
-      modifiedAttributes.afterSpacing = fixupMargin(vNode.properties.style['margin-bottom']);
+    if (vNode.properties.style['padding-left'] || vNode.properties.style['padding-right']) {
+      const { style } = vNode.properties;
+      const paddingStyles = ['padding-left', 'padding-right'];
+
+      paddingStyles.forEach((paddingStyle) => {
+        if (style[paddingStyle]) {
+          const padding = fixupMargin(style[paddingStyle]);
+          const direction = paddingStyle.split('-')[1]; // 'left' or 'right'
+
+          if (padding) {
+            modifiedAttributes.indentation = modifiedAttributes.indentation || {};
+            modifiedAttributes.indentation[direction] = isNaN(modifiedAttributes.indentation[direction])
+              ? padding
+              : modifiedAttributes.indentation[direction] + padding;
+          }
+        }
+      });
+    }
+
+    if (vNode.tagName === 'p') {
+      const { style } = vNode.properties;
+      
+      // list elements might have margin-bottom style and happens in list where a p node exist for each list item
+      // copy the margin-bottom (if applicable) to the afterSpacing attribute
+      if (style['margin-bottom']) {
+        modifiedAttributes.afterSpacing = fixupMargin(style['margin-bottom']);
+      }
+
+      if (style['margin-top']) {
+        modifiedAttributes.beforeSpacing = fixupMargin(style['margin-top']);
+      }
+
+      if (style['padding-bottom']) {
+        const paddingBottom = fixupMargin(style['padding-bottom']);
+        if (!isNaN(modifiedAttributes.afterSpacing)) {
+          modifiedAttributes.afterSpacing += paddingBottom;
+        }else{
+          modifiedAttributes.afterSpacing = paddingBottom;
+        }
+      }
+
+      if (style['padding-top']) {
+        const paddingTop = fixupMargin(style['padding-top']);
+        if (!isNaN(modifiedAttributes.beforeSpacing)) {
+          modifiedAttributes.beforeSpacing += paddingTop;
+        }else{
+          modifiedAttributes.beforeSpacing = paddingTop;
+        }
+      }
     }
 
     if (vNode.properties.style.display) {
