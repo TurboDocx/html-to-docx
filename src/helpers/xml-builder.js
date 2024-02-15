@@ -824,24 +824,30 @@ const buildRunOrHyperLink = async (vNode, attributes, docxDocumentInstance) => {
       .ele('@w', 'hyperlink')
       .att('@r', 'id', `rId${relationshipId}`);
 
-    const modifiedAttributes = { ...attributes };
+    for (let idx = 0; idx < vNode.children.length; idx++) {
+      const childVNode = vNode.children[idx];
+      const modifiedAttributes =
+        isVNode(childVNode) && childVNode.tagName === 'img'
+          ? { ...attributes, type: 'picture', description: childVNode.properties.alt } : { ...attributes };
       modifiedAttributes.hyperlink = true;
-  
+
       const runFragments = await buildRunOrRuns(
-        vNode.children[0],
+        childVNode,
         modifiedAttributes,
         docxDocumentInstance
       );
       if (Array.isArray(runFragments)) {
         for (let index = 0; index < runFragments.length; index++) {
           const runFragment = runFragments[index];
-  
+
           hyperlinkFragment.import(runFragment);
         }
       } else {
         hyperlinkFragment.import(runFragments);
       }
-      hyperlinkFragment.up();
+    }
+
+    hyperlinkFragment.up();
 
     return hyperlinkFragment;
   }
