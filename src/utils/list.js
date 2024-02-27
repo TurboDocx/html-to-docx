@@ -52,14 +52,14 @@ class ListStyleBuilder {
   }
 
   getUnorderedListPrefixSuffix(style) {
-    let listType = ''
+    let listType = '';
 
     if (style && style['list-style-type']) {
       listType = style['list-style-type'];
     }
     switch (listType) {
       case 'square':
-        return '•';
+        return '';
       case 'circle':
         return 'o';
       default:
