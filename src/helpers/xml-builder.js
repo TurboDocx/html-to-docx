@@ -10,8 +10,8 @@ import isVText from 'virtual-dom/vnode/is-vtext';
 import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
 import imageToBase64 from 'image-to-base64';
-import mimeTypes from 'mime-types';
 import sizeOf from 'image-size';
+import { getMimeType } from '../utils/image'
 
 import namespaces from '../namespaces';
 import {
@@ -780,7 +780,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
       });
       if (base64String) {
         isConverted = true;
-        vNode.properties.src = `data:${mimeTypes.lookup(imageSource)};base64, ${base64String}`;
+        vNode.properties.src = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
       }
     }
     
@@ -1240,10 +1240,8 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
               console.warning(`skipping image download and conversion due to ${error}`);
             });
 
-            if (base64String && mimeTypes.lookup(imageSource)) {
-              childVNode.properties.src = `data:${mimeTypes.lookup(
-                imageSource
-              )};base64, ${base64String}`;
+            if (base64String && getMimeType(imageSource, base64String)) {
+              childVNode.properties.src = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
             } else {
               break;
             }
@@ -1295,8 +1293,8 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           console.warning(`skipping image download and conversion due to ${error}`);
         });
 
-        if (base64String && mimeTypes.lookup(imageSource)) {
-          vNode.properties.src = `data:${mimeTypes.lookup(imageSource)};base64, ${base64String}`;
+        if (base64String && getMimeType(imageSource, base64String)) {
+          vNode.properties.src = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
         } else {
           paragraphFragment.up();
 
