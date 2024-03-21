@@ -328,7 +328,7 @@ const cssBorderParser = (borderString) => {
   const tokens = borderString.split(' ');
   let size = 0;
   let stroke = 'single';
-  let color = '000000';
+  let color = 'CCCCCC';
 
   for (let tokenIdx = 0; tokenIdx < tokens.length; tokenIdx++) {
     const token = tokens[tokenIdx];
@@ -2030,9 +2030,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   if (isVNode(vNode) && vNode.properties) {
     const tableAttributes = vNode.properties.attributes || {};
     const tableStyles = vNode.properties.style || {};
+
     const tableBorders = {
       strokes: { ...setUpDirectionalBorderStroke('nil') },
-      colors: { ...setUpDirectionalBorderColor('000000') },
+      colors: { ...setUpDirectionalBorderColor('CCCCCC') }, // default border color when we insert table using tinymce
     };
     const tableCellBorders = {};
 

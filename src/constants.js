@@ -108,7 +108,7 @@ const verticalAlignValues = ['top', 'middle', 'bottom'];
 const defaultBorderStyles = {
   borderSize: 0,
   borderStrike: 'nil',
-  borderColor: '000000',
+  borderColor: 'CCCCCC',
 };
 const defaultPercentageMarginValue = 0
 
