@@ -52,7 +52,6 @@ import {
   verticalAlignValues,
   imageType,
   internalRelationship,
-  defaultBorderStyles,
   defaultPercentageMarginValue
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
@@ -324,11 +323,10 @@ const fixupMargin = (marginString) => {
   return defaultPercentageMarginValue;
 };
 
-const cssBorderParser = (borderString) => {
+const cssBorderParser = (borderString, defaultBorderOptions = {size:0, stroke:'single', color:'000000'}) => {
   const tokens = borderString.split(' ');
-  let size = 0;
-  let stroke = 'single';
-  let color = 'CCCCCC';
+
+  let {size, stroke, color } = defaultBorderOptions
 
   for (let tokenIdx = 0; tokenIdx < tokens.length; tokenIdx++) {
     const token = tokens[tokenIdx];
@@ -1430,17 +1428,19 @@ const buildTableCellProperties = (attributes) => {
   return tableCellPropertiesFragment;
 };
 
-const fixupTableCellBorder = (vNode, attributes) => {
+const fixupTableCellBorder = (vNode, attributes, tableBorderOptions= {}) => {
+  let {  stroke, color } = tableBorderOptions;
   if (Object.prototype.hasOwnProperty.call(vNode.properties.style, 'border')) {
     if (vNode.properties.style.border === 'none' || vNode.properties.style.border === 0) {
       attributes.tableCellBorder = {
-        strokes: { ...setUpDirectionalBorderStroke('nil') },
-        colors: { ...setUpDirectionalBorderColor('000000') },
+        strokes: { ...setUpDirectionalBorderStroke(stroke) },
+        colors: { ...setUpDirectionalBorderColor(color) },
       };
     } else {
       // eslint-disable-next-line no-use-before-define
       const [borderSize, borderStroke, borderColor] = cssBorderParser(
-        vNode.properties.style.border
+        vNode.properties.style.border,
+        tableBorderOptions
       );
 
       attributes.tableCellBorder = {
@@ -1468,7 +1468,8 @@ const fixupTableCellBorder = (vNode, attributes) => {
   } else if (vNode.properties.style['border-top'] && vNode.properties.style['border-top'] !== '0') {
     // eslint-disable-next-line no-use-before-define
     const [borderSize, borderStroke, borderColor] = cssBorderParser(
-      vNode.properties.style['border-top']
+      vNode.properties.style['border-top'],
+      tableBorderOptions
     );
     attributes.tableCellBorder = {
       ...attributes.tableCellBorder,
@@ -1488,7 +1489,8 @@ const fixupTableCellBorder = (vNode, attributes) => {
   ) {
     // eslint-disable-next-line no-use-before-define
     const [borderSize, borderStroke, borderColor] = cssBorderParser(
-      vNode.properties.style['border-left']
+      vNode.properties.style['border-left'],
+      tableBorderOptions
     );
     attributes.tableCellBorder = {
       ...attributes.tableCellBorder,
@@ -1508,7 +1510,8 @@ const fixupTableCellBorder = (vNode, attributes) => {
   ) {
     // eslint-disable-next-line no-use-before-define
     const [borderSize, borderStroke, borderColor] = cssBorderParser(
-      vNode.properties.style['border-bottom']
+      vNode.properties.style['border-bottom'],
+      tableBorderOptions
     );
     attributes.tableCellBorder = {
       ...attributes.tableCellBorder,
@@ -1528,7 +1531,8 @@ const fixupTableCellBorder = (vNode, attributes) => {
   ) {
     // eslint-disable-next-line no-use-before-define
     const [borderSize, borderStroke, borderColor] = cssBorderParser(
-      vNode.properties.style['border-right']
+      vNode.properties.style['border-right'],
+      tableBorderOptions
     );
     attributes.tableCellBorder = {
       ...attributes.tableCellBorder,
@@ -1616,8 +1620,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
         ...modifiedAttributes,
         ...modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, attributes),
       };
-
-      fixupTableCellBorder(vNode, modifiedAttributes);
+      console.log('order in btc', docxDocumentInstance.tableBorders)
+      fixupTableCellBorder(vNode, modifiedAttributes, docxDocumentInstance.tableBorders);
     }
   }
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes);
@@ -1678,7 +1682,7 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
   return tableCellFragment;
 };
 
-const buildRowSpanCell = (rowSpanMap, columnIndex, attributes) => {
+const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOptions) => {
   const rowSpanCellFragments = [];
   let spanObject = rowSpanMap.get(columnIndex.index);
   while (spanObject && spanObject.rowSpan) {
@@ -1691,7 +1695,7 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes) => {
     };
 
     if ('border-left' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-left']);
+      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-left'], tableBorderOptions);
       cellProperties.tableCellBorder = {
         ...cellProperties.tableCellBorder,
         left: borderSize,
@@ -1700,7 +1704,7 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes) => {
       };
     }
     if ('border-right' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-right']);
+      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-right'], tableBorderOptions);
       cellProperties.tableCellBorder = {
         ...cellProperties.tableCellBorder,
         right: borderSize,
@@ -1709,7 +1713,7 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes) => {
       };
     }
     if ('border-top' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-top']);
+      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-top'], tableBorderOptions);
       cellProperties.tableCellBorder = {
         ...cellProperties.tableCellBorder,
         top: borderSize,
@@ -1718,7 +1722,7 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes) => {
       };
     }
     if ('border-bottom' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-bottom']);
+      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-bottom'], tableBorderOptions);
       cellProperties.tableCellBorder = {
         ...cellProperties.tableCellBorder,
         bottom: borderSize,
@@ -1820,7 +1824,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
       );
     }
     if (vNode.properties.style) {
-      fixupTableCellBorder(vNode, modifiedAttributes);
+      fixupTableCellBorder(vNode, modifiedAttributes,docxDocumentInstance.tableBorders);
     }
   }
 
@@ -1837,7 +1841,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
 
     // eslint-disable-next-line no-restricted-syntax
     for (const column of tableColumns) {
-      const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes);
+      const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders);
       if (Array.isArray(rowSpanCellFragments)) {
         for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
           const rowSpanCellFragment = rowSpanCellFragments[iteratorIndex];
@@ -1859,7 +1863,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
   }
 
   if (columnIndex.index < rowSpanMap.size) {
-    const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes);
+    const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders);
     if (Array.isArray(rowSpanCellFragments)) {
       for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
         const rowSpanCellFragment = rowSpanCellFragments[iteratorIndex];
@@ -2031,13 +2035,13 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
     const tableAttributes = vNode.properties.attributes || {};
     const tableStyles = vNode.properties.style || {};
 
+    let { size: borderSize, stroke: borderStrike, color: borderColor } = docxDocumentInstance.tableBorders;
+
     const tableBorders = {
-      strokes: { ...setUpDirectionalBorderStroke('nil') },
-      colors: { ...setUpDirectionalBorderColor('CCCCCC') }, // default border color when we insert table using tinymce
+      strokes: { ...setUpDirectionalBorderStroke(borderStrike) },
+      colors: { ...setUpDirectionalBorderColor(borderColor) },
     };
     const tableCellBorders = {};
-
-    let { borderSize, borderStrike, borderColor } = defaultBorderStyles;
 
     // eslint-disable-next-line no-restricted-globals
     if (!isNaN(tableAttributes.border)) {
@@ -2053,15 +2057,13 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         setUpDirectionalBorderSize(tableCellBorders, 1);
 
         tableCellBorders.strokes = setUpDirectionalBorderStroke(borderStrike);
-        // TODO: HTML generally gives color gray if only border attribute is present. Decide if we go with black or gray
-        // assigning the 000000 color to borders
         tableCellBorders.colors = setUpDirectionalBorderColor(borderColor);
       }
     }
 
     // css style overrides table border properties
     if (tableStyles.border) {
-      const [cssSize, cssStroke, cssColor] = cssBorderParser(tableStyles.border);
+      const [cssSize, cssStroke, cssColor] = cssBorderParser(tableStyles.border, docxDocumentInstance.tableBorders);
       borderSize = cssSize ?? borderSize;
       borderColor = cssColor || borderColor;
       borderStrike = cssStroke || borderStrike;

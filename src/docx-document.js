@@ -153,6 +153,7 @@ class DocxDocument {
     this.lang = properties.lang || defaultLang;
     this.tableRowCantSplit =
       (properties.table && properties.table.row && properties.table.row.cantSplit) || false;
+    this.tableBorders = (properties.table && properties.table.options) || defaultDocumentOptions.table.options;
     this.pageNumber = properties.pageNumber || false;
     this.skipFirstHeaderFooter = properties.skipFirstHeaderFooter || false;
     this.lineNumber = properties.lineNumber ? properties.lineNumberOptions : null;
@@ -343,7 +344,7 @@ class DocxDocument {
       } else if (properties.start) {
         startValue = properties.start
       }
-      [...Array(9).keys()].forEach((level, idx) => {
+      [...Array(9).keys()].forEach((level) => {
         const levelFragment = fragment({ namespaceAlias: { w: namespaces.w } })
           .ele('@w', 'lvl')
           .att('@w', 'ilvl', level)
