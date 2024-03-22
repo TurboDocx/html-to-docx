@@ -1621,7 +1621,6 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
         ...modifiedAttributes,
         ...modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, attributes),
       };
-      console.log('order in btc', docxDocumentInstance.tableBorders)
       fixupTableCellBorder(vNode, modifiedAttributes, docxDocumentInstance.tableBorders);
     }
   }
