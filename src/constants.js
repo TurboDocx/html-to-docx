@@ -25,11 +25,11 @@ const portraitMargins = {
 const defaultFont = 'Times New Roman';
 const defaultFontSize = 22;
 const defaultLang = 'en-US';
-const defaultTableOptions = {
+const defaultTableBorderOptions = {
   size: 0,
   stroke: 'nil',
-  color: '000000'
-}
+  color: '000000',
+};
 const defaultDocumentOptions = {
   orientation: defaultOrientation,
   margins: cloneDeep(portraitMargins),
@@ -53,7 +53,7 @@ const defaultDocumentOptions = {
     row: {
       cantSplit: false,
     },
-    options: defaultTableOptions
+    options: defaultTableBorderOptions,
   },
   pageSize: {
     width: landscapeHeight,
@@ -111,11 +111,11 @@ const paragraphBordersObject = {
 };
 const colorlessColors = ['transparent', 'auto'];
 const verticalAlignValues = ['top', 'middle', 'bottom'];
-const defaultPercentageMarginValue = 0
+const defaultPercentageMarginValue = 0;
 
 export {
   defaultDocumentOptions,
-  defaultTableOptions,
+  defaultTableBorderOptions,
   defaultHTMLString,
   relsFolderName,
   headerFileName,
@@ -142,5 +142,5 @@ export {
   colorlessColors,
   verticalAlignValues,
   defaultLang,
-  defaultPercentageMarginValue
+  defaultPercentageMarginValue,
 };
