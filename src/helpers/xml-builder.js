@@ -52,7 +52,8 @@ import {
   verticalAlignValues,
   imageType,
   internalRelationship,
-  defaultPercentageMarginValue
+  defaultPercentageMarginValue,
+  defaultTableBorderOptions
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
@@ -323,7 +324,7 @@ const fixupMargin = (marginString) => {
   return defaultPercentageMarginValue;
 };
 
-const cssBorderParser = (borderString, defaultBorderOptions = {size:0, stroke:'single', color:'000000'}) => {
+const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableBorderOptions, stroke: 'single' }) => {
   const tokens = borderString.split(' ');
 
   let {size, stroke, color } = defaultBorderOptions
