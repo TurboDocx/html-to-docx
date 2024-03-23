@@ -53,7 +53,7 @@ const defaultDocumentOptions = {
     row: {
       cantSplit: false,
     },
-    options: defaultTableBorderOptions,
+    borderOptions: defaultTableBorderOptions,
   },
   pageSize: {
     width: landscapeHeight,
