@@ -2211,11 +2211,11 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
           tableBorders.colors = { ...tableBorders.colors, left: fixupColorCode(tableStyles[tableStyle])};
         } else if (tableStyle === 'border-right-color') {
           tableBorders.colors = { ...tableBorders.colors, right: fixupColorCode(tableStyles[tableStyle]) };
+        } else if (tableStyle === 'border-top-color') {
+          tableBorders.colors = { ...tableBorders.colors, top: fixupColorCode(tableStyles[tableStyle]) };
         } else if (tableStyle === 'border-bottom-color') {
           tableBorders.colors = { ...tableBorders.colors, bottom: fixupColorCode(tableStyles[tableStyle]) };
-        } else if (tableStyle === 'border-right-color') {
-          tableBorders.colors = { ...tableBorders.colors, right: fixupColorCode(tableStyles[tableStyle]) };
-        }else if(tableStyle === 'border-left-width'){
+        } else if(tableStyle === 'border-left-width'){
           tableBorders.left = borderSizeParser(tableStyles[tableStyle])
         }else if(tableStyle === 'border-right-width'){
           tableBorders.right = borderSizeParser(tableStyles[tableStyle])
@@ -2346,7 +2346,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
           const tableGridFragment = buildTableGridFromTableRow(childVNode, modifiedAttributes);
           tableFragment.import(tableGridFragment);
         }
-                const tableRowFragment = await buildTableRow(
+          const tableRowFragment = await buildTableRow(
           childVNode,
           modifiedAttributes,
           rowSpanMap,
