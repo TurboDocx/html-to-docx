@@ -1455,9 +1455,18 @@ const buildTableCellProperties = (attributes) => {
   return tableCellPropertiesFragment;
 };
 
+/**
+ * 
+ * @param {*} vNode Denotes the xml node
+ * @param {obj} attributes Specifies attributes of the node
+ * @param {obj} tableBorderOptions Denotes the tableBorderOptions given. Defaults to {}
+ * @param {string} rowIndexEquivalent Denotes the row in which table cell is present
+ * @param {string} columnIndexEquivalent Denotes the column in which table cell is present
+ */
 const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowIndexEquivalent, columnIndexEquivalent) => {
   let { color } = tableBorderOptions;
   const tableCellStyles = vNode.properties.style || {};
+  // assign the properties if tableCellBorder is not present in attributes
   if (!attributes.tableCellBorder) {
     attributes.tableCellBorder = { strokes: {}, colors: {} };
   }
@@ -1473,8 +1482,16 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
     const indexOfBorderTopWidth = tableCellStyleKeys.lastIndexOf('border-top-width')
     const indexOfBorderTopStyle = tableCellStyleKeys.lastIndexOf('border-top-style')
     const indexOfBorderTopColor = tableCellStyleKeys.lastIndexOf('border-top-color')
+    // used to store the lastIndexes of properties if present
+    // in html, properties order matter hence we need to see the order in 
+    // which properties have arrived.
+    // based on the indices, we sort in ascending order
+    // then apply the properties accordingly.
     let indexes = []
 
+    // if border style is given and it has hidden value
+    // then no matter what are the properties of the cell border styles
+    // those will be overwritten and we wont have the outer border
     if (indexOfBorderTopStyle !== -1 && tableCellStyles['border-top-style'] === 'hidden') {
       attributes.tableCellBorder.top = 0
       attributes.tableCellBorder.strokes.top = 'hidden'
@@ -1530,6 +1547,9 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
         }
       }
 
+      // if there was no top attribute given to tableBorder or
+      // current cell styles borderSize is greater than the table one
+      // update the border styles
       if (!attributes.tableBorder.top || borderSize > attributes.tableBorder.top) {
         attributes.tableCellBorder.top = borderSize
         attributes.tableCellBorder.strokes.top = borderStrike
@@ -1546,7 +1566,16 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
     const indexOfBorderBottomWidth = tableCellStyleKeys.lastIndexOf('border-bottom-width')
     const indexOfBorderBottomStyle = tableCellStyleKeys.lastIndexOf('border-bottom-style')
     const indexOfBorderBottomColor = tableCellStyleKeys.lastIndexOf('border-bottom-color')
+    // used to store the lastIndexes of properties if present
+    // in html, properties order matter hence we need to see the order in 
+    // which properties have arrived.
+    // based on the indices, we sort in ascending order
+    // then apply the properties accordingly.
     let indexes = []
+
+    // if border style is given and it has hidden value
+    // then no matter what are the properties of the cell border styles
+    // those will be overwritten and we wont have the outer border
     if (indexOfBorderBottomStyle !== -1 && tableCellStyles['border-bottom-style'] === 'hidden') {
       attributes.tableCellBorder.bottom = 0
       attributes.tableCellBorder.strokes.bottom = 'hidden'
@@ -1602,6 +1631,9 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
         }
       }
 
+      // if there was no bottom attribute given to tableBorder or
+      // current cell styles borderSize is greater than the table one
+      // update the border styles
       if (!attributes.tableBorder.bottom || borderSize > attributes.tableBorder.bottom) {
         attributes.tableCellBorder.bottom = borderSize
         attributes.tableCellBorder.strokes.bottom = borderStrike
@@ -1621,7 +1653,16 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
     const indexOfBorderLeftWidth = tableCellStyleKeys.lastIndexOf('border-left-width')
     const indexOfBorderLeftStyle = tableCellStyleKeys.lastIndexOf('border-left-style')
     const indexOfBorderLeftColor = tableCellStyleKeys.lastIndexOf('border-left-color')
+    // used to store the lastIndexes of properties if present
+    // in html, properties order matter hence we need to see the order in 
+    // which properties have arrived.
+    // based on the indices, we sort in ascending order
+    // then apply the properties accordingly.
     let indexes = []
+
+    // if border style is given and it has hidden value
+    // then no matter what are the properties of the cell border styles
+    // those will be overwritten and we wont have the outer border
     if (indexOfBorderLeftStyle !== -1 && tableCellStyles['border-left-style'] === 'hidden') {
       attributes.tableCellBorder.left = 0
       attributes.tableCellBorder.strokes.left = 'hidden'
@@ -1676,6 +1717,9 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
         }
       }
 
+      // if there was no left attribute given to tableBorder or
+      // current cell styles borderSize is greater than the table one
+      // update the border styles
       if (!attributes.tableBorder.left || borderSize > attributes.tableBorder.left) {
         attributes.tableCellBorder.left = borderSize
         attributes.tableCellBorder.strokes.left = borderStrike
@@ -1690,7 +1734,16 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
     const indexOfBorderRightWidth = tableCellStyleKeys.lastIndexOf('border-right-width')
     const indexOfBorderRightStyle = tableCellStyleKeys.lastIndexOf('border-right-style')
     const indexOfBorderRightColor = tableCellStyleKeys.lastIndexOf('border-right-color')
+    // used to store the lastIndexes of properties if present
+    // in html, properties order matter hence we need to see the order in 
+    // which properties have arrived.
+    // based on the indices, we sort in ascending order
+    // then apply the properties accordingly.
     let indexes = []
+
+    // if border style is given and it has hidden value
+    // then no matter what are the properties of the cell border styles
+    // those will be overwritten and we wont have the outer border
     if (indexOfBorderRightStyle !== -1 && tableCellStyles['border-right-style'] === 'hidden') {
       attributes.tableCellBorder.right = 0
       attributes.tableCellBorder.strokes.right = 'hidden'
@@ -1746,6 +1799,9 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
         }
       }
 
+      // if there was no right attribute given to tableBorder or
+      // current cell styles borderSize is greater than the table one
+      // update the border styles
       if (!attributes.tableBorder.right || borderSize > attributes.tableBorder.right) {
         attributes.tableCellBorder.right = borderSize
         attributes.tableCellBorder.strokes.right = borderStrike
@@ -1754,8 +1810,11 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
     }
   }
 
+  // for columnIndexEquivalentFirst, we have already processed left attributes
+  // for columnIndexEquivalentLast, we have already processed right attributes
+  // for rowIndexEquivalentFirst, we have already processed top attributes
+  // for rowIndexEquivalentLast, we have already processed bottom attributes
   for (const tableCellStyle of tableCellStyleKeys) {
-
     if (tableCellStyle === 'border') {
       if (tableCellStyles[tableCellStyle] === 'none' || tableCellStyles[tableCellStyle] === 0) {
         const strokes = { ...setUpDirectionalBorderStroke('none') };
@@ -2037,7 +2096,8 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
 const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDocumentInstance, rowIndexEquivalent, columnIndexEquivalent) => {
   const tableCellFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tc');
   let modifiedAttributes = { ...attributes };
-  // if table cell styles will be given, then below both are overridden
+  
+  // store the original attributes in case we need to revert back
   const originalTopAttributes = {
     stroke: modifiedAttributes.tableCellBorder.strokes.top,
     color: modifiedAttributes.tableCellBorder.colors.top,
@@ -2065,14 +2125,17 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
   const columnIndexEquivalentFirst = columnIndexEquivalent.indexOf('first')
   const columnIndexEquivalentLast = columnIndexEquivalent.indexOf('last')
 
+  // if table cell styles will be given, then below 4 are overridden
   if (rowIndexEquivalentFirst !== -1) {
-    //  we set the top border of cells to table top border
+    // it means that the cell is in first row
+    // we set the top border of cells to table top border
     modifiedAttributes.tableCellBorder.strokes.top = modifiedAttributes.tableBorder.strokes.top;
     modifiedAttributes.tableCellBorder.colors.top = modifiedAttributes.tableBorder.colors.top;
     modifiedAttributes.tableCellBorder.top = modifiedAttributes.tableBorder.top || docxDocumentInstance.tableBorders.size;
   }
 
   if (rowIndexEquivalentLast !== -1) {
+    // it means that the cell is in last row
     // we set the bottom border of cells to that of table
     modifiedAttributes.tableCellBorder.strokes.bottom = modifiedAttributes.tableBorder.strokes.bottom;
     modifiedAttributes.tableCellBorder.colors.bottom = modifiedAttributes.tableBorder.colors.bottom;
@@ -2080,6 +2143,7 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
   }
 
   if (columnIndexEquivalentFirst !== -1) {
+    // it means that the cell is in first column
     // we set the left border of cells to that of table
     modifiedAttributes.tableCellBorder.strokes.left = modifiedAttributes.tableBorder.strokes.left;
     modifiedAttributes.tableCellBorder.colors.left = modifiedAttributes.tableBorder.colors.left;
@@ -2087,6 +2151,7 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
   }
 
   if (columnIndexEquivalentLast !== -1) {
+    // it means that the cell is in last column
     // we set the right border of cells to that of table
     modifiedAttributes.tableCellBorder.strokes.right = modifiedAttributes.tableBorder.strokes.right;
     modifiedAttributes.tableCellBorder.colors.right = modifiedAttributes.tableBorder.colors.right;
@@ -2100,6 +2165,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
       const { style } = vNode.properties;
       const styleKeys = Object.keys(style)
       for (const styleKey of styleKeys) {
+        // separately set the properties for 4 directions in case shorthands are given
+        // as we use directional properties indiviually to generate border
         if (styleKey === 'border') {
           spanObject['border-left'] = style[styleKey];
           spanObject['border-right'] = style[styleKey];
@@ -2160,6 +2227,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
       );
       columnIndex.index += parseInt(modifiedAttributes.colSpan) - 1;
     }
+
+    // style attribute is given to table cell
     if (vNode.properties.style) {
       modifiedAttributes = {
         ...modifiedAttributes,
@@ -2167,10 +2236,16 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
       };
       fixupTableCellBorder(vNode, modifiedAttributes, docxDocumentInstance.tableBorders, rowIndexEquivalent, columnIndexEquivalent);
     } else {
-      // it means that border style provided was none to the cell border-attribute was given to table.
-      // also border-style was kept as none
-      // In those cases, we need to revert back to original border style
+      // no style attribute was given to the table cell
+
+      // Table tag was given the border attribute
       if (attributes.isTableBorderAttributeGiven) {
+        // If border-style to table was kept as none
+        // In those cases, we need to revert back to original border style
+        // It is because the table cells would still have border
+        // due to the table border attribute
+        // original attributes are only given to the outer cells of the table
+        // for inner cells the logic is defined with comments below
         if (attributes.tableBorder.strokes.top === 'none') {
           if (rowIndexEquivalentFirst !== -1) {
             modifiedAttributes.tableCellBorder.strokes.top = originalTopAttributes.stroke
@@ -2201,7 +2276,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
         }
 
         const { size, stroke } = defaultTableBorderAttributeOptions
-        // in such cases we havent provided any styling to the td cells
+        // here we are talking of inner cells
+        // we havent provided any styling to the td cells
         // they will have 1px solid <color> border
         // this is because border attribute was given to table tag
         if (rowIndexEquivalentFirst === -1) {
