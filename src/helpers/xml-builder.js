@@ -2096,7 +2096,7 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
 const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDocumentInstance, rowIndexEquivalent, columnIndexEquivalent) => {
   const tableCellFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tc');
   let modifiedAttributes = { ...attributes };
-  
+
   // store the original attributes in case we need to revert back
   const originalTopAttributes = {
     stroke: modifiedAttributes.tableCellBorder.strokes.top,
@@ -2374,41 +2374,87 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       tableCellBorder: { strokes: {}, colors: {} },
     };
 
-    if ('border-left' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-left'], tableBorderOptions);
-      cellProperties.tableCellBorder = {
-        ...cellProperties.tableCellBorder,
-        left: borderSize,
-        colors: { ...cellProperties.tableCellBorder.colors, left: borderColor },
-        strokes: { ...cellProperties.tableCellBorder.strokes, left: borderStroke },
-      };
-    }
-    if ('border-right' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-right'], tableBorderOptions);
-      cellProperties.tableCellBorder = {
-        ...cellProperties.tableCellBorder,
-        right: borderSize,
-        colors: { ...cellProperties.tableCellBorder.colors, right: borderColor },
-        strokes: { ...cellProperties.tableCellBorder.strokes, right: borderStroke },
-      };
-    }
-    if ('border-top' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-top'], tableBorderOptions);
-      cellProperties.tableCellBorder = {
-        ...cellProperties.tableCellBorder,
-        top: borderSize,
-        colors: { ...cellProperties.tableCellBorder.colors, top: borderColor },
-        strokes: { ...cellProperties.tableCellBorder.strokes, top: borderStroke },
-      };
-    }
-    if ('border-bottom' in spanObject) {
-      const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject['border-bottom'], tableBorderOptions);
-      cellProperties.tableCellBorder = {
-        ...cellProperties.tableCellBorder,
-        bottom: borderSize,
-        colors: { ...cellProperties.tableCellBorder.colors, bottom: borderColor },
-        strokes: { ...cellProperties.tableCellBorder.strokes, bottom: borderStroke },
-      };
+    const spanObjectKeys = Object.keys(spanObject)
+
+    for (const spanObjectKey of spanObjectKeys) {
+      if (spanObject === 'border') {
+        const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject[spanObjectKey], tableBorderOptions);
+        setUpDirectionalBorderSize(cellProperties.tableCellBorder, borderSize)
+        cellProperties.tableCellBorder = {
+          ...cellProperties.tableCellBorder,
+          colors: { ...cellProperties.tableCellBorder.colors, left: borderColor },
+          strokes: { ...cellProperties.tableCellBorder.strokes, left: borderStroke },
+        };
+      } else if (spanObjectKey === 'border-left') {
+        const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject[spanObjectKey], tableBorderOptions);
+        cellProperties.tableCellBorder = {
+          ...cellProperties.tableCellBorder,
+          left: borderSize,
+          colors: { ...cellProperties.tableCellBorder.colors, left: borderColor },
+          strokes: { ...cellProperties.tableCellBorder.strokes, left: borderStroke },
+        };
+      } else if (spanObjectKey === 'border-right') {
+        const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject[spanObjectKey], tableBorderOptions);
+        cellProperties.tableCellBorder = {
+          ...cellProperties.tableCellBorder,
+          right: borderSize,
+          colors: { ...cellProperties.tableCellBorder.colors, right: borderColor },
+          strokes: { ...cellProperties.tableCellBorder.strokes, right: borderStroke },
+        };
+      } else if (spanObjectKey === 'border-top') {
+        const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject[spanObjectKey], tableBorderOptions);
+        cellProperties.tableCellBorder = {
+          ...cellProperties.tableCellBorder,
+          top: borderSize,
+          colors: { ...cellProperties.tableCellBorder.colors, top: borderColor },
+          strokes: { ...cellProperties.tableCellBorder.strokes, top: borderStroke },
+        };
+      } else if (spanObjectKey === 'border-bottom') {
+        const [borderSize, borderStroke, borderColor] = cssBorderParser(spanObject[spanObjectKey], tableBorderOptions);
+        cellProperties.tableCellBorder = {
+          ...cellProperties.tableCellBorder,
+          bottom: borderSize,
+          colors: { ...cellProperties.tableCellBorder.colors, bottom: borderColor },
+          strokes: { ...cellProperties.tableCellBorder.strokes, bottom: borderStroke },
+        };
+      } else if (spanObjectKey === 'border-color') {
+        cellProperties.tableCellBorder = {
+          ...cellProperties.tableCellBorder,
+          colors: { ...setUpDirectionalBorderColor(fixupColorCode(spanObject[spanObjectKey])) }
+        }
+      } else if (spanObjectKey === 'border-left-color') {
+        cellProperties.tableCellBorder.colors = { ...cellProperties.tableCellBorder.colors, left: fixupColorCode(spanObject[spanObjectKey]) };
+      } else if (spanObjectKey === 'border-right-color') {
+        cellProperties.tableCellBorder.colors = { ...cellProperties.tableCellBorder.colors, right: fixupColorCode(spanObject[spanObjectKey]) };
+      } else if (spanObjectKey === 'border-top-color') {
+        cellProperties.tableCellBorder.colors = { ...cellProperties.tableCellBorder.colors, top: fixupColorCode(spanObject[spanObjectKey]) };
+      } else if (spanObjectKey === 'border-top-color') {
+        tableBorders.colors = { ...tableBorders.colors, top: fixupColorCode(spanObject[spanObjectKey]) };
+      } else if (spanObjectKey === 'border-style') {
+        cellProperties.tableCellBorder = {
+          ...cellProperties.tableCellBorder,
+          strokes: { ...setUpDirectionalBorderStroke(borderStyleParser(spanObject[spanObjectKey])) }
+        }
+      }
+      else if (spanObjectKey === 'border-left-style') {
+        cellProperties.tableCellBorder.strokes = { ...cellProperties.tableCellBorder.strokes, left: borderStyleParser(spanObject[spanObjectKey]) }
+      } else if (spanObjectKey === 'border-right-style') {
+        cellProperties.tableCellBorder.strokes = { ...cellProperties.tableCellBorder.strokes, right: borderStyleParser(spanObject[spanObjectKey]) }
+      } else if (spanObjectKey === 'border-top-style') {
+        cellProperties.tableCellBorder.strokes = { ...cellProperties.tableCellBorder.strokes, top: borderStyleParser(spanObject[spanObjectKey]) }
+      } else if (spanObjectKey === 'border-bottom-style') {
+        cellProperties.tableCellBorder.strokes = { ...cellProperties.tableCellBorder.strokes, bottom: borderStyleParser(spanObject[spanObjectKey]) }
+      } else if (spanObjectKey === 'border-width') {
+        setUpDirectionalBorderSize(cellProperties.tableCellBorder, spanObject[spanObjectKey])
+      } else if (spanObjectKey === 'border-left-width') {
+        cellProperties.tableCellBorder.left = borderSizeParser(spanObject[spanObjectKey])
+      } else if (spanObjectKey === 'border-right-width') {
+        cellProperties.tableCellBorder.right = borderSizeParser(spanObject[spanObjectKey])
+      } else if (spanObjectKey === 'border-top-width') {
+        cellProperties.tableCellBorder.top = borderSizeParser(spanObject[spanObjectKey])
+      } else if (spanObjectKey === 'border-bottom-width') {
+        cellProperties.tableCellBorder.bottom = borderSizeParser(spanObject[spanObjectKey])
+      }
     }
 
     const tableCellPropertiesFragment = buildTableCellProperties(cellProperties);
@@ -2425,23 +2471,10 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
     if (spanObject.rowSpan - 1 === 0) {
       rowSpanMap.delete(columnIndex.index);
     } else {
-      const updatedSpanObject = {
-        rowSpan: spanObject.rowSpan - 1,
-        colSpan: spanObject.colSpan || 0,
-      };
-      if ('border-left' in spanObject) {
-        updatedSpanObject['border-left'] = spanObject['border-left'];
-      }
-      if ('border-right' in spanObject) {
-        updatedSpanObject['border-right'] = spanObject['border-right'];
-      }
-      if ('border-bottom' in spanObject) {
-        updatedSpanObject['border-bottom'] = spanObject['border-bottom'];
-      }
-      if ('border-top' in spanObject) {
-        updatedSpanObject['border-top'] = spanObject['border-top'];
-      }
+      const updatedSpanObject = cloneDeep(spanObject)
       rowSpanMap.set(columnIndex.index, updatedSpanObject);
+      updatedSpanObject.rowSpan = spanObject.rowSpan - 1
+      updatedSpanObject.colSpan = spanObject.colSpan || 0
     }
     columnIndex.index += spanObject.colSpan || 1;
     spanObject = rowSpanMap.get(columnIndex.index);
