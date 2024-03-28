@@ -30,6 +30,10 @@ const defaultTableBorderOptions = {
   stroke: 'nil',
   color: '000000',
 };
+const defaultTableBorderAttributeOptions = {
+  size: 1,
+  stroke: 'single'
+}
 const defaultDocumentOptions = {
   orientation: defaultOrientation,
   margins: cloneDeep(portraitMargins),
@@ -143,4 +147,5 @@ export {
   verticalAlignValues,
   defaultLang,
   defaultPercentageMarginValue,
+  defaultTableBorderAttributeOptions
 };

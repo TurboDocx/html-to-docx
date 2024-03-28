@@ -53,7 +53,8 @@ import {
   imageType,
   internalRelationship,
   defaultPercentageMarginValue,
-  defaultTableBorderOptions
+  defaultTableBorderOptions,
+  defaultTableBorderAttributeOptions
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
@@ -332,32 +333,13 @@ const fixupMargin = (marginString) => {
 };
 
 const borderStyleParser = (style) => {
-  let stroke = 'single';
-  if (
-    [
-      'solid',
-      'dashed',
-      'dotted',
-      'double',
-      'groove',
-      'ridges',
-      'inset',
-      'outset',
-      'hidden',
-      'none',
-      'windowtext', // tinyMCE has this border property
-    ].includes(style)
-  ) {
-    // Accepted OOXML Values for border style: http://officeopenxml.com/WPtableBorders.php
-    if (['dashed', 'dotted', 'double', 'inset', 'outset', 'none'].includes(style)) {
-      stroke = style;
-    } else if (style === 'hidden') {
-      stroke = ' nil';
-    } else {
-      stroke = 'single';
-    }
+  // Accepted OOXML Values for border style: http://officeopenxml.com/WPtableBorders.php
+  if (['dashed', 'dotted', 'double', 'inset', 'outset', 'none'].includes(style)) {
+    return style;
+  } else if (style === 'hidden') {
+    return 'nil';
   }
-  return stroke;
+  return 'single'
 }
 
 const borderSizeParser = (borderSize) => {
@@ -397,13 +379,7 @@ const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableB
       ].includes(token)
     ) {
       // Accepted OOXML Values for border style: http://officeopenxml.com/WPtableBorders.php
-      if (['dashed', 'dotted', 'double', 'inset', 'outset', 'none'].includes(token)) {
-        stroke = token;
-      } else if (token === 'hidden') {
-        stroke = ' nil';
-      } else {
-        stroke = 'single';
-      }
+      stroke = borderStyleParser(token)
     } else if (pointRegex.test(token)) {
       const matchedParts = token.match(pointRegex);
       // convert point to eighth of a point
@@ -2192,27 +2168,29 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
           }
         }
 
+        const { size, stroke } = defaultTableBorderAttributeOptions
         // in such cases we havent provided any styling to the td cells
         // they will have 1px solid <color> border
+        // this is because border attribute was given to table tag
         if (rowIndexEquivalentFirst === -1) {
-          modifiedAttributes.tableCellBorder.strokes.top = 'single'
+          modifiedAttributes.tableCellBorder.strokes.top = stroke
           modifiedAttributes.tableCellBorder.colors.top = docxDocumentInstance.tableBorders.color
-          modifiedAttributes.tableCellBorder.top = 1
+          modifiedAttributes.tableCellBorder.top = size
         }
         if (rowIndexEquivalentLast === -1) {
-          modifiedAttributes.tableCellBorder.strokes.bottom = 'single'
+          modifiedAttributes.tableCellBorder.strokes.bottom = stroke
           modifiedAttributes.tableCellBorder.colors.bottom = docxDocumentInstance.tableBorders.color
-          modifiedAttributes.tableCellBorder.bottom = 1
+          modifiedAttributes.tableCellBorder.bottom = size
         }
         if (columnIndexEquivalentFirst === -1) {
-          modifiedAttributes.tableCellBorder.strokes.left = 'single'
+          modifiedAttributes.tableCellBorder.strokes.left = stroke
           modifiedAttributes.tableCellBorder.colors.left = docxDocumentInstance.tableBorders.color
-          modifiedAttributes.tableCellBorder.left = 1
+          modifiedAttributes.tableCellBorder.left = size
         }
         if (columnIndexEquivalentLast === -1) {
-          modifiedAttributes.tableCellBorder.strokes.right = 'single'
+          modifiedAttributes.tableCellBorder.strokes.right = stroke
           modifiedAttributes.tableCellBorder.colors.right = docxDocumentInstance.tableBorders.color
-          modifiedAttributes.tableCellBorder.right = 1
+          modifiedAttributes.tableCellBorder.right = size
         }
       }
 
@@ -2653,7 +2631,8 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
       if (parsedNumber) {
         borderSize = parsedNumber;
         // by default the borderStrike is solid if border attribute is present
-        borderStrike = 'single';
+        const { stroke } = defaultTableBorderAttributeOptions
+        borderStrike = stroke;
         setUpDirectionalBorderSize(tableBorders, parsedNumber);
         tableBorders.strokes = setUpDirectionalBorderStroke(borderStrike);
         tableBorders.colors = setUpDirectionalBorderColor(borderColor)
@@ -2667,10 +2646,12 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
     } else if (tableAttributes.border) {
       modifiedAttributes.isTableBorderAttributeGiven = true
 
+      const { stroke, size } = defaultTableBorderAttributeOptions
+
       // here we have passed a string which is not 0. In such cases, the borderSize becomes 1
-      borderSize = 1
+      borderSize = size
       // the srtoke is solid by default
-      borderStrike = 'single';
+      borderStrike = stroke;
 
       setUpDirectionalBorderSize(tableBorders, borderSize);
       tableBorders.strokes = setUpDirectionalBorderStroke(borderStrike);
@@ -2692,12 +2673,9 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
           borderColor = cssColor || borderColor;
           borderStrike = cssStroke || borderStrike;
           // TODO: Remove these comments when handling left and right borders
+          setUpDirectionalBorderSize(tableBorders, borderSize)
           tableBorders.strokes = { ...setUpDirectionalBorderStroke(borderStrike) };
           tableBorders.colors = { ...setUpDirectionalBorderColor(borderColor) };
-          tableBorders.top = borderSize;
-          tableBorders.bottom = borderSize;
-          tableBorders.left = borderSize;
-          tableBorders.right = borderSize;
         } else if (tableStyle === 'border-collapse') {
           if (tableStyles[tableStyle] === 'collapse') {
             tableBorders.insideV = borderSize;
