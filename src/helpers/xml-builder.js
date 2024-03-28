@@ -1503,6 +1503,12 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           type: 'border-top-color'
         })
       }
+      if (indexOfBorderTopStyle !== -1) {
+        indexes.push({
+          index: indexOfBorderTopStyle,
+          type: 'border-top-style'
+        })
+      }
       indexes.sort((a, b) => a.index - b.index)
 
       let borderSize = attributes.tableCellBorder.top;
@@ -1519,6 +1525,8 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type])
         } else if (indexes[idxItem].type === 'border-top-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type])
+        } else {
+          borderStrike = borderStyleParser(tableCellStyles[indexes[idxItem].type])
         }
       }
 
@@ -1567,6 +1575,12 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           type: 'border-bottom-color'
         })
       }
+      if (indexOfBorderBottomStyle !== -1) {
+        indexes.push({
+          index: indexOfBorderBottomStyle,
+          type: 'border-bottom-style'
+        })
+      }
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.bottom;
@@ -1583,6 +1597,8 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type])
         } else if (indexes[idxItem].type === 'border-bottom-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type])
+        } else {
+          borderStrike = borderStyleParser(tableCellStyles[indexes[idxItem].type])
         }
       }
 
@@ -1634,6 +1650,12 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           type: 'border-left-color'
         })
       }
+      if (indexOfBorderLeftStyle !== -1) {
+        indexes.push({
+          index: indexOfBorderLeftStyle,
+          type: 'border-left-style'
+        })
+      }
       indexes.sort((a, b) => a.index - b.index);
       let borderSize = attributes.tableCellBorder.left;
       let borderColor = attributes.tableCellBorder.strokes.left;
@@ -1649,6 +1671,8 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type])
         } else if (indexes[idxItem].type === 'border-left-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type])
+        } else {
+          borderStrike = borderStyleParser(tableCellStyles[indexes[idxItem].type])
         }
       }
 
@@ -1695,6 +1719,12 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           type: 'border-right-color'
         })
       }
+      if (indexOfBorderRightStyle !== -1) {
+        indexes.push({
+          index: indexOfBorderRightStyle,
+          type: 'border-right-style'
+        })
+      }
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.right;
@@ -1711,6 +1741,8 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
           borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type])
         } else if (indexes[idxItem].type === 'border-right-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type])
+        } else {
+          borderStrike = borderStyleParser(tableCellStyles[indexes[idxItem].type])
         }
       }
 
