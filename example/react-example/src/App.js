@@ -986,7 +986,221 @@ const htmlString = `<!DOCTYPE html>
                 </tr>
             </tbody>
         </table>
-
+        <p>Some more border cases</p>
+        <p>Changed the border style to none</p>
+        <table style="border-collapse: collapse; width: 100%; border-width: 1px; border-style: none;" border="1">
+            <colgroup>
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td>1,1</td>
+                    <td>1,2</td>
+                    <td>1,3</td>
+                    <td>1,4</td>
+                </tr>
+                <tr>
+                    <td>2,1</td>
+                    <td>2,2</td>
+                    <td>2,3</td>
+                    <td>2,4</td>
+                </tr>
+                <tr>
+                    <td>3,1</td>
+                    <td>3,2</td>
+                    <td>3,3</td>
+                    <td>3,4</td>
+                </tr>
+                <tr>
+                    <td>4,1</td>
+                    <td>4,2</td>
+                    <td>4,3</td>
+                    <td>4,4</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>&nbsp;</p>
+        <p>here just normal table insertion</p>
+        <table style="border-collapse: collapse; width: 100%; height: 76px;" border="1">
+            <colgroup>
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+            </colgroup>
+            <tbody>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">1,1</td>
+                    <td style="height: 19px;">1,2</td>
+                    <td style="height: 19px;">1,3</td>
+                    <td style="height: 19px;">1,4</td>
+                </tr>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">2,1</td>
+                    <td style="height: 19px;">2,2</td>
+                    <td style="height: 19px;">2,3</td>
+                    <td style="height: 19px;">2,4</td>
+                </tr>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">3,1</td>
+                    <td style="height: 19px;">3,2</td>
+                    <td style="height: 19px;">3,3</td>
+                    <td style="height: 19px;">3,4</td>
+                </tr>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">4,1</td>
+                    <td style="height: 19px;">4,2</td>
+                    <td style="height: 19px;">4,3</td>
+                    <td style="height: 19px;">4,4</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>&nbsp;</p>
+        <p>here changed border style to hidden</p>
+        <table style="border-collapse: collapse; width: 100%; border-width: 1px; border-style: hidden; height: 76px;" border="1">
+            <colgroup>
+                <col style="width: 25.0399%;">
+                <col style="width: 25.0399%;">
+                <col style="width: 25.0399%;">
+                <col style="width: 25.0399%;">
+            </colgroup>
+            <tbody>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">1,1</td>
+                    <td style="height: 19px;">1,2</td>
+                    <td style="height: 19px;">1,3</td>
+                    <td style="height: 19px;">1,4</td>
+                </tr>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">2,1</td>
+                    <td style="height: 19px;">2,2</td>
+                    <td style="height: 19px;">2,3</td>
+                    <td style="height: 19px;">2,4</td>
+                </tr>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">3,1</td>
+                    <td style="height: 19px;">3,2</td>
+                    <td style="height: 19px;">3,3</td>
+                    <td style="height: 19px;">3,4</td>
+                </tr>
+                <tr style="height: 19px;">
+                    <td style="height: 19px;">4,1</td>
+                    <td style="height: 19px;">4,2</td>
+                    <td style="height: 19px;">&nbsp;4,3</td>
+                    <td style="height: 19px;">4,4</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>&nbsp;</p>
+        <p>Here removing the border but adding styles</p>
+        <table style="border-collapse: collapse; width: 100%; border-width: 0px; border-style: solid;" border="1">
+            <colgroup>
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td style="border-width: 0px;">1,1</td>
+                    <td style="border-width: 0px;">1,2</td>
+                    <td style="border-width: 0px;">1,3</td>
+                    <td style="border-width: 0px;">1,4</td>
+                </tr>
+                <tr>
+                    <td style="border-width: 0px;">2,1</td>
+                    <td style="border-width: 0px;">2,2</td>
+                    <td style="border-width: 0px;">2,3</td>
+                    <td style="border-width: 0px;">2,4</td>
+                </tr>
+                <tr>
+                    <td style="border-width: 0px;">3,1</td>
+                    <td style="border-width: 0px;">3,2</td>
+                    <td style="border-width: 0px;">3,3</td>
+                    <td style="border-width: 0px;">3,4</td>
+                </tr>
+                <tr>
+                    <td style="border-width: 0px;">4,1</td>
+                    <td style="border-width: 0px;">4,2</td>
+                    <td style="border-width: 0px;">4,3</td>
+                    <td style="border-width: 0px;">4,4</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>&nbsp;</p>
+        <p>changing once again to hidden without copy</p>
+        <table style="border-collapse: collapse; width: 100%; border-width: 1px; border-style: hidden;" border="1">
+            <colgroup>
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td>1,1</td>
+                    <td>1,2</td>
+                    <td>1,3</td>
+                    <td>1,4</td>
+                </tr>
+                <tr>
+                    <td>2,1</td>
+                    <td>2,2</td>
+                    <td>2,3</td>
+                    <td>2,4</td>
+                </tr>
+                <tr>
+                    <td>3,1</td>
+                    <td>3,2</td>
+                    <td>3,3</td>
+                    <td>3,4</td>
+                </tr>
+                <tr>
+                    <td>4,1</td>
+                    <td>4,2</td>
+                    <td>4,3</td>
+                    <td>4,4</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Many styles</p>
+        <table style="border-collapse: collapse; width: 100%; border: 2px solid purple; border-width: 4px; border-left-color:yellow;" border="1">
+            <colgroup>
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td style="border:5px dotted red; border-left: 2px dashed ;border-left-color:aqua">1,1</td>
+                    <td>1,2</td>
+                    <td>1,3</td>
+                    <td>1,4</td>
+                </tr>
+                <tr>
+                    <td style="border:5px dotted red; border-left: 8px dashed ;border-left-color:aqua">2,1</td>
+                    <td>2,2</td>
+                    <td>2,3</td>
+                    <td>2,4</td>
+                </tr>
+                <tr>
+                    <td>3,1</td>
+                    <td>3,2</td>
+                    <td>3,3</td>
+                    <td style="border:5px dotted red; border-right: 2px dashed ;border-right-color:aqua">3,4</td>
+                </tr>
+                <tr>
+                    <td style="border:3px dashed blue; border-left: 2px solid ;border-left-color:aqua; border-bottom-stlye: double; border-bottom-width: 6px; border-bottom-color: magenta">4,1</td>
+                    <td>4,2</td>
+                    <td>4,3</td>
+                    <td style="border:5px dotted red; border-left: 2px dashed ;border-left-color:aqua; border-bottom:5px dashed blue">4,4</td>
+                </tr>
+            </tbody>
+        </table>
         <p>Here we start with Images Case</p>
         <pre>
         Inside Pre tag
