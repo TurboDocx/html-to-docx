@@ -130,8 +130,8 @@ class DocxDocument {
       marginsObject && Object.keys(marginsObject).length
         ? marginsObject
         : isPortraitOrientation
-          ? portraitMargins
-          : landscapeMargins;
+        ? portraitMargins
+        : landscapeMargins;
 
     this.availableDocumentSpace = this.width - this.margins.left - this.margins.right;
     this.title = properties.title || '';
@@ -153,6 +153,9 @@ class DocxDocument {
     this.lang = properties.lang || defaultLang;
     this.tableRowCantSplit =
       (properties.table && properties.table.row && properties.table.row.cantSplit) || false;
+    this.tableBorders =
+      (properties.table && properties.table.borderOptions) ||
+      defaultDocumentOptions.table.borderOptions;
     this.pageNumber = properties.pageNumber || false;
     this.skipFirstHeaderFooter = properties.skipFirstHeaderFooter || false;
     this.lineNumber = properties.lineNumber ? properties.lineNumberOptions : null;
@@ -337,24 +340,18 @@ class DocxDocument {
         .ele('@w', 'abstractNum')
         .att('@w', 'abstractNumId', String(numberingId));
 
-      let startValue = 1
+      let startValue = 1;
       if (properties.attributes && properties.attributes['data-start']) {
-        startValue = properties.attributes['data-start']
+        startValue = properties.attributes['data-start'];
       } else if (properties.start) {
-        startValue = properties.start
+        startValue = properties.start;
       }
-      [...Array(9).keys()].forEach((level, idx) => {
+      [...Array(9).keys()].forEach((level) => {
         const levelFragment = fragment({ namespaceAlias: { w: namespaces.w } })
           .ele('@w', 'lvl')
           .att('@w', 'ilvl', level)
           .ele('@w', 'start')
-          .att(
-            '@w',
-            'val',
-            type === 'ol'
-              ? startValue
-              : '1'
-          )
+          .att('@w', 'val', type === 'ol' ? startValue : '1')
           .up()
           .ele('@w', 'numFmt')
           .att(
@@ -362,8 +359,8 @@ class DocxDocument {
             'val',
             type === 'ol'
               ? this.ListStyleBuilder.getListStyleType(
-                properties.style && properties.style['list-style-type']
-              )
+                  properties.style && properties.style['list-style-type']
+                )
               : 'bullet'
           )
           .up()
@@ -371,7 +368,9 @@ class DocxDocument {
           .att(
             '@w',
             'val',
-            type === 'ol' ? this.ListStyleBuilder.getListPrefixSuffix(properties.style, level) : this.ListStyleBuilder.getUnorderedListPrefixSuffix(properties.style)
+            type === 'ol'
+              ? this.ListStyleBuilder.getListPrefixSuffix(properties.style, level)
+              : this.ListStyleBuilder.getUnorderedListPrefixSuffix(properties.style)
           )
           .up()
           .ele('@w', 'lvlJc')
@@ -455,7 +454,7 @@ class DocxDocument {
   }
 
   createNumbering(type, properties) {
-        this.lastNumberingId += 1;
+    this.lastNumberingId += 1;
     this.numberingObjects.push({ numberingId: this.lastNumberingId, type, properties });
 
     return this.lastNumberingId;

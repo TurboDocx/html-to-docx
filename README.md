@@ -67,6 +67,10 @@ full fledged examples can be found under `example/`
   - `table` <?[Object]>
     - `row` <?[Object]>
       - `cantSplit` <?[Boolean]> flag to allow table row to split across pages. Defaults to `false`.
+    - `borderOptions` <?[Object]>
+      - `size` <?[Number]> denotes the border size. Defaults to `0`.
+      - `stroke` <?[String]> denotes the style of the borderStrike. Defaults to `nil`.
+      - `color` <?[String]> determines the border color. Defaults to `000000`.
   - `pageNumber` <?[Boolean]> flag to enable page number in footer. Defaults to `false`. Page number works only if footer flag is set as `true`.
   - `skipFirstHeaderFooter` <?[Boolean]> flag to skip first page header and footer. Defaults to `false`.
   - `lineNumber` <?[Boolean]> flag to enable line numbering. Defaults to `false`.
