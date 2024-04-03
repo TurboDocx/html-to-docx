@@ -343,11 +343,12 @@ const fixupMargin = (marginString) => {
   } else if (inchRegex.test(marginString)) {
     const matchedParts = marginString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
+  } else if(percentageRegex.test(marginString)){
+    // This requires changes in lot of functions. So, for now, we are returning the percentage value as it is.
+    // TODO: Revisit this and see how margins in percentages are handled and change in respective functions.
+    const matchedParts = marginString.match(percentageRegex);
+    return matchedParts[1]
   }
-
-  // else we are provided margins in percentage form
-  // TODO: Decide what to do with percentage margins
-  return defaultPercentageMarginValue;
 };
 
 const borderStyleParser = (style) => {
