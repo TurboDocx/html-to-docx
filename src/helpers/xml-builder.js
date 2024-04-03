@@ -301,6 +301,9 @@ const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
   } else if (inchRegex.test(rowHeightString)) {
     const matchedParts = rowHeightString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
+  } else if (percentageRegex.test(rowHeightString)) {
+    const matchedParts = rowHeightString.match(percentageRegex);
+    return (matchedParts[1] * parentHeight) / 100;
   }
 };
 
@@ -2526,6 +2529,16 @@ const buildTableRowProperties = (attributes) => {
   return tableRowPropertiesFragment;
 };
 
+/**
+ * Builds a table row fragment
+ * 
+ * @param {any} vNode  Denotes the current xml node
+ * @param {obj} attributes Attributes of the node
+ * @param {map} rowSpanMap stores the row span of the cells
+ * @param {any} docxDocumentInstance Denotes the docx Document instance
+ * @param {string} rowIndexEquivalent Denotes the row in which table cell is present
+ * @returns {any} Returns the table row fragment
+ */
 const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance, rowIndexEquivalent) => {
   const tableRowFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tr');
   const modifiedAttributes = cloneDeep(attributes)
@@ -2539,6 +2552,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
         vNode.children[0].properties.style &&
         vNode.children[0].properties.style.height)
     ) {
+      const tableHeight = modifiedAttributes.height || docxDocumentInstance.pageSize.height
       modifiedAttributes.tableRowHeight = fixupRowHeight(
         (vNode.properties.style && vNode.properties.style.height) ||
         (vNode.children[0] &&
@@ -2546,7 +2560,8 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
           vNode.children[0].properties.style &&
           vNode.children[0].properties.style.height
           ? vNode.children[0].properties.style.height
-          : undefined)
+          : undefined),
+        tableHeight
       );
     }
     if (vNode.properties.style) {
@@ -2960,6 +2975,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
     }
     if (modifiedAttributes.width) {
       modifiedAttributes.width = Math.min(modifiedAttributes.width, attributes.maximumWidth);
+    }
+
+    if (tableStyles.height) {
+      modifiedAttributes.height = fixupRowHeight(tableStyles.height, docxDocumentInstance.pageSize.height);
     }
   }
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
