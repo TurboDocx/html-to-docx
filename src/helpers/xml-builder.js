@@ -40,6 +40,8 @@ import {
   cmRegex,
   inchRegex,
   inchToTWIP,
+  cmToHIP,
+  inchToHIP
 } from '../utils/unit-conversion';
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
@@ -261,7 +263,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
 };
 
 // eslint-disable-next-line consistent-return
-const fixupFontSize = (fontSizeString) => {
+const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
   if (pointRegex.test(fontSizeString)) {
     const matchedParts = fontSizeString.match(pointRegex);
     // convert point to half point
@@ -270,11 +272,21 @@ const fixupFontSize = (fontSizeString) => {
     const matchedParts = fontSizeString.match(pixelRegex);
     // convert pixels to half point
     return pixelToHIP(matchedParts[1]);
+  } else if (cmRegex.test(fontSizeString)) {
+    const matchedParts = fontSizeString.match(cmRegex);
+    return cmToHIP(matchedParts[1]);
+  } else if (inchRegex.test(fontSizeString)) {
+    const matchedParts = fontSizeString.match(inchRegex);
+    return inchToHIP(matchedParts[1]);
+  } else if (percentageRegex.test(fontSizeString)) {
+    // need fontsize here default
+    const matchedParts = fontSizeString.match(percentageRegex);
+    return (matchedParts[1] * docxDocumentInstance.fontSize) / 100;
   }
 };
 
 // eslint-disable-next-line consistent-return
-const fixupRowHeight = (rowHeightString) => {
+const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
   if (pointRegex.test(rowHeightString)) {
     const matchedParts = rowHeightString.match(pointRegex);
     // convert point to half point
@@ -459,13 +471,13 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
       );
     }
     if (vNode.properties.style['font-size']) {
-      modifiedAttributes.fontSize = fixupFontSize(vNode.properties.style['font-size']);
+      modifiedAttributes.fontSize = fixupFontSize(vNode.properties.style['font-size'], docxDocumentInstance);
     }
     if (vNode.properties.style['line-height']) {
       modifiedAttributes.lineHeight = fixupLineHeight(
         vNode.properties.style['line-height'],
         vNode.properties.style['font-size']
-          ? fixupFontSize(vNode.properties.style['font-size'])
+          ? fixupFontSize(vNode.properties.style['font-size'], docxDocumentInstance)
           : null
       );
     }
