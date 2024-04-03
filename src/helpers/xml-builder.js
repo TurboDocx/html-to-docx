@@ -308,7 +308,7 @@ const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
 };
 
 // eslint-disable-next-line consistent-return
-const fixupColumnWidth = (columnWidthString) => {
+const fixupColumnWidth = (columnWidthString, parentWidth = 0) => {
   if (pointRegex.test(columnWidthString)) {
     const matchedParts = columnWidthString.match(pointRegex);
     return pointToTWIP(matchedParts[1]);
@@ -321,6 +321,9 @@ const fixupColumnWidth = (columnWidthString) => {
   } else if (inchRegex.test(columnWidthString)) {
     const matchedParts = columnWidthString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
+  } else if (percentageRegex.test(columnWidthString)) {
+    const matchedParts = columnWidthString.match(percentageRegex);
+    return (matchedParts[1] * parentWidth) / 100
   }
 };
 
@@ -1409,14 +1412,14 @@ const buildTableCellBorders = (tableCellBorder) => {
   return tableCellBordersFragment;
 };
 
-const buildTableCellWidth = (tableCellWidth) =>
+const buildTableCellWidth = (tableCellWidth, parentWidth) =>
   fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'tcW')
-    .att('@w', 'w', fixupColumnWidth(tableCellWidth))
+    .att('@w', 'w', fixupColumnWidth(tableCellWidth, parentWidth))
     .att('@w', 'type', 'dxa')
     .up();
 
-const buildTableCellProperties = (attributes) => {
+const buildTableCellProperties = (attributes, parentWidth) => {
   const tableCellPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
     'tcPr'
@@ -1458,7 +1461,7 @@ const buildTableCellProperties = (attributes) => {
           delete attributes.rowSpan;
           break;
         case 'width':
-          const widthFragment = buildTableCellWidth(attributes[key]);
+          const widthFragment = buildTableCellWidth(attributes[key], parentWidth);
           tableCellPropertiesFragment.import(widthFragment);
           delete attributes.width;
           break;
@@ -2108,7 +2111,19 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
   }
 };
 
-const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDocumentInstance, rowIndexEquivalent, columnIndexEquivalent) => {
+/**
+ * 
+ * @param {any} vNode Current working XML node
+ * @param {obj} attributes Attributes of the node
+ * @param {map} rowSpanMap Map denoting the row span for table cells
+ * @param {obj} columnIndex Holds the index of the current column
+ * @param {any} docxDocumentInstance Instance of the docx document
+ * @param {string} rowIndexEquivalent Denotes the row in which table cell is present
+ * @param {string} columnIndexEquivalent Denotes the column in which table cell is present
+ * @param {number} parentWidth Width of the parent element
+ * @returns 
+ */
+const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDocumentInstance, rowIndexEquivalent, columnIndexEquivalent, parentWidth) => {
   const tableCellFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tc');
   let modifiedAttributes = { ...attributes };
 
@@ -2319,7 +2334,7 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
 
     }
   }
-  const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes);
+  const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
@@ -2377,7 +2392,16 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
   return tableCellFragment;
 };
 
-const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOptions) => {
+/**
+ * 
+ * @param {map} rowSpanMap map denoting the row span for table cells
+ * @param {obj} columnIndex obj denoting the index of the current column
+ * @param {obj} attributes attributes of the table cell
+ * @param {obj} tableBorderOptions options for the table border
+ * @param {number} parentWidth width of the parent element
+ * @returns {any} Returns the row span cell fragment
+ */
+const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOptions, parentWidth) => {
   const rowSpanCellFragments = [];
   let spanObject = rowSpanMap.get(columnIndex.index);
   while (spanObject && spanObject.rowSpan) {
@@ -2472,7 +2496,7 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       }
     }
 
-    const tableCellPropertiesFragment = buildTableCellProperties(cellProperties);
+    const tableCellPropertiesFragment = buildTableCellProperties(cellProperties, parentWidth);
     rowSpanCellFragment.import(tableCellPropertiesFragment);
 
     const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
@@ -2575,6 +2599,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
 
   const columnIndex = { index: 0 };
 
+  const tableWidth = modifiedAttributes.width;
   if (vNodeHasChildren(vNode)) {
     const tableColumns = vNode.children.filter((childVNode) =>
       ['td', 'th'].includes(childVNode.tagName)
@@ -2583,7 +2608,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
 
     // eslint-disable-next-line no-restricted-syntax
     for (const column of tableColumns) {
-      const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders);
+      const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders, tableWidth);
       if (Array.isArray(rowSpanCellFragments)) {
         for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
           const rowSpanCellFragment = rowSpanCellFragments[iteratorIndex];
@@ -2599,7 +2624,8 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
         columnIndex,
         docxDocumentInstance,
         rowIndexEquivalent,
-        columnIndexEquivalent
+        columnIndexEquivalent,
+        tableWidth
       );
       columnIndex.index++;
 
@@ -2608,7 +2634,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
   }
 
   if (columnIndex.index < rowSpanMap.size) {
-    const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders);
+    const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders, tableWidth);
     if (Array.isArray(rowSpanCellFragments)) {
       for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
         const rowSpanCellFragment = rowSpanCellFragments[iteratorIndex];
