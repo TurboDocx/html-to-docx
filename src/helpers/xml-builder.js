@@ -427,138 +427,108 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
 
   // styles
   if (isVNode(vNode) && vNode.properties && vNode.properties.style) {
-    if (vNode.properties.style.color && !colorlessColors.includes(vNode.properties.style.color)) {
-      modifiedAttributes.color = fixupColorCode(vNode.properties.style.color);
-    }
+    const vNodeStyle = vNode.properties.style;
+    const vNodeStyleKeys = Object.keys(vNodeStyle);
 
-    if (
-      vNode.properties.style['background-color'] &&
-      !colorlessColors.includes(vNode.properties.style['background-color'])
-    ) {
-      modifiedAttributes.backgroundColor = fixupColorCode(
-        vNode.properties.style['background-color']
-      );
-    }
+    for(const vNodeStyleKey of vNodeStyleKeys) {
+      const vNodeStyleValue = vNodeStyle[vNodeStyleKey];
+      if(vNodeStyleKey === 'color'){
+        if(!colorlessColors.includes(vNodeStyleValue)){
+          modifiedAttributes.color = fixupColorCode(vNodeStyleValue);
+        }
+      } else if(vNodeStyleKey === 'background-color'){
+        if(!colorlessColors.includes(vNodeStyleValue)){
+          modifiedAttributes.backgroundColor = fixupColorCode(vNodeStyleValue);
+        }
+      } else if(vNodeStyleKey === 'background'){
+        if(!colorlessColors.includes(vNodeStyleValue)){
+          modifiedAttributes.backgroundColor = fixupColorCode(vNodeStyleValue);
+        }
+      } else if(vNodeStyleKey === 'vertical-align'){
+        if(verticalAlignValues.includes(vNodeStyleValue)){
+          modifiedAttributes.verticalAlign = vNodeStyleValue;
+        }
+      } else if(vNodeStyleKey === 'text-align'){
+        if(['left', 'right', 'center', 'justify'].includes(vNodeStyleValue)){
+          modifiedAttributes.textAlign = vNodeStyleValue;
+        }
+      } else if(vNodeStyleKey === 'font-weight'){
+        // FIXME: remove bold check when other font weights are handled.
+        if(vNodeStyleValue === 'bold'){
+          modifiedAttributes.strong = vNodeStyleValue;
+        }
+      } else if(vNodeStyleKey === 'font-family'){
+        modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
+      } else if(vNodeStyleKey === 'font-size'){
+        modifiedAttributes.fontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
+      } else if(vNodeStyleKey === 'line-height'){
+        modifiedAttributes.lineHeight = fixupLineHeight(vNodeStyleValue, 
+          vNodeStyle['font-size'] ? 
+        fixupFontSize(vNodeStyle['font-size'],  docxDocumentInstance) : 
+        null);
+      } else if(vNodeStyleKey === 'margin'){
+        const marginParts = vNodeStyleValue.split(' ');
+        const margins = {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0
+        }
+        if(marginParts.length === 1){
+          const fixedUpMargin = fixupMargin(marginParts[0]);
+          margins.top = fixedUpMargin;
+          margins.bottom = fixedUpMargin;
+          margins.left = fixedUpMargin;
+          margins.right = fixedUpMargin;
+        } else if(marginParts.length === 2){
+          const fixedUpMarginVertical = fixupMargin(marginParts[0]);
+          const fixedUpMarginHorizontal = fixupMargin(marginParts[1]);
+          margins.top = fixedUpMarginVertical;
+          margins.bottom = fixedUpMarginVertical;
+          margins.left = fixedUpMarginHorizontal;
+          margins.right = fixedUpMarginHorizontal
+        } else if(marginParts.length === 3){
+          margins.top = fixupMargin(marginParts[0]);
+          margins.bottom = fixupMargin(marginParts[2]);
+          margins.right = fixupMargin(marginParts[1]);
+          margins.left = fixupMargin(marginParts[1]);
+        } else if(marginParts.length === 4){
+          margins.top = fixupMargin(marginParts[0]);
+          margins.right = fixupMargin(marginParts[1]);
+          margins.bottom = fixupMargin(marginParts[2]);
+          margins.left = fixupMargin(marginParts[3]);
+        }
 
-    if (
-      vNode.properties.style.background &&
-      !colorlessColors.includes(vNode.properties.style.background)
-    ) {
-      modifiedAttributes.backgroundColor = fixupColorCode(vNode.properties.style.background);
-    }
-
-    if (
-      vNode.properties.style['vertical-align'] &&
-      verticalAlignValues.includes(vNode.properties.style['vertical-align'])
-    ) {
-      modifiedAttributes.verticalAlign = vNode.properties.style['vertical-align'];
-    }
-
-    if (
-      vNode.properties.attributes.valign &&
-      verticalAlignValues.includes(vNode.properties.attributes.valign)
-    ) {
-      modifiedAttributes.verticalAlign = vNode.properties.attributes.valign;
-    }
-
-    if (
-      vNode.properties.style['text-align'] &&
-      ['left', 'right', 'center', 'justify'].includes(vNode.properties.style['text-align'])
-    ) {
-      modifiedAttributes.textAlign = vNode.properties.style['text-align'];
-    }
-
-    // FIXME: remove bold check when other font weights are handled.
-    if (vNode.properties.style['font-weight'] && vNode.properties.style['font-weight'] === 'bold') {
-      modifiedAttributes.strong = vNode.properties.style['font-weight'];
-    }
-    if (vNode.properties.style['font-family']) {
-      modifiedAttributes.font = docxDocumentInstance.createFont(
-        vNode.properties.style['font-family']
-      );
-    }
-    if (vNode.properties.style['font-size']) {
-      modifiedAttributes.fontSize = fixupFontSize(vNode.properties.style['font-size'], docxDocumentInstance);
-    }
-    if (vNode.properties.style['line-height']) {
-      modifiedAttributes.lineHeight = fixupLineHeight(
-        vNode.properties.style['line-height'],
-        vNode.properties.style['font-size']
-          ? fixupFontSize(vNode.properties.style['font-size'], docxDocumentInstance)
-          : null
-      );
-    }
-
-    if (vNode.properties.style['margin']) {
-      const marginParts = vNode.properties.style['margin'].split(' ');
-      const margins = {
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0
+        const { left, right, bottom } = margins
+        const indentation = { left, right }
+        if(left || right){
+          modifiedAttributes.indentation = indentation;
+        }
+        if(bottom){
+          modifiedAttributes.afterSpacing = bottom;
+        }
+      } else if(vNodeStyleKey === 'margin-left' || vNodeStyleKey === 'margin-right'){
+        const leftMargin = fixupMargin(vNodeStyle['margin-left']);
+        const rightMargin = fixupMargin(vNodeStyle['margin-right']);
+        const indentation = {};
+        if(leftMargin){
+          indentation.left = leftMargin;
+        }
+        if(rightMargin){
+          indentation.right = rightMargin;
+        }
+        if(leftMargin || rightMargin){
+          modifiedAttributes.indentation = indentation;
+        }
+      } else if(vNodeStyleKey === 'margin-bottom'){
+        if(vNode.tagName === 'p'){
+          modifiedAttributes.afterSpacing = fixupMargin(vNodeStyle['margin-bottom']);
+        }
+      } else if(vNodeStyleKey === 'display'){
+        modifiedAttributes.display = vNodeStyle['display'];
+      } else if(vNodeStyleKey === 'width'){
+        modifiedAttributes.width = vNodeStyle['width'];
       }
-      if (marginParts.length === 1) {
-        const fixedUpMargin = fixupMargin(marginParts[0]);
-        margins.top = fixedUpMargin;
-        margins.bottom = fixedUpMargin;
-        margins.left = fixedUpMargin;
-        margins.right = fixedUpMargin;
-      } else if (marginParts.length === 2) {
-        const fixedUpMarginVertical = fixupMargin(marginParts[0]);
-        const fixedUpMarginHorizontal = fixupMargin(marginParts[1]);
-        margins.top = fixedUpMarginVertical;
-        margins.bottom = fixedUpMarginVertical;
-        margins.left = fixedUpMarginHorizontal;
-        margins.right = fixedUpMarginHorizontal
-      } else if (marginParts.length === 3) {
-        margins.top = fixupMargin(marginParts[0]);
-        margins.bottom = fixupMargin(marginParts[2]);
-        margins.right = fixupMargin(marginParts[1]);
-        margins.left = fixupMargin(marginParts[1]);
-      } else if (marginParts.length === 4) {
-        margins.top = fixupMargin(marginParts[0]);
-        margins.right = fixupMargin(marginParts[1]);
-        margins.bottom = fixupMargin(marginParts[2]);
-        margins.left = fixupMargin(marginParts[3]);
-      }
-
-      const { left, right, bottom } = margins
-      const indentation = { left, right }
-      if (left || right) {
-        modifiedAttributes.indentation = indentation;
-      }
-      if (bottom) {
-        modifiedAttributes.afterSpacing = bottom;
-      }
-    }
-
-    if (vNode.properties.style['margin-left'] || vNode.properties.style['margin-right']) {
-      const leftMargin = fixupMargin(vNode.properties.style['margin-left']);
-      const rightMargin = fixupMargin(vNode.properties.style['margin-right']);
-      const indentation = {};
-      if (leftMargin) {
-        indentation.left = leftMargin;
-      }
-      if (rightMargin) {
-        indentation.right = rightMargin;
-      }
-      if (leftMargin || rightMargin) {
-        modifiedAttributes.indentation = indentation;
-      }
-    }
-
-    // list elements might have margin-bottom style and happens in list where a p node exist for each list item
-    // copy the margin-bottom (if applicable) to the afterSpacing attribute
-    if (vNode.tagName === 'p' && vNode.properties.style['margin-bottom']) {
-      modifiedAttributes.afterSpacing = fixupMargin(vNode.properties.style['margin-bottom']);
-    }
-
-    if (vNode.properties.style.display) {
-      modifiedAttributes.display = vNode.properties.style.display;
-    }
-
-    if (vNode.properties.style.width) {
-      modifiedAttributes.width = vNode.properties.style.width;
     }
   }
 
