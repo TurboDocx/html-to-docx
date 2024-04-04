@@ -51,3 +51,11 @@ export const pointToEIP = (PointValue) => Math.round(PointValue * 8);
 export const pixelToEIP = (pixelValue) => pointToEIP(pixelToPoint(pixelValue));
 
 export const EIPToPixel = (EIPValue) => pointToPixel(EIPToPoint(EIPValue));
+
+export const cmToHIP = (cmValue) => pointToHIP(cmValue * 28.3464567);
+
+export const HIPToCm = (HIPValue) => HIPToPoint(HIPValue) / 28.3464567;
+
+export const inchToHIP = (inchValue) => pointToHIP(inchValue * 72);
+
+export const HIPToInch = (HIPValue) => HIPToPoint(HIPValue) / 72;

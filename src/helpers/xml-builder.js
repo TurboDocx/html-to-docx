@@ -40,6 +40,8 @@ import {
   cmRegex,
   inchRegex,
   inchToTWIP,
+  cmToHIP,
+  inchToHIP
 } from '../utils/unit-conversion';
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
@@ -261,7 +263,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
 };
 
 // eslint-disable-next-line consistent-return
-const fixupFontSize = (fontSizeString) => {
+const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
   if (pointRegex.test(fontSizeString)) {
     const matchedParts = fontSizeString.match(pointRegex);
     // convert point to half point
@@ -270,11 +272,21 @@ const fixupFontSize = (fontSizeString) => {
     const matchedParts = fontSizeString.match(pixelRegex);
     // convert pixels to half point
     return pixelToHIP(matchedParts[1]);
+  } else if (cmRegex.test(fontSizeString)) {
+    const matchedParts = fontSizeString.match(cmRegex);
+    return cmToHIP(matchedParts[1]);
+  } else if (inchRegex.test(fontSizeString)) {
+    const matchedParts = fontSizeString.match(inchRegex);
+    return inchToHIP(matchedParts[1]);
+  } else if (percentageRegex.test(fontSizeString)) {
+    // need fontsize here default
+    const matchedParts = fontSizeString.match(percentageRegex);
+    return (matchedParts[1] * docxDocumentInstance.fontSize) / 100;
   }
 };
 
 // eslint-disable-next-line consistent-return
-const fixupRowHeight = (rowHeightString) => {
+const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
   if (pointRegex.test(rowHeightString)) {
     const matchedParts = rowHeightString.match(pointRegex);
     // convert point to half point
@@ -289,11 +301,14 @@ const fixupRowHeight = (rowHeightString) => {
   } else if (inchRegex.test(rowHeightString)) {
     const matchedParts = rowHeightString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
+  } else if (percentageRegex.test(rowHeightString)) {
+    const matchedParts = rowHeightString.match(percentageRegex);
+    return (matchedParts[1] * parentHeight) / 100;
   }
 };
 
 // eslint-disable-next-line consistent-return
-const fixupColumnWidth = (columnWidthString) => {
+const fixupColumnWidth = (columnWidthString, parentWidth = 0) => {
   if (pointRegex.test(columnWidthString)) {
     const matchedParts = columnWidthString.match(pointRegex);
     return pointToTWIP(matchedParts[1]);
@@ -306,6 +321,9 @@ const fixupColumnWidth = (columnWidthString) => {
   } else if (inchRegex.test(columnWidthString)) {
     const matchedParts = columnWidthString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
+  } else if (percentageRegex.test(columnWidthString)) {
+    const matchedParts = columnWidthString.match(percentageRegex);
+    return (matchedParts[1] * parentWidth) / 100
   }
 };
 
@@ -325,11 +343,12 @@ const fixupMargin = (marginString) => {
   } else if (inchRegex.test(marginString)) {
     const matchedParts = marginString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
+  } else if(percentageRegex.test(marginString)){
+    // This requires changes in lot of functions. So, for now, we are returning the percentage value as it is.
+    // TODO: Revisit this and see how margins in percentages are handled and change in respective functions.
+    const matchedParts = marginString.match(percentageRegex);
+    return matchedParts[1]
   }
-
-  // else we are provided margins in percentage form
-  // TODO: Decide what to do with percentage margins
-  return defaultPercentageMarginValue;
 };
 
 const borderStyleParser = (style) => {
@@ -459,13 +478,13 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
       );
     }
     if (vNode.properties.style['font-size']) {
-      modifiedAttributes.fontSize = fixupFontSize(vNode.properties.style['font-size']);
+      modifiedAttributes.fontSize = fixupFontSize(vNode.properties.style['font-size'], docxDocumentInstance);
     }
     if (vNode.properties.style['line-height']) {
       modifiedAttributes.lineHeight = fixupLineHeight(
         vNode.properties.style['line-height'],
         vNode.properties.style['font-size']
-          ? fixupFontSize(vNode.properties.style['font-size'])
+          ? fixupFontSize(vNode.properties.style['font-size'], docxDocumentInstance)
           : null
       );
     }
@@ -1394,14 +1413,14 @@ const buildTableCellBorders = (tableCellBorder) => {
   return tableCellBordersFragment;
 };
 
-const buildTableCellWidth = (tableCellWidth) =>
+const buildTableCellWidth = (tableCellWidth, parentWidth) =>
   fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'tcW')
-    .att('@w', 'w', fixupColumnWidth(tableCellWidth))
+    .att('@w', 'w', fixupColumnWidth(tableCellWidth, parentWidth))
     .att('@w', 'type', 'dxa')
     .up();
 
-const buildTableCellProperties = (attributes) => {
+const buildTableCellProperties = (attributes, parentWidth) => {
   const tableCellPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
     'tcPr'
@@ -1443,7 +1462,7 @@ const buildTableCellProperties = (attributes) => {
           delete attributes.rowSpan;
           break;
         case 'width':
-          const widthFragment = buildTableCellWidth(attributes[key]);
+          const widthFragment = buildTableCellWidth(attributes[key], parentWidth);
           tableCellPropertiesFragment.import(widthFragment);
           delete attributes.width;
           break;
@@ -2093,7 +2112,19 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
   }
 };
 
-const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDocumentInstance, rowIndexEquivalent, columnIndexEquivalent) => {
+/**
+ * 
+ * @param {any} vNode Current working XML node
+ * @param {obj} attributes Attributes of the node
+ * @param {map} rowSpanMap Map denoting the row span for table cells
+ * @param {obj} columnIndex Holds the index of the current column
+ * @param {any} docxDocumentInstance Instance of the docx document
+ * @param {string} rowIndexEquivalent Denotes the row in which table cell is present
+ * @param {string} columnIndexEquivalent Denotes the column in which table cell is present
+ * @param {number} parentWidth Width of the parent element
+ * @returns 
+ */
+const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDocumentInstance, rowIndexEquivalent, columnIndexEquivalent, parentWidth) => {
   const tableCellFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tc');
   let modifiedAttributes = { ...attributes };
 
@@ -2304,7 +2335,7 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
 
     }
   }
-  const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes);
+  const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
@@ -2362,7 +2393,16 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
   return tableCellFragment;
 };
 
-const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOptions) => {
+/**
+ * 
+ * @param {map} rowSpanMap map denoting the row span for table cells
+ * @param {obj} columnIndex obj denoting the index of the current column
+ * @param {obj} attributes attributes of the table cell
+ * @param {obj} tableBorderOptions options for the table border
+ * @param {number} parentWidth width of the parent element
+ * @returns {any} Returns the row span cell fragment
+ */
+const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOptions, parentWidth) => {
   const rowSpanCellFragments = [];
   let spanObject = rowSpanMap.get(columnIndex.index);
   while (spanObject && spanObject.rowSpan) {
@@ -2457,7 +2497,7 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       }
     }
 
-    const tableCellPropertiesFragment = buildTableCellProperties(cellProperties);
+    const tableCellPropertiesFragment = buildTableCellProperties(cellProperties, parentWidth);
     rowSpanCellFragment.import(tableCellPropertiesFragment);
 
     const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
@@ -2514,6 +2554,16 @@ const buildTableRowProperties = (attributes) => {
   return tableRowPropertiesFragment;
 };
 
+/**
+ * Builds a table row fragment
+ * 
+ * @param {any} vNode  Denotes the current xml node
+ * @param {obj} attributes Attributes of the node
+ * @param {map} rowSpanMap stores the row span of the cells
+ * @param {any} docxDocumentInstance Denotes the docx Document instance
+ * @param {string} rowIndexEquivalent Denotes the row in which table cell is present
+ * @returns {any} Returns the table row fragment
+ */
 const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance, rowIndexEquivalent) => {
   const tableRowFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tr');
   const modifiedAttributes = cloneDeep(attributes)
@@ -2527,6 +2577,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
         vNode.children[0].properties.style &&
         vNode.children[0].properties.style.height)
     ) {
+      const tableHeight = modifiedAttributes.height || docxDocumentInstance.pageSize.height
       modifiedAttributes.tableRowHeight = fixupRowHeight(
         (vNode.properties.style && vNode.properties.style.height) ||
         (vNode.children[0] &&
@@ -2534,7 +2585,8 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
           vNode.children[0].properties.style &&
           vNode.children[0].properties.style.height
           ? vNode.children[0].properties.style.height
-          : undefined)
+          : undefined),
+        tableHeight
       );
     }
     if (vNode.properties.style) {
@@ -2548,6 +2600,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
 
   const columnIndex = { index: 0 };
 
+  const tableWidth = modifiedAttributes.width;
   if (vNodeHasChildren(vNode)) {
     const tableColumns = vNode.children.filter((childVNode) =>
       ['td', 'th'].includes(childVNode.tagName)
@@ -2556,7 +2609,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
 
     // eslint-disable-next-line no-restricted-syntax
     for (const column of tableColumns) {
-      const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders);
+      const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders, tableWidth);
       if (Array.isArray(rowSpanCellFragments)) {
         for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
           const rowSpanCellFragment = rowSpanCellFragments[iteratorIndex];
@@ -2572,7 +2625,8 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
         columnIndex,
         docxDocumentInstance,
         rowIndexEquivalent,
-        columnIndexEquivalent
+        columnIndexEquivalent,
+        tableWidth
       );
       columnIndex.index++;
 
@@ -2581,7 +2635,7 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
   }
 
   if (columnIndex.index < rowSpanMap.size) {
-    const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders);
+    const rowSpanCellFragments = buildRowSpanCell(rowSpanMap, columnIndex, modifiedAttributes, docxDocumentInstance.tableBorders, tableWidth);
     if (Array.isArray(rowSpanCellFragments)) {
       for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
         const rowSpanCellFragment = rowSpanCellFragments[iteratorIndex];
@@ -2948,6 +3002,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
     }
     if (modifiedAttributes.width) {
       modifiedAttributes.width = Math.min(modifiedAttributes.width, attributes.maximumWidth);
+    }
+
+    if (tableStyles.height) {
+      modifiedAttributes.height = fixupRowHeight(tableStyles.height, docxDocumentInstance.pageSize.height);
     }
   }
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
