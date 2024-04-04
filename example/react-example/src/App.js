@@ -1201,6 +1201,60 @@ const htmlString = `<!DOCTYPE html>
                 </tr>
             </tbody>
         </table>
+        <p>
+        Adding one table with height in px and one with height in percentages
+        Percentage height table
+        </p>
+        <table style="border-collapse: collapse; width: 100.05%; height: 75%;" border="1">
+            <colgroup>
+                <col style="width: 33.2506%;">
+                <col style="width: 33.2506%;">
+                <col style="width: 33.2506%;">
+            </colgroup>
+            <tbody>
+                <tr style="height: 10%;">
+                    <td>1,1</td>
+                    <td>1,2</td>
+                    <td>1,3</td>
+                </tr>
+                <tr style="height: 20%;">
+                    <td>2,1</td>
+                    <td>2,2</td>
+                    <td>2,3</td>
+                </tr>
+                <tr style="height: 85px;">
+                    <td>3,1</td>
+                    <td>3,2</td>
+                    <td>3,3</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>px Height table</p>
+        <table style="border-collapse: collapse; width: 100.05%; height: 178px;" border="1">
+            <colgroup>
+                <col style="width: 33.2506%;">
+                <col style="width: 33.2506%;">
+                <col style="width: 33.2506%;">
+            </colgroup>
+            <tbody>
+                <tr style="height: 10%;">
+                    <td>1,1</td>
+                    <td>1,2</td>
+                    <td>1,3</td>
+                </tr>
+                <tr style="height: 20%;">
+                    <td>2,1</td>
+                    <td>2,2</td>
+                    <td>2,3</td>
+                </tr>
+                <tr style="height: 85px;">
+                    <td>3,1</td>
+                    <td>3,2</td>
+                    <td>3,3</td>
+                </tr>
+            </tbody>
+        </table>
+
         <p>Here we start with Images Case</p>
         <pre>
         Inside Pre tag
