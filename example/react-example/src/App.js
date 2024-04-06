@@ -1369,6 +1369,37 @@ const htmlString = `<!DOCTYPE html>
             <strong> Inside a and strong</strong>
             <i>Inside italics and a</i>
         </a>
+
+        <p>Here we check for text-transform properties</p>
+        <p style="text-transform: uppercase">
+            Adding one value
+            <span style="text-transform:lowercase;">this is lowercase </span>
+            <strong style="text-transform:capitalize;">
+                <i style="text-transform:uppercase">this capitalized </i>
+                <span style="color: blue">Hello world </span>
+                <span>capitalize should happen inside</span>
+            </strong>
+            <span>Uppercase not other changes</span>
+        </p>
+
+        <p style="text-transform: uppercase">
+            Adding one value
+            <span style="text-transform:lowercase;">this is lowercase </span>
+            <strong style="text-transform:capitalize;">
+                <i >this capitalized </i>
+                <span style="color: blue">heLLo world </span>
+                <span>capitalize should happen  inside</span>
+            </strong>
+            <span>Uppercase not other changes</span>
+        </p>
+
+        <p style="text-transform: uppercase">
+            Adding one value <span style="text-transform:lowercase;"> this is lowercase </span> <strong style="text-transform:capitalize;">
+            <i>this capitalized</i>
+            <span style="color: blue">Hello world</span>
+            <span>no change should happen here</span>
+        </strong>
+        </p>
     </body>
 </html>`;
 
