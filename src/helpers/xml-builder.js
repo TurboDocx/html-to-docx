@@ -2586,6 +2586,36 @@ const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance
     if (vNode.properties.style) {
       // na in columnIndexEquivalent means not applicable and we are calling tableCellBorder from row
       fixupTableCellBorder(vNode, modifiedAttributes, docxDocumentInstance.tableBorders, rowIndexEquivalent, 'na');
+
+      // if there are some styles provided to table row
+      // then we need to pass these to the corresponding cells
+      // if cells have same style attributes, they will get overridden with the cell values
+      // else cells get these properties as happens in html
+      // TODO: Might need to add more properties. As of writing, was able to find only these
+      const tableRowStyles = vNode.properties.style
+      const tableRowStlyeKeys = Object.keys(tableRowStyles)
+
+      for (const tableRowStlyeKey of tableRowStlyeKeys) {
+        const tableRowStyleValue = tableRowStyles[tableRowStlyeKey]
+        if (tableRowStlyeKey === 'background-color' || tableRowStlyeKey === 'background') {
+          if (!colorlessColors.includes(tableRowStyleValue)) {
+            modifiedAttributes.backgroundColor = fixupColorCode(tableRowStyleValue);
+          }
+        } else if (tableRowStlyeKey === 'color') {
+          if (!colorlessColors.includes(tableRowStyleValue)) {
+            modifiedAttributes.color = fixupColorCode(tableRowStyleValue);
+          }
+        } else if (tableRowStlyeKey === 'font-size') {
+          modifiedAttributes.fontSize = fixupFontSize(tableRowStyleValue, docxDocumentInstance);
+        } else if (tableRowStlyeKey === 'font-family') {
+          modifiedAttributes.font = docxDocumentInstance.createFont(tableRowStyleValue);
+        } else if (tableRowStlyeKey === 'font-weight') {
+          // FIXME: remove bold check when other font weights are handled.
+          if (tableRowStyleValue === 'bold') {
+            modifiedAttributes.strong = tableRowStyleValue;
+          }
+        }
+      }
     }
   }
 

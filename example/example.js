@@ -1403,6 +1403,158 @@ const htmlString = `<!DOCTYPE html>
             <span>no change should happen here</span>
         </strong>
         </p>
+
+        <p>Some tr styles cases</p>
+        <p>Color property only passed to tr</p>
+        <div align="left">
+            <table style="border: none rgb(0, 0, 0); border-collapse: collapse;" border="1">
+                <colgroup>
+                    <col style="width: 403px;">
+                    <col style="width: 221px;">
+                </colgroup>
+                <tbody>
+                    <tr style="background-color: rgb(0, 0, 0);">
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(243, 243, 243);">Service</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(243, 243, 243);">Rate</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 1</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$175/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 2</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$145/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 3</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$125/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 4</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$105/hr</span></p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>Common properties and some only to tr</p>
+        <div align="left">
+            <table style="border: none rgb(0, 0, 0); border-collapse: collapse;" border="1">
+                <colgroup>
+                    <col style="width: 403px;">
+                    <col style="width: 221px;">
+                </colgroup>
+                <tbody>
+                    <tr style="background-color: rgb(0, 0, 0); color:purple; font-family: cursive; font-size: 16pt; font-weight:bold;">
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; color: rgb(243, 243, 243);">Service</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(243, 243, 243);">Rate</span></p>
+                        </td>
+                    </tr>
+                    <tr style="color:aqua">
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif;">Value 1</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$175/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr style="font-size: 20pt">
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 2</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style=" font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$145/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 3</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$125/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 4</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$105/hr</span></p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>Checking Rowspan with style attribute to tr</p>
+        <div align="left">
+            <table style="border: none rgb(0, 0, 0); border-collapse: collapse;" border="1">
+                <colgroup>
+                    <col style="width: 403px;">
+                    <col style="width: 221px;">
+                </colgroup>
+                <tbody>
+                    <tr style="background-color: rgb(0, 0, 0); color:purple; font-family: cursive; font-size: 16pt; font-weight:bold;">
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);" rowspan="2">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; color: rgb(243, 243, 243);">Service</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(243, 243, 243);">Rate</span></p>
+                        </td>
+                    </tr>
+                    <tr style="color:aqua">
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif;">Value 1</span></p>
+                        </td>
+                    </tr>
+                    <tr style="font-size: 20pt">
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 2</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style=" font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$145/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 3</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$125/hr</span></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">Value 4</span></p>
+                        </td>
+                        <td style="vertical-align: top; border: 1pt solid rgb(0, 0, 0);">
+                            <p style="line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;"><span style="font-size: 11pt; font-family: 'Open Sans', sans-serif; color: rgb(105, 93, 70);">$105/hr</span></p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </body>
 </html>`;
 
