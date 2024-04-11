@@ -1555,26 +1555,26 @@ const htmlString = `<!DOCTYPE html>
                 </tbody>
             </table>
 
-            <p>Some list examples here </p>
-            <ul type="1">
-            <li><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Quarterly - up to two (2) days of Workshop sessions with {customer} to be used for advisory services and working sessions such as:</span>
-                <ul type="a">
-                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Supportability Review</span></li>
-                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Technology Update Roadmap</span></li>
-                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Design &amp; Planning Sessions</span></li>
-                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Hands on Working Sessions</span></li>
-                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Mini-Projects</li>
-                </ul>
-            </li>
-            <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Monthly - One (1) Hour Sync with {customer} team</span>
-                <ul type="1">
-                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">monthly update tailored to {customer}'s environment</span></li>
-                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Open Q &amp; A</span></li>
-                </ul>
-            </li>
-            <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Annual Environment Health Check with Findings &amp; Recommendations</span></li>
-        </ul>
+        <p>Some list examples here </p>
         </div>
+        <ul type="1">
+            <li><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Heading 1</span>
+                <ul type="a">
+                    <li style="font-family: 'Times New Roman', Times, serif; line-height:125%"><span style="font-family: 'Times New Roman', Times, serif; font-size: 12pt;">Sub bullet 1</span></li>
+                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height:32px"><span>Sub bullet 2</span></li>
+                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Sub bullet 3</span></li>
+                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt;"><span style="font-family: 'Comic Sans MS', cursive; font-size: 12pt; line-height:64pt;">sub bullet 4</span></li>
+                    <li style="font-family: 'Lucida Console', 'Courier New', monospace; font-size: 12pt; line-height:5in">Sub bullet 5</li>
+                </ul>
+            </li>
+            <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Heading 2</span>6
+                <ul type="1">
+                    <li style="font-size: 12pt; line-height: 1.15;"><span style=" font-size: 12pt;">Sub bullet 6</span></li>
+                    <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Sub bullet 6</span></li>
+                </ul>
+            </li>
+            <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Heading 3</span></li>
+        </ul>
     </body>
 </html>`;
 
@@ -1593,3 +1593,4 @@ const htmlString = `<!DOCTYPE html>
         console.log('Docx file created successfully');
     });
 })();
+
