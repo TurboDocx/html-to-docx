@@ -18,6 +18,7 @@ import { imageType, internalRelationship } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { getMimeType } from '../utils/image';
+import { cloneDeep } from 'lodash';
 
 const convertHTML = HTMLToVDOM({
   VNode,
@@ -165,6 +166,8 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                     : [childVNode]
                   : []
             );
+
+            childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
 
             const generatedNode = isVNode(childVNode)
               ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
