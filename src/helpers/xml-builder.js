@@ -365,6 +365,24 @@ const fixupLineHeight = (lineHeight, fontSize) => {
 
 // eslint-disable-next-line consistent-return
 const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
+  if (fontSizeString === 'xx-small') {
+    fontSizeString = '9px';
+  } else if (fontSizeString === 'x-small') {
+    fontSizeString = '10px';
+  } else if (fontSizeString === 'small') {
+    fontSizeString = '13px';
+  } else if (fontSizeString === 'medium') {
+    fontSizeString = '16px';
+  } else if (fontSizeString === 'large') {
+    fontSizeString = '18px';
+  } else if (fontSizeString === 'x-large') {
+    fontSizeString = '24px';
+  } else if (fontSizeString === 'xx-large') {
+    fontSizeString = '32px';
+  } else if (fontSizeString === 'xxx-large') {
+    fontSizeString = '48px';
+  }
+
   if (pointRegex.test(fontSizeString)) {
     const matchedParts = fontSizeString.match(pointRegex);
     // convert point to half point
@@ -385,6 +403,7 @@ const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
     return (matchedParts[1] * docxDocumentInstance.fontSize) / 100;
   }
 };
+
 
 // eslint-disable-next-line consistent-return
 const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
