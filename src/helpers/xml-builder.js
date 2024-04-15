@@ -3051,23 +3051,26 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
   tableFragment.import(tablePropertiesFragment);
 
+  let isTableGridBuilt = false;
   const rowSpanMap = new Map();
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
-      if (childVNode.tagName === 'colgroup') {
+      if (childVNode.tagName === 'colgroup' && !isTableGridBuilt) {
         const tableGridFragment = buildTableGrid(childVNode, modifiedAttributes);
         tableFragment.import(tableGridFragment);
+        isTableGridBuilt = true;
       } else if (childVNode.tagName === 'thead') {
         for (let iteratorIndex = 0; iteratorIndex < childVNode.children.length; iteratorIndex++) {
           const grandChildVNode = childVNode.children[iteratorIndex];
           if (grandChildVNode.tagName === 'tr') {
-            if (iteratorIndex === 0) {
+            if (iteratorIndex === 0 && !isTableGridBuilt) {
               const tableGridFragment = buildTableGridFromTableRow(
                 grandChildVNode,
                 modifiedAttributes
               );
               tableFragment.import(tableGridFragment);
+              isTableGridBuilt = false;
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,
@@ -3083,12 +3086,13 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         for (let iteratorIndex = 0; iteratorIndex < childVNode.children.length; iteratorIndex++) {
           const grandChildVNode = childVNode.children[iteratorIndex];
           if (grandChildVNode.tagName === 'tr') {
-            if (iteratorIndex === 0) {
+            if (iteratorIndex === 0 && !isTableGridBuilt) {
               const tableGridFragment = buildTableGridFromTableRow(
                 grandChildVNode,
                 modifiedAttributes
               );
               tableFragment.import(tableGridFragment);
+              isTableGridBuilt = true;
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,
