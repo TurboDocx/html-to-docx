@@ -263,13 +263,29 @@ const fixupLineHeight = (lineHeight, fontSize) => {
   if (!isNaN(lineHeight)) {
     if (fontSize) {
       const actualLineHeight = +lineHeight * fontSize;
-
+      
       return HIPToTWIP(actualLineHeight);
     } else {
       // 240 TWIP or 12 point is default line height
       return +lineHeight * 240;
     }
-  } else {
+  } else if (pointRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(pointRegex);
+    return pointToTWIP(matchedParts[1]);
+  } else if (pixelRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(pixelRegex);
+    return pixelToTWIP(matchedParts[1]);
+  } else if (cmRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(cmRegex);
+    return cmToTWIP(matchedParts[1]);
+  } else if (inchRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(inchRegex);
+    return inchToTWIP(matchedParts[1]);
+  } else if (percentageRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(percentageRegex);
+    return HIPToTWIP((matchedParts[1] * fontSize) / 100);
+  } 
+  else {
     // 240 TWIP or 12 point is default line height
     return 240;
   }

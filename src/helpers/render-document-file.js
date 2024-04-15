@@ -17,6 +17,8 @@ import namespaces from '../namespaces';
 import { imageType, internalRelationship } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
+import { getMimeType } from '../utils/image';
+import { cloneDeep } from 'lodash';
 
 const convertHTML = HTMLToVDOM({
   VNode,
@@ -140,42 +142,46 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
           ) {
             accumulator[accumulator.length - 1].node.children.push(childVNode);
           } else {
+            const properties =
+            {
+              attributes: {
+                ...(parentVNodeProperties?.attributes || {}),
+                ...(childVNode?.properties?.attributes || {}),
+              },
+              style: {
+                ...(parentVNodeProperties?.style || {}),
+                ...(childVNode?.properties?.style || {}),
+              },
+            };
             const paragraphVNode = new VNode(
               'p',
-              isVNode(childVNode) && childVNode.properties && parentVNodeProperties
-                ? {
-                    attributes: {
-                      ...(parentVNodeProperties.attributes || {}),
-                      ...(childVNode.properties.attributes || {}),
-                    },
-                    style: {
-                      ...(parentVNodeProperties.style || {}),
-                      ...(childVNode.properties.style || {}),
-                    },
-                  }
-                : null, // copy properties for styling purposes
-
+              properties, // copy properties for styling purposes
               // eslint-disable-next-line no-nested-ternary
               isVText(childVNode)
                 ? [childVNode]
                 : // eslint-disable-next-line no-nested-ternary
                 isVNode(childVNode)
-                ? childVNode.tagName.toLowerCase() === 'li'
-                  ? [...childVNode.children]
-                  : [childVNode]
-                : []
+                  ? childVNode.tagName.toLowerCase() === 'li'
+                    ? [...childVNode.children]
+                    : [childVNode]
+                  : []
             );
-            accumulator.push({
-              // eslint-disable-next-line prettier/prettier, no-nested-ternary
-              node: isVNode(childVNode)
-                ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-                  childVNode.tagName.toLowerCase() === 'li'
-                  ? childVNode
-                  : childVNode.tagName.toLowerCase() !== 'p'
+
+            childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+
+            const generatedNode = isVNode(childVNode)
+              ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
+              childVNode.tagName.toLowerCase() === 'li'
+                ? childVNode
+                : childVNode.tagName.toLowerCase() !== 'p'
                   ? paragraphVNode
                   : childVNode
-                : // eslint-disable-next-line prettier/prettier
-                  paragraphVNode,
+              : // eslint-disable-next-line prettier/prettier
+              paragraphVNode;
+
+            accumulator.push({
+              // eslint-disable-next-line prettier/prettier, no-nested-ternary
+              node: generatedNode,
               level: tempVNodeObject.level,
               type: tempVNodeObject.type,
               numberingId: tempVNodeObject.numberingId,
