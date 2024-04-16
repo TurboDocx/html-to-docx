@@ -365,6 +365,8 @@ const fixupLineHeight = (lineHeight, fontSize) => {
 
 // eslint-disable-next-line consistent-return
 const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
+  // https://developer.mozilla.org/en-US/docs/Web/CSS/font-size
+  // Checked manually which size generates what px value and found the below
   if (fontSizeString === 'xx-small') {
     fontSizeString = '9px';
   } else if (fontSizeString === 'x-small') {
@@ -381,6 +383,18 @@ const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
     fontSizeString = '32px';
   } else if (fontSizeString === 'xxx-large') {
     fontSizeString = '48px';
+  }
+
+  if (fontSizeString === 'smaller') {
+    // for this case, font-size becomes 5/6 of the parent font size.
+    // since we dont have access to immediate parent size
+    // we will use the default font size given to us
+    return Math.floor((5 * docxDocumentInstance.fontSize) / 6);
+  } else if (fontSizeString === 'larger') {
+    // for this case, font-size inceases by 20% of the parent font size.
+    // since we dont have access to immediate parent size
+    // we will use the default font size given to us
+    return Math.floor(docxDocumentInstance.fontSize * 1.2);
   }
 
   if (pointRegex.test(fontSizeString)) {
@@ -403,7 +417,6 @@ const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
     return (matchedParts[1] * docxDocumentInstance.fontSize) / 100;
   }
 };
-
 
 // eslint-disable-next-line consistent-return
 const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
