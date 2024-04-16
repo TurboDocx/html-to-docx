@@ -3051,6 +3051,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
   tableFragment.import(tablePropertiesFragment);
 
+  // We need to avoid building table grid multiple times
+  // So we use a bool variable to check if in for loop
+  // have we already built the grid, and add conditions accordingly
+  // multiple grids can cause issue with table rendering
   let isTableGridBuilt = false;
   const rowSpanMap = new Map();
   if (vNodeHasChildren(vNode)) {
