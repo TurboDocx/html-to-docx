@@ -2058,7 +2058,7 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
       if (rowIndexEquivalentLast !== -1) continue
       attributes.tableCellBorder.colors = { ...attributes.tableCellBorder.colors, bottom: fixupColorCode(tableCellStyles[tableCellStyle]) };
     } else if (tableCellStyle === 'border-style') {
-      const strokes = { ...setUpDirectionalBorderStroke(borderStroke) };
+      const strokes = { ...setUpDirectionalBorderStroke(borderStyleParser(tableCellStyles[tableCellStyle])) };
       if (rowIndexEquivalentFirst !== -1) {
         delete strokes.top
       }
