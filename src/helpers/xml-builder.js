@@ -2058,7 +2058,7 @@ const fixupTableCellBorder = (vNode, attributes, tableBorderOptions = {}, rowInd
       if (rowIndexEquivalentLast !== -1) continue
       attributes.tableCellBorder.colors = { ...attributes.tableCellBorder.colors, bottom: fixupColorCode(tableCellStyles[tableCellStyle]) };
     } else if (tableCellStyle === 'border-style') {
-      const strokes = { ...setUpDirectionalBorderStroke(borderStroke) };
+      const strokes = { ...setUpDirectionalBorderStroke(borderStyleParser(tableCellStyles[tableCellStyle])) };
       if (rowIndexEquivalentFirst !== -1) {
         delete strokes.top
       }
@@ -3051,23 +3051,30 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
   tableFragment.import(tablePropertiesFragment);
 
+  // We need to avoid building table grid multiple times
+  // So we use a bool variable to check if in for loop
+  // have we already built the grid, and add conditions accordingly
+  // multiple grids can cause issue with table rendering
+  let isTableGridBuilt = false;
   const rowSpanMap = new Map();
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
-      if (childVNode.tagName === 'colgroup') {
+      if (childVNode.tagName === 'colgroup' && !isTableGridBuilt) {
         const tableGridFragment = buildTableGrid(childVNode, modifiedAttributes);
         tableFragment.import(tableGridFragment);
+        isTableGridBuilt = true;
       } else if (childVNode.tagName === 'thead') {
         for (let iteratorIndex = 0; iteratorIndex < childVNode.children.length; iteratorIndex++) {
           const grandChildVNode = childVNode.children[iteratorIndex];
           if (grandChildVNode.tagName === 'tr') {
-            if (iteratorIndex === 0) {
+            if (iteratorIndex === 0 && !isTableGridBuilt) {
               const tableGridFragment = buildTableGridFromTableRow(
                 grandChildVNode,
                 modifiedAttributes
               );
               tableFragment.import(tableGridFragment);
+              isTableGridBuilt = false;
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,
@@ -3083,12 +3090,13 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         for (let iteratorIndex = 0; iteratorIndex < childVNode.children.length; iteratorIndex++) {
           const grandChildVNode = childVNode.children[iteratorIndex];
           if (grandChildVNode.tagName === 'tr') {
-            if (iteratorIndex === 0) {
+            if (iteratorIndex === 0 && !isTableGridBuilt) {
               const tableGridFragment = buildTableGridFromTableRow(
                 grandChildVNode,
                 modifiedAttributes
               );
               tableFragment.import(tableGridFragment);
+              isTableGridBuilt = true;
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,
