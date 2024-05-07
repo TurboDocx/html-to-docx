@@ -256,6 +256,25 @@ const buildTextElement = (text) =>
     .txt(text)
     .up();
 
+const buildTextDecoration = (values) => {
+  if (values.length === 1) {
+    if (values[0] === 'underline') {
+      return buildUnderline();
+    } else if (values[0] === 'line-through') {
+      return buildStrike();
+    }
+  }
+
+  // validValues has both 'underline' and 'line-through'
+  return fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'u')
+    .att('@w', 'val', 'single')
+    .up()
+    .ele('@w', 'strike')
+    .att('@w', 'val', true)
+    .up();
+};
+
 // eslint-disable-next-line consistent-return
 const fixupLineHeight = (lineHeight, fontSize) => {
   // FIXME: If line height is anything other than a number
@@ -559,6 +578,8 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         modifiedAttributes.width = vNodeStyle['width'];
       } else if (vNodeStyleKey === 'text-transform') {
         modifiedAttributes.textTransform = vNodeStyleValue;
+      } else if (vNodeStyleKey === 'text-decoration' || vNodeStyleKey === 'text-decoration-line') {
+        modifiedAttributes.textDecoration = vNodeStyleValue;
       }
     }
   }
@@ -618,6 +639,8 @@ const buildFormatting = (htmlTag, options) => {
       return buildFontSize(options && options.fontSize ? options.fontSize : 10);
     case 'hyperlink':
       return buildRunStyleFragment('Hyperlink');
+    case 'textDecoration':
+      return buildTextDecoration(options && options.textDecoration ? options.textDecoration : 'none');
   }
 
   return null;
@@ -636,9 +659,23 @@ const buildRunProperties = (attributes) => {
         options[key] = attributes[key];
       }
 
-      const formattingFragment = buildFormatting(key, options);
-      if (formattingFragment) {
-        runPropertiesFragment.import(formattingFragment);
+      if (key === 'textDecoration') {
+        // skipping values that have 'overline'(no support in OOXML) or empty values
+        const validValues = attributes[key]
+          .split(' ')
+          .filter((value) => value !== 'overline' && value.trim() !== '');
+        if (validValues.length !== 0) {
+          options.textDecoration = validValues;
+        }
+      }
+
+      // check if there are no attributes
+      if (Object.keys(options).length !== 0) {
+        const formattingFragment = buildFormatting(key, options);
+
+        if (formattingFragment) {
+          runPropertiesFragment.import(formattingFragment);
+        }
       }
     });
   }

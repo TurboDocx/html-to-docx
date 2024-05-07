@@ -1404,6 +1404,27 @@ const htmlString = `<!DOCTYPE html>
         </strong>
         </p>
 
+        <div>
+            <p>
+                Here we check for text-decoration properties:
+                <p style="text-decoration: underline">
+                    This is an underline text.
+                </p>
+                <strong style="text-decoration: overline">
+                    This is an overline text in strong tag.
+                </strong>
+                <span style="text-decoration: line-through">
+                    This is line-through text in span tag.
+                </span>
+                <p style="text-decoration: underline overline line-through">
+                    This line has underline, overline and line-through styles in p tag.
+                </p>
+                <p style="text-decoration: ">
+                    This line has empty text-decoration.
+                </p>
+            </p>
+        </div>
+
         <p>Some tr styles cases</p>
         <p>Color property only passed to tr</p>
         <div align="left">
