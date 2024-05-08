@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable radix */
 /* eslint-disable no-param-reassign */
@@ -7,8 +8,8 @@
 import { fragment } from 'xmlbuilder2';
 import isVNode from 'virtual-dom/vnode/is-vnode';
 import isVText from 'virtual-dom/vnode/is-vtext';
-import colorNames from 'color-name';
-import { cloneDeep } from 'lodash';
+import colorNames, { cadetblue } from 'color-name';
+import { cloneDeep, values } from 'lodash';
 import imageToBase64 from 'image-to-base64';
 import sizeOf from 'image-size';
 import { getMimeType } from '../utils/image'
@@ -87,7 +88,28 @@ const setBorderIndexEquivalent = (index, length) => {
   if (index === 0) return 'first';
   if (index === length - 1) return 'last';
   return 'middle';
-}
+};
+
+const isThickness = (value) =>
+  ['auto', 'from-text'].includes(value) ||
+  pointRegex.test(value) ||
+  pixelRegex.test(value) ||
+  cmRegex.test(value) ||
+  inchRegex.test(value) ||
+  percentageRegex.test(value);
+
+const isTextDecorationLine = (line) =>
+  ['overline', 'underline', 'line-through', 'blink', 'none'].includes(line);
+
+const isTextDecorationStyle = (style) =>
+  ['solid', 'dotted', 'double', 'dashed', 'wavy'].includes(style);
+
+const isColorCode = (colorCode) =>
+  Object.prototype.hasOwnProperty.call(colorNames, colorCode.toLowerCase()) ||
+  rgbRegex.test(colorCode) ||
+  hslRegex.test(colorCode) ||
+  hexRegex.test(colorCode) ||
+  hex3Regex.test(colorCode);
 
 // eslint-disable-next-line consistent-return
 const fixupColorCode = (colorCodeString) => {
@@ -256,23 +278,49 @@ const buildTextElement = (text) =>
     .txt(text)
     .up();
 
-const buildTextDecoration = (values) => {
-  if (values.length === 1) {
-    if (values[0] === 'underline') {
-      return buildUnderline();
-    } else if (values[0] === 'line-through') {
-      return buildStrike();
-    }
+const buildTextDecoration = (value) => {
+  console.log(value);
+  if (value.line === 'underline') {
+    return fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'u')
+      .att('@w', 'val', value.style ? value.style : 'single')
+      .att('@w', 'color', value.color ? value.color : '000000')
+      .up();
+  } else if (value.line === 'line-through') {
+    return fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'strike')
+      .att('@w', 'val', true)
+      .up();
   }
 
-  // validValues has both 'underline' and 'line-through'
+  // line has both 'underline' and 'line-through'
   return fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'u')
-    .att('@w', 'val', 'single')
+    .att('@w', 'val', value.style ? value.style : 'single')
+    .att('@w', 'color', value.color ? value.color : '000000')
     .up()
     .ele('@w', 'strike')
     .att('@w', 'val', true)
     .up();
+};
+
+const fixupTextDecorationStyle = (style) => {
+  if (['dotted', 'double'].includes(style)) {
+    return style;
+  }
+  const map = {
+    solid: 'single',
+    dashed: 'dash',
+    wavy: 'wave',
+  };
+  return map[style];
+};
+
+const fixupTextDecorationLine = (line) => {
+  if (['overline', 'blink'].includes(line)) {
+    return 'none';
+  }
+  return line;
 };
 
 // eslint-disable-next-line consistent-return
@@ -578,8 +626,42 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         modifiedAttributes.width = vNodeStyle['width'];
       } else if (vNodeStyleKey === 'text-transform') {
         modifiedAttributes.textTransform = vNodeStyleValue;
-      } else if (vNodeStyleKey === 'text-decoration' || vNodeStyleKey === 'text-decoration-line') {
-        modifiedAttributes.textDecoration = vNodeStyleValue;
+      } else if (vNodeStyleKey === 'text-decoration') {
+        const valueParts = vNodeStyleValue.split(' ').map((part) => part.toLowerCase());
+        const value = {};
+
+        // eslint-disable-next-line no-loop-func
+        valueParts.forEach((valuePart) => {
+          if (isColorCode(valuePart)) {
+            value.color = fixupColorCode(valuePart);
+          } else if (isTextDecorationStyle(valuePart)) {
+            value.style = fixupTextDecorationStyle(valuePart);
+          } else if (isTextDecorationLine(valuePart)) {
+            if (value && value.line) {
+              value.line = 'both';
+            } else {
+              value.line = fixupTextDecorationLine(valuePart);
+            }
+          }
+        });
+
+        if (value.line !== 'none') {
+          modifiedAttributes.textDecoration = value;
+        }
+      } else if (vNodeStyleKey === 'text-decoration-line') {
+        const value = fixupTextDecorationLine(vNodeStyleValue);
+        if (value !== 'none') {
+          modifiedAttributes.textDecoration = { line: value };
+        }
+      } else if (vNodeStyleKey === 'text-decoration-style') {
+        modifiedAttributes.textDecoration = { style: vNodeStyleValue, line: 'underline' };
+      } else if (vNodeStyleKey === 'text-decoration-color') {
+        modifiedAttributes.textDecoration = {
+          color: fixupColorCode(vNodeStyleValue),
+          line: 'underline',
+        };
+      } else if (vNodeStyleKey === 'text-shadow') {
+        modifiedAttributes.textShadow = vNodeStyleValue;
       }
     }
   }
@@ -640,7 +722,7 @@ const buildFormatting = (htmlTag, options) => {
     case 'hyperlink':
       return buildRunStyleFragment('Hyperlink');
     case 'textDecoration':
-      return buildTextDecoration(options && options.textDecoration ? options.textDecoration : 'none');
+      return buildTextDecoration(options && options.textDecoration ? options.textDecoration : {});
   }
 
   return null;
@@ -660,22 +742,12 @@ const buildRunProperties = (attributes) => {
       }
 
       if (key === 'textDecoration') {
-        // skipping values that have 'overline'(no support in OOXML) or empty values
-        const validValues = attributes[key]
-          .split(' ')
-          .filter((value) => value !== 'overline' && value.trim() !== '');
-        if (validValues.length !== 0) {
-          options.textDecoration = validValues;
-        }
+        options.textDecoration = attributes[key];
       }
 
-      // check if there are no attributes
-      if (Object.keys(options).length !== 0) {
-        const formattingFragment = buildFormatting(key, options);
-
-        if (formattingFragment) {
-          runPropertiesFragment.import(formattingFragment);
-        }
+      const formattingFragment = buildFormatting(key, options);
+      if (formattingFragment) {
+        runPropertiesFragment.import(formattingFragment);
       }
     });
   }
