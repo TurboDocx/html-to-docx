@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable radix */
 /* eslint-disable no-param-reassign */
@@ -279,7 +278,6 @@ const buildTextElement = (text) =>
     .up();
 
 const buildTextDecoration = (value) => {
-  console.log(value);
   if (value.line === 'underline') {
     return fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'u')
@@ -304,6 +302,7 @@ const buildTextDecoration = (value) => {
     .up();
 };
 
+// maps html text-decoration-style attribute values to ooxml values
 const fixupTextDecorationStyle = (style) => {
   if (['dotted', 'double'].includes(style)) {
     return style;
@@ -316,6 +315,7 @@ const fixupTextDecorationStyle = (style) => {
   return map[style];
 };
 
+// maps html text-decoration-line attribute values to ooxml values
 const fixupTextDecorationLine = (line) => {
   if (['overline', 'blink'].includes(line)) {
     return 'none';
@@ -631,6 +631,7 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         const value = {};
 
         // eslint-disable-next-line no-loop-func
+        // mapping each value to specific property of text-decoration
         valueParts.forEach((valuePart) => {
           if (isColorCode(valuePart)) {
             value.color = fixupColorCode(valuePart);
