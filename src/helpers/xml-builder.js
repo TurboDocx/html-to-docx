@@ -7,8 +7,8 @@
 import { fragment } from 'xmlbuilder2';
 import isVNode from 'virtual-dom/vnode/is-vnode';
 import isVText from 'virtual-dom/vnode/is-vtext';
-import colorNames, { cadetblue } from 'color-name';
-import { cloneDeep, values } from 'lodash';
+import colorNames from 'color-name';
+import { cloneDeep } from 'lodash';
 import imageToBase64 from 'image-to-base64';
 import sizeOf from 'image-size';
 import { getMimeType } from '../utils/image'
@@ -628,7 +628,11 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         modifiedAttributes.textTransform = vNodeStyleValue;
       } else if (vNodeStyleKey === 'text-decoration') {
         const valueParts = vNodeStyleValue.split(' ').map((part) => part.toLowerCase());
-        const value = {};
+        let value = {};
+
+        if (modifiedAttributes.textDecoration) {
+          value = modifiedAttributes.textDecoration;
+        }
 
         // eslint-disable-next-line no-loop-func
         // mapping each value to specific property of text-decoration
@@ -638,10 +642,11 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           } else if (isTextDecorationStyle(valuePart)) {
             value.style = fixupTextDecorationStyle(valuePart);
           } else if (isTextDecorationLine(valuePart)) {
-            if (value && value.line) {
+            const newValue = fixupTextDecorationLine(valuePart);
+            if (value && value.line && value.line !== newValue) {
               value.line = 'both';
             } else {
-              value.line = fixupTextDecorationLine(valuePart);
+              value.line = newValue;
             }
           }
         });
@@ -1211,6 +1216,11 @@ const buildParagraphProperties = (attributes) => {
           paragraphPropertiesFragment.import(indentationFragment);
           // eslint-disable-next-line no-param-reassign
           delete attributes.indentation;
+          break;
+        case 'textDecoration':
+          const textDecorationFragment = buildTextDecoration(attributes[key]);
+          paragraphPropertiesFragment.import(textDecorationFragment);
+          // we don't delete attributes.textDecoration so that it could be inherited by children nodes.
           break;
       }
     });

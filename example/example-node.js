@@ -1428,6 +1428,12 @@ const htmlString = `<!DOCTYPE html>
                 <p style="text-decoration-color: orange">
                     This line has orange underline style in p tag.
                 </p>
+                <p style="text-decoration:underline orange">
+                    <span style="text-decoration: line-through red">
+                        Hey, here I lie within <strong style="text-decoration: overline;">the strong tag</strong>
+                        and now
+                    </span> oustide every tag
+                </p>
             </p>
         </div>
 
