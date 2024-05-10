@@ -302,6 +302,12 @@ const buildTextDecoration = (value) => {
     .up();
 };
 
+const buildTextShadow = () =>
+  fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'shadow')
+    .att('@w', 'val', true)
+    .up();
+
 // maps html text-decoration-style attribute values to ooxml values
 const fixupTextDecorationStyle = (style) => {
   if (['dotted', 'double'].includes(style)) {
@@ -667,7 +673,9 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           line: 'underline',
         };
       } else if (vNodeStyleKey === 'text-shadow') {
-        modifiedAttributes.textShadow = vNodeStyleValue;
+        if (vNodeStyleValue.trim() !== '' && vNodeStyleValue !== 'none') {
+          modifiedAttributes.textShadow = vNodeStyleValue;
+        }
       }
     }
   }
@@ -729,6 +737,8 @@ const buildFormatting = (htmlTag, options) => {
       return buildRunStyleFragment('Hyperlink');
     case 'textDecoration':
       return buildTextDecoration(options && options.textDecoration ? options.textDecoration : {});
+    case 'textShadow':
+      return buildTextShadow();
   }
 
   return null;
@@ -749,6 +759,10 @@ const buildRunProperties = (attributes) => {
 
       if (key === 'textDecoration') {
         options.textDecoration = attributes[key];
+      }
+
+      if (key === 'textShadow') {
+        options.textShadow = attributes[key];
       }
 
       const formattingFragment = buildFormatting(key, options);
