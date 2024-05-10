@@ -1437,6 +1437,13 @@ const htmlString = `<!DOCTYPE html>
             </p>
         </div>
 
+        <div>
+            <span style="text-shadow: 1px 1px 2px grey;">Add new domain</span> to Google Workspace
+            <p style="text-shadow: 1px 1px 2px grey;">This text has shadow.<strong> And this has shadow with strong tag.</strong> </p>
+            <p style="text-shadow:">This text has empty shadow property.</p>
+            <p style="text-shadow: none">This text has none shadow property.</p>
+        </div>
+
         <p>Some tr styles cases</p>
         <p>Color property only passed to tr</p>
         <div align="left">
