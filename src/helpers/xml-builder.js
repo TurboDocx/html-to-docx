@@ -87,7 +87,28 @@ const setBorderIndexEquivalent = (index, length) => {
   if (index === 0) return 'first';
   if (index === length - 1) return 'last';
   return 'middle';
-}
+};
+
+const isThickness = (value) =>
+  ['auto', 'from-text'].includes(value) ||
+  pointRegex.test(value) ||
+  pixelRegex.test(value) ||
+  cmRegex.test(value) ||
+  inchRegex.test(value) ||
+  percentageRegex.test(value);
+
+const isTextDecorationLine = (line) =>
+  ['overline', 'underline', 'line-through', 'blink', 'none'].includes(line);
+
+const isTextDecorationStyle = (style) =>
+  ['solid', 'dotted', 'double', 'dashed', 'wavy'].includes(style);
+
+const isColorCode = (colorCode) =>
+  Object.prototype.hasOwnProperty.call(colorNames, colorCode.toLowerCase()) ||
+  rgbRegex.test(colorCode) ||
+  hslRegex.test(colorCode) ||
+  hexRegex.test(colorCode) ||
+  hex3Regex.test(colorCode);
 
 // eslint-disable-next-line consistent-return
 const fixupColorCode = (colorCodeString) => {
@@ -255,6 +276,52 @@ const buildTextElement = (text) =>
     .att('@xml', 'space', 'preserve')
     .txt(text)
     .up();
+
+const buildTextDecoration = (value) => {
+  if (value.line === 'underline') {
+    return fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'u')
+      .att('@w', 'val', value.style ? value.style : 'single')
+      .att('@w', 'color', value.color ? value.color : '000000')
+      .up();
+  } else if (value.line === 'line-through') {
+    return fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'strike')
+      .att('@w', 'val', true)
+      .up();
+  }
+
+  // line has both 'underline' and 'line-through'
+  return fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'u')
+    .att('@w', 'val', value.style ? value.style : 'single')
+    .att('@w', 'color', value.color ? value.color : '000000')
+    .up()
+    .ele('@w', 'strike')
+    .att('@w', 'val', true)
+    .up();
+};
+
+// maps html text-decoration-style attribute values to ooxml values
+const fixupTextDecorationStyle = (style) => {
+  if (['dotted', 'double'].includes(style)) {
+    return style;
+  }
+  const map = {
+    solid: 'single',
+    dashed: 'dash',
+    wavy: 'wave',
+  };
+  return map[style];
+};
+
+// maps html text-decoration-line attribute values to ooxml values
+const fixupTextDecorationLine = (line) => {
+  if (['overline', 'blink'].includes(line)) {
+    return 'none';
+  }
+  return line;
+};
 
 // eslint-disable-next-line consistent-return
 const fixupLineHeight = (lineHeight, fontSize) => {
@@ -559,6 +626,48 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         modifiedAttributes.width = vNodeStyle['width'];
       } else if (vNodeStyleKey === 'text-transform') {
         modifiedAttributes.textTransform = vNodeStyleValue;
+      } else if (vNodeStyleKey === 'text-decoration') {
+        const valueParts = vNodeStyleValue.split(' ').map((part) => part.toLowerCase());
+        let value = {};
+
+        if (modifiedAttributes.textDecoration) {
+          value = modifiedAttributes.textDecoration;
+        }
+
+        // eslint-disable-next-line no-loop-func
+        // mapping each value to specific property of text-decoration
+        valueParts.forEach((valuePart) => {
+          if (isColorCode(valuePart)) {
+            value.color = fixupColorCode(valuePart);
+          } else if (isTextDecorationStyle(valuePart)) {
+            value.style = fixupTextDecorationStyle(valuePart);
+          } else if (isTextDecorationLine(valuePart)) {
+            const newValue = fixupTextDecorationLine(valuePart);
+            if (value && value.line && value.line !== newValue) {
+              value.line = 'both';
+            } else {
+              value.line = newValue;
+            }
+          }
+        });
+
+        if (value.line !== 'none') {
+          modifiedAttributes.textDecoration = value;
+        }
+      } else if (vNodeStyleKey === 'text-decoration-line') {
+        const value = fixupTextDecorationLine(vNodeStyleValue);
+        if (value !== 'none') {
+          modifiedAttributes.textDecoration = { line: value };
+        }
+      } else if (vNodeStyleKey === 'text-decoration-style') {
+        modifiedAttributes.textDecoration = { style: vNodeStyleValue, line: 'underline' };
+      } else if (vNodeStyleKey === 'text-decoration-color') {
+        modifiedAttributes.textDecoration = {
+          color: fixupColorCode(vNodeStyleValue),
+          line: 'underline',
+        };
+      } else if (vNodeStyleKey === 'text-shadow') {
+        modifiedAttributes.textShadow = vNodeStyleValue;
       }
     }
   }
@@ -618,6 +727,8 @@ const buildFormatting = (htmlTag, options) => {
       return buildFontSize(options && options.fontSize ? options.fontSize : 10);
     case 'hyperlink':
       return buildRunStyleFragment('Hyperlink');
+    case 'textDecoration':
+      return buildTextDecoration(options && options.textDecoration ? options.textDecoration : {});
   }
 
   return null;
@@ -634,6 +745,10 @@ const buildRunProperties = (attributes) => {
 
       if (key === 'fontSize' || key === 'font') {
         options[key] = attributes[key];
+      }
+
+      if (key === 'textDecoration') {
+        options.textDecoration = attributes[key];
       }
 
       const formattingFragment = buildFormatting(key, options);
@@ -1101,6 +1216,11 @@ const buildParagraphProperties = (attributes) => {
           paragraphPropertiesFragment.import(indentationFragment);
           // eslint-disable-next-line no-param-reassign
           delete attributes.indentation;
+          break;
+        case 'textDecoration':
+          const textDecorationFragment = buildTextDecoration(attributes[key]);
+          paragraphPropertiesFragment.import(textDecorationFragment);
+          // we don't delete attributes.textDecoration so that it could be inherited by children nodes.
           break;
       }
     });
