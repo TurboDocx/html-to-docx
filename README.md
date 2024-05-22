@@ -11,9 +11,7 @@ html-to-docx earlier used to use [libtidy] to clean up the html before parsing, 
 
 ### Disclaimer
 
-Even though there is an instance of html-to-docx running in production, please ensure that it covers all the cases that you might be encountering usually, since this is not a complete solution.
-
-Currently it doesn't work with browser directly, but it was tested against React.
+Even though there are instances of html-to-docx running in production, please ensure that it covers all the cases that you might be encountering usually, since this is coontinually evolving. Currently it doesn't work with browser directly, but it was tested against React.
 
 ## Installation
 
@@ -129,7 +127,7 @@ Please make sure to branch new branches off of develop for contribution.
 
 ## Support
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/privateOmega)
+[!["Proudly Sponsored and Maintained by TurboDocx"](https://image.typedream.com/cdn-cgi/image/width=1920,format=auto,fit=scale-down,quality=100/https://api.typedream.com/v0/document/public/de39171b-a5c9-49c5-bd9c-c2dfd5d632a2/2PZxyx12UwC5HrIA3p6lo16fCms_Group_16_1_.png)](https://www.TurboDocx.com)
 
 ## License
 
@@ -157,8 +155,8 @@ MIT
 
 ## Contributors
 
-<a href="https://github.com/privateomega/html-to-docx/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=privateomega/html-to-docx" />
+<a href="https://github.com/TurboDocx/html-to-docx/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=turbodocx/html-to-docx" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
