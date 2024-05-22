@@ -1,4 +1,8 @@
 ### Node ###
+
+# Output Example.docx
+*.docx
+
 # Logs
 logs
 *.log
