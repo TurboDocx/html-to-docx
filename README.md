@@ -1,6 +1,6 @@
 ![TurboDocx](./banner.png)
 
-html-to-docx by TurboDocx
+html-to-docx
 ============
 [![NPM Version][npm-image]][npm-url]
 
