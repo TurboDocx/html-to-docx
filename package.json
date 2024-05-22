@@ -1,6 +1,6 @@
 {
-  "name": "html-to-docx",
-  "version": "1.1.2",
+  "name": "@turbodocx/html-to-docx",
+  "version": "1.9.1",
   "description": "HTML to DOCX converter",
   "keywords": [
     "html",
@@ -24,9 +24,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/privateOmega/html-to-docx.git"
+    "url": "git+https://github.com/turbodocx/html-to-docx.git"
   },
-  "author": "privateOmega <privateOmega@protonmail.com>",
+  "author": "TurboDocx, Inc.",
   "contributors": [
     "amrita-syn <amrita.yadav@synapsica.com>",
     "charuthaB <charutha.bhaskar@synapsica.com>",
@@ -35,7 +35,9 @@
     "erenard",
     "KeithGillette",
     "juralio-james",
-    "nicolasiscoding <nicolascoding@gmail.com>",
+    "nicolasiscoding",
+    "K-Kumar-01 ",
+    "Swayamshu",
     "zedtux <zedtux@zedroot.org>",
     "hlerebours",
     "hakjeri",
@@ -43,9 +45,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/privateOmega/html-to-docx/issues"
+    "url": "https://github.com/TurboDocx/html-to-docx/issues"
   },
-  "homepage": "https://github.com/privateOmega/html-to-docx#readme",
+  "homepage": "https://github.com/TurboDocx/html-to-docx#readme",
   "devDependencies": {
     "@commitlint/cli": "^13.1.0",
     "@commitlint/config-conventional": "^13.1.0",
