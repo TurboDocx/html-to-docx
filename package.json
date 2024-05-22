@@ -1,5 +1,5 @@
 {
-  "name": "html-to-docx",
+  "name": "@turbodocx/html-to-docx",
   "version": "1.9.1",
   "description": "HTML to DOCX converter",
   "keywords": [
@@ -24,9 +24,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/privateOmega/html-to-docx.git"
+    "url": "git+https://github.com/turbodocx/html-to-docx.git"
   },
-  "author": "privateOmega <privateOmega@protonmail.com>",
+  "author": "TurboDocx, Inc.",
   "contributors": [
     "amrita-syn <amrita.yadav@synapsica.com>",
     "charuthaB <charutha.bhaskar@synapsica.com>",

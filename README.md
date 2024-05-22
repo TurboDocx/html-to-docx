@@ -1,24 +1,20 @@
 html-to-docx
 ============
-
+![TurboDocx](./banner.png)
 [![NPM Version][npm-image]][npm-url]
 
-html-to-docx is a js library for converting HTML documents to DOCX format supported by Microsoft Word 2007+, LibreOffice Writer, Google Docs, WPS Writer etc.
-
-It was inspired by [html-docx-js] project but mitigates the problem of documents generated being non-compatiable with word processors like Google Docs and libreOffice Writer that doesn't support [altchunks] feature.
-
-html-to-docx earlier used to use [libtidy] to clean up the html before parsing, but had to remove it since it was causing so many dependency issues due to node-gyp.
+`html-to-docx` is a powerful JavaScript library designed to convert HTML documents to DOCX format, compatible with Microsoft Word 2007+, LibreOffice Writer, Google Docs, WPS Writer, and other word processors. Originally created by @PrivateOmega, this hard fork is now maintained and supported by TurboDocx to ensure ongoing development and improvements.
 
 ### Disclaimer
 
-Even though there are instances of html-to-docx running in production, please ensure that it covers all the cases that you might be encountering usually, since this is coontinually evolving. Currently it doesn't work with browser directly, but it was tested against React.
+While `html-to-docx` is robust and used in production environments, it is continually evolving. Please ensure it meets your specific needs through thorough testing. Note that it currently does not work directly in the browser.
 
 ## Installation
 
-Use the npm to install foobar.
+Use the npm to install the project.
 
 ```bash
-npm install html-to-docx
+npm install @turbodocx/html-to-docx
 ```
 
 ## Usage
@@ -126,15 +122,15 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 Please make sure to branch new branches off of develop for contribution.
 
 ## Support
-
+**Proudly Sponsored and Maintained by TurboDocx.com** 
 [!["Proudly Sponsored and Maintained by TurboDocx"](https://image.typedream.com/cdn-cgi/image/width=1920,format=auto,fit=scale-down,quality=100/https://api.typedream.com/v0/document/public/de39171b-a5c9-49c5-bd9c-c2dfd5d632a2/2PZxyx12UwC5HrIA3p6lo16fCms_Group_16_1_.png)](https://www.TurboDocx.com)
 
 ## License
 
 MIT
 
-[npm-image]: https://img.shields.io/npm/v/html-to-docx.svg
-[npm-url]: https://npmjs.org/package/html-to-docx
+[npm-image]: https://img.shields.io/npm/v/@turbodocx/html-to-docx.svg
+[npm-url]: https://npmjs.org/package/@turbodocx/html-to-docx
 [html-docx-js]: https://github.com/evidenceprime/html-docx-js "html-docx-js"
 [altchunks]: https://docs.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.altchunk?view=openxml-2.8.1 "altchunks"
 [libtidy]: https://github.com/jure/node-libtidy "libtidy"
