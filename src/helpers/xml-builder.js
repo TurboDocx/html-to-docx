@@ -54,12 +54,12 @@ import {
   verticalAlignValues,
   imageType,
   internalRelationship,
-  defaultPercentageMarginValue,
   defaultTableBorderOptions,
   defaultTableBorderAttributeOptions
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
+import { isZeroOrTruthy } from '../utils/truthy-check';
 
 const setUpDirectionalBorderStroke = (borderStrike = 'nil') => ({
   top: borderStrike,
@@ -335,7 +335,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
   if (!isNaN(lineHeight)) {
     if (fontSize) {
       const actualLineHeight = +lineHeight * fontSize;
-      
+
       return HIPToTWIP(actualLineHeight);
     } else {
       // 240 TWIP or 12 point is default line height
@@ -356,7 +356,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
   } else if (percentageRegex.test(lineHeight)) {
     const matchedParts = lineHeight.match(percentageRegex);
     return HIPToTWIP((matchedParts[1] * fontSize) / 100);
-  } 
+  }
   else {
     // 240 TWIP or 12 point is default line height
     return 240;
@@ -522,7 +522,6 @@ const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableB
   return [size, stroke, color];
 };
 
-
 const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes, options) => {
   const modifiedAttributes = { ...attributes };
 
@@ -602,23 +601,23 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
 
         const { left, right, bottom } = margins
         const indentation = { left, right }
-        if (left || right) {
+        if (isZeroOrTruthy(left) || isZeroOrTruthy(right)) {
           modifiedAttributes.indentation = indentation;
         }
-        if (bottom) {
+        if (isZeroOrTruthy(bottom)) {
           modifiedAttributes.afterSpacing = bottom;
         }
       } else if (vNodeStyleKey === 'margin-left' || vNodeStyleKey === 'margin-right') {
         const leftMargin = fixupMargin(vNodeStyle['margin-left']);
         const rightMargin = fixupMargin(vNodeStyle['margin-right']);
         const indentation = {};
-        if (leftMargin) {
+        if (isZeroOrTruthy(leftMargin)) {
           indentation.left = leftMargin;
         }
-        if (rightMargin) {
+        if (isZeroOrTruthy(rightMargin)) {
           indentation.right = rightMargin;
         }
-        if (leftMargin || rightMargin) {
+        if (isZeroOrTruthy(leftMargin) || isZeroOrTruthy(rightMargin)) {
           modifiedAttributes.indentation = indentation;
         }
       } else if (vNodeStyleKey === 'margin-bottom') {
@@ -759,7 +758,7 @@ const buildRunProperties = (attributes) => {
       if (key === 'textDecoration') {
         options.textDecoration = attributes[key];
       }
-      
+
       if (key === 'textShadow') {
         options.textShadow = attributes[key];
       }
