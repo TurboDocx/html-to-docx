@@ -1614,7 +1614,34 @@ const htmlString = `<!DOCTYPE html>
                 </ul>
             </li>
             <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Heading 3</span></li>
-        </ul>
+        </ul>   
+        <div>
+            <p>One More test case</p>
+            <p style="margin: 0in; line-height: normal; font-size: 11pt; font-family: Calibri, sans-serif;"><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">PHASE ONE</span></strong><br /><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif; color: red;">CONFIDENTIAL <br />HOURS: 1 – 2</span></strong></p>
+            <p style="margin: 0in; line-height: normal; font-size: 11pt; font-family: Calibri, sans-serif;"><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif; color: red;">TIER: 1 </span></strong></p>
+            <p style="line-height: normal; margin: 0in 0in 10pt; font-size: 11pt; font-family: Calibri, sans-serif;"><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">Scheduled Work</span></strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">: Business Hours </span><br /><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">Location:</span></strong>
+                <span style="font-size: 10.0pt; font-family: Arial, sans-serif;"> Remote</span>
+            </p>
+            <ul style="margin-bottom: 0in; margin-top: 0px;">
+                <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Item 1k</span>
+                    <ul style="list-style-type: circle; margin-bottom: 0in; margin-top: 0px;">
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 1</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 2</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 3</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 4</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 5</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 6</span></li>
+                    </ul>
+                </li>
+                <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Item 2</span>
+                    <ul style="list-style-type: circle; margin-bottom: 0in; margin-top: 0px;">
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 1</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 2</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 10pt 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 1</span></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
     </body>
 </html>`;
 
@@ -1633,4 +1660,3 @@ const htmlString = `<!DOCTYPE html>
         console.log('Docx file created successfully');
     });
 })();
-
