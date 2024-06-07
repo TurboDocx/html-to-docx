@@ -54,7 +54,6 @@ import {
   verticalAlignValues,
   imageType,
   internalRelationship,
-  defaultPercentageMarginValue,
   defaultTableBorderOptions,
   defaultTableBorderAttributeOptions
 } from '../constants';
@@ -335,7 +334,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
   if (!isNaN(lineHeight)) {
     if (fontSize) {
       const actualLineHeight = +lineHeight * fontSize;
-      
+
       return HIPToTWIP(actualLineHeight);
     } else {
       // 240 TWIP or 12 point is default line height
@@ -356,7 +355,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
   } else if (percentageRegex.test(lineHeight)) {
     const matchedParts = lineHeight.match(percentageRegex);
     return HIPToTWIP((matchedParts[1] * fontSize) / 100);
-  } 
+  }
   else {
     // 240 TWIP or 12 point is default line height
     return 240;
@@ -522,7 +521,6 @@ const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableB
   return [size, stroke, color];
 };
 
-
 const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes, options) => {
   const modifiedAttributes = { ...attributes };
 
@@ -599,7 +597,7 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           margins.bottom = fixupMargin(marginParts[2]);
           margins.left = fixupMargin(marginParts[3]);
         }
-
+        
         const { left, right, bottom } = margins
         const indentation = { left, right }
         if (left || right) {
@@ -759,7 +757,7 @@ const buildRunProperties = (attributes) => {
       if (key === 'textDecoration') {
         options.textDecoration = attributes[key];
       }
-      
+
       if (key === 'textShadow') {
         options.textShadow = attributes[key];
       }
