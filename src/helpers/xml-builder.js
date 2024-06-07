@@ -59,6 +59,7 @@ import {
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
+import { isZeroOrTruthy } from '../utils/truthy-check';
 
 const setUpDirectionalBorderStroke = (borderStrike = 'nil') => ({
   top: borderStrike,
@@ -597,26 +598,26 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           margins.bottom = fixupMargin(marginParts[2]);
           margins.left = fixupMargin(marginParts[3]);
         }
-        
+
         const { left, right, bottom } = margins
         const indentation = { left, right }
-        if (left || right) {
+        if (isZeroOrTruthy(left) || isZeroOrTruthy(right)) {
           modifiedAttributes.indentation = indentation;
         }
-        if (bottom) {
+        if (isZeroOrTruthy(bottom)) {
           modifiedAttributes.afterSpacing = bottom;
         }
       } else if (vNodeStyleKey === 'margin-left' || vNodeStyleKey === 'margin-right') {
         const leftMargin = fixupMargin(vNodeStyle['margin-left']);
         const rightMargin = fixupMargin(vNodeStyle['margin-right']);
         const indentation = {};
-        if (leftMargin) {
+        if (isZeroOrTruthy(leftMargin)) {
           indentation.left = leftMargin;
         }
-        if (rightMargin) {
+        if (isZeroOrTruthy(rightMargin)) {
           indentation.right = rightMargin;
         }
-        if (leftMargin || rightMargin) {
+        if (isZeroOrTruthy(leftMargin) || isZeroOrTruthy(rightMargin)) {
           modifiedAttributes.indentation = indentation;
         }
       } else if (vNodeStyleKey === 'margin-bottom') {
