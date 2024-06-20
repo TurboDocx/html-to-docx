@@ -928,7 +928,11 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
           // do not slice and concat children since this is already accounted for in the buildRunOrRuns function
           // eslint-disable-next-line no-continue
           continue;
+        } else if (tempVNode.tagName === 'br') {
+          const lineBreakFragment = buildLineBreak();
+          runFragmentsArray.push(lineBreakFragment);
         }
+        // TODO: check if picture can occur inside inline elements(not span)
       }
 
       if (tempVNode.children && tempVNode.children.length) {
