@@ -34,7 +34,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     if (isValidUrl(imageSource)) {
       const base64String = await imageToBase64(imageSource).catch((error) => {
         // eslint-disable-next-line no-console
-        console.warning(`skipping image download and conversion due to ${error}`);
+        console.warn(`skipping image download and conversion due to ${error}`);
       });
 
       if (base64String) {

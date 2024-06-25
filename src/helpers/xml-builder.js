@@ -957,7 +957,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
       requiresConversion = true
       const base64String = await imageToBase64(imageSource).catch((error) => {
         // eslint-disable-next-line no-console
-        console.warning(`skipping image download and conversion due to ${error}`);
+        console.warn(`skipping image download and conversion due to ${error}`);
       });
       if (base64String) {
         isConverted = true;
@@ -1423,7 +1423,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           if (isValidUrl(imageSource)) {
             base64String = await imageToBase64(imageSource).catch((error) => {
               // eslint-disable-next-line no-console
-              console.warning(`skipping image download and conversion due to ${error}`);
+              console.warn(`skipping image download and conversion due to ${error}`);
             });
 
             if (base64String && getMimeType(imageSource, base64String)) {
@@ -1476,7 +1476,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       if (isValidUrl(imageSource)) {
         base64String = await imageToBase64(imageSource).catch((error) => {
           // eslint-disable-next-line no-console
-          console.warning(`skipping image download and conversion due to ${error}`);
+          console.warn(`skipping image download and conversion due to ${error}`);
         });
 
         if (base64String && getMimeType(imageSource, base64String)) {
