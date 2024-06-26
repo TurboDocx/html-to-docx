@@ -124,14 +124,18 @@ class DocxDocument {
     this.width = isPortraitOrientation ? width : height;
     this.height = isPortraitOrientation ? height : width;
 
-    const marginsObject = properties.margins;
-    this.margins =
-      // eslint-disable-next-line no-nested-ternary
-      marginsObject && Object.keys(marginsObject).length
-        ? marginsObject
-        : isPortraitOrientation
-        ? portraitMargins
-        : landscapeMargins;
+    const defaultMargins = isPortraitOrientation ? portraitMargins : landscapeMargins;
+    const marginsObject = properties.margins || {};
+
+    this.margins = {
+      top: marginsObject.top !== undefined ? marginsObject.top : defaultMargins.top,
+      right: marginsObject.right !== undefined ? marginsObject.right : defaultMargins.right,
+      bottom: marginsObject.bottom !== undefined ? marginsObject.bottom : defaultMargins.bottom,
+      left: marginsObject.left !== undefined ? marginsObject.left : defaultMargins.left,
+      header: marginsObject.header !== undefined ? marginsObject.header : defaultMargins.header,
+      footer: marginsObject.footer !== undefined ? marginsObject.footer : defaultMargins.footer,
+      gutter: marginsObject.gutter !== undefined ? marginsObject.gutter : defaultMargins.gutter,
+    };
 
     this.availableDocumentSpace = this.width - this.margins.left - this.margins.right;
     this.title = properties.title || '';
