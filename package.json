@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/html-to-docx",
-  "version": "1.9.4",
+  "version": "1.9.3",
   "description": "HTML to DOCX converter",
   "keywords": [
     "html",
@@ -41,7 +41,8 @@
     "zedtux <zedtux@zedroot.org>",
     "hlerebours",
     "hakjeri",
-    "tasola"
+    "tasola",
+    "AmitSharma512"
   ],
   "license": "MIT",
   "bugs": {
