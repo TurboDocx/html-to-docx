@@ -25,6 +25,9 @@ const generateStylesXML = (
 		</w:pPr>
 	  </w:pPrDefault>
 	</w:docDefaults>
+	<w:style w:type="paragraph" w:styleId="Normal" w:default="1">
+	  <w:name w:val="normal" />
+	</w:style>
 	<w:style w:type="character" w:styleId="Hyperlink">
 	  <w:name w:val="Hyperlink" />
 	  <w:rPr>
