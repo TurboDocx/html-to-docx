@@ -1310,6 +1310,10 @@ const htmlString = `<!DOCTYPE html>
             Inside i tag
             <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" />
         </i>
+       
+        <p>
+         paragraph <strong>temporary</strong> <em>lorem</em> <u>test tag</u>
+        </p>
 
         <em>
             Inside em tag
