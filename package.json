@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/html-to-docx",
-  "version": "1.9.7",
+  "version": "1.9.8",
   "description": "HTML to DOCX converter",
   "keywords": [
     "html",
@@ -73,7 +73,8 @@
     "taro-shono",
     "braun1928",
     "juralio-james",
-    "robinminso"
+    "robinminso",
+    "shareefalis"
   ],
   "license": "MIT",
   "bugs": {
