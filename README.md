@@ -6,6 +6,7 @@ html-to-docx
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
 [![npm](https://img.shields.io/npm/dw/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
+[![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
 
 `@turbodocx/html-to-docx` is a powerful JavaScript library designed to convert HTML documents to DOCX format, compatible with Microsoft Word 2007+, LibreOffice Writer, Google Docs, WPS Writer, and other word processors. Inspired by [@PrivateOmega]("https://github.com/privateOmega/"), this is supported by TurboDocx to ensure ongoing development and improvements.
 
