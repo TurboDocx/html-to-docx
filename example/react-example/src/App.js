@@ -1625,6 +1625,7 @@ function App() {
       table: { row: { cantSplit: true } },
       footer: true,
       pageNumber: true,
+      preprocessing: { skipHTMLMinify: false }
     });
 
     saveAs(fileBuffer, 'html-to-docx.docx');

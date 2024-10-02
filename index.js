@@ -1,5 +1,6 @@
 /* eslint-disable no-useless-escape */
 import JSZip from 'jszip';
+import createDocumentOptionsAndMergeWithDefaults from './src/utils/options-utils';
 import addFilesToContainer from './src/html-to-docx';
 
 const minifyHTMLString = (htmlString) => {
@@ -30,20 +31,22 @@ async function generateContainer(
 ) {
   const zip = new JSZip();
 
+  const normalizedDocumentOptions = createDocumentOptionsAndMergeWithDefaults(documentOptions);
+
   let contentHTML = htmlString;
   let headerHTML = headerHTMLString;
   let footerHTML = footerHTMLString;
-  if (htmlString) {
+  if (htmlString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
     contentHTML = minifyHTMLString(contentHTML);
   }
-  if (headerHTMLString) {
+  if (headerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
     headerHTML = minifyHTMLString(headerHTML);
   }
-  if (footerHTMLString) {
+  if (footerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
     footerHTML = minifyHTMLString(footerHTML);
   }
 
-  await addFilesToContainer(zip, contentHTML, documentOptions, headerHTML, footerHTML);
+  await addFilesToContainer(zip, contentHTML, normalizedDocumentOptions, headerHTML, footerHTML);
 
   const buffer = await zip.generateAsync({ type: 'arraybuffer' });
   if (Object.prototype.hasOwnProperty.call(global, 'Buffer')) {
