@@ -47,7 +47,6 @@ full fledged examples can be found under `example/`
     - `header` <[Number]> distance from the top edge of the page to the top edge of the header in [TWIP]. Defaults to 720. Supports equivalent measurement in [pixel], [cm] or [inch].
     - `footer` <[Number]> distance from the bottom edge of the page to the bottom edge of the footer in [TWIP]. Defaults to 720. Supports equivalent measurement in [pixel], [cm] or [inch].
     - `gutter` <[Number]> amount of extra space added to the specified margin, above any existing margin values. This setting is typically used when a document is being created for binding in [TWIP]. Defaults to 0. Supports equivalent measurement in [pixel], [cm] or [inch].
-    - preProcessing
   - `title` <?[String]> title of the document.
   - `subject` <?[String]> subject of the document.
   - `creator` <?[String]> creator of the document. Defaults to `html-to-docx`
