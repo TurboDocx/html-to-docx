@@ -9,17 +9,6 @@ import { relsXML } from './schemas';
 import DocxDocument from './docx-document';
 import { renderDocumentFile } from './helpers';
 import {
-  pixelRegex,
-  pixelToTWIP,
-  cmRegex,
-  cmToTWIP,
-  inchRegex,
-  inchToTWIP,
-  pointRegex,
-  pointToHIP,
-} from './utils/unit-conversion';
-import {
-  defaultDocumentOptions,
   defaultHTMLString,
   relsFolderName,
   headerFileName,
@@ -39,86 +28,15 @@ const convertHTML = HTMLToVDOM({
   VText,
 });
 
-const mergeOptions = (options, patch) => ({ ...options, ...patch });
-
-const fixupFontSize = (fontSize) => {
-  let normalizedFontSize;
-  if (pointRegex.test(fontSize)) {
-    const matchedParts = fontSize.match(pointRegex);
-
-    normalizedFontSize = pointToHIP(matchedParts[1]);
-  } else if (fontSize) {
-    // assuming it is already in HIP
-    normalizedFontSize = fontSize;
-  } else {
-    normalizedFontSize = null;
-  }
-
-  return normalizedFontSize;
-};
-
-const normalizeUnits = (dimensioningObject, defaultDimensionsProperty) => {
-  let normalizedUnitResult = {};
-  if (typeof dimensioningObject === 'object' && dimensioningObject !== null) {
-    Object.keys(dimensioningObject).forEach((key) => {
-      if (pixelRegex.test(dimensioningObject[key])) {
-        const matchedParts = dimensioningObject[key].match(pixelRegex);
-        normalizedUnitResult[key] = pixelToTWIP(matchedParts[1]);
-      } else if (cmRegex.test(dimensioningObject[key])) {
-        const matchedParts = dimensioningObject[key].match(cmRegex);
-        normalizedUnitResult[key] = cmToTWIP(matchedParts[1]);
-      } else if (inchRegex.test(dimensioningObject[key])) {
-        const matchedParts = dimensioningObject[key].match(inchRegex);
-        normalizedUnitResult[key] = inchToTWIP(matchedParts[1]);
-      } else if (dimensioningObject[key]) {
-        normalizedUnitResult[key] = dimensioningObject[key];
-      } else {
-        // incase value is something like 0
-        normalizedUnitResult[key] = defaultDimensionsProperty[key];
-      }
-    });
-  } else {
-    // eslint-disable-next-line no-param-reassign
-    normalizedUnitResult = null;
-  }
-
-  return normalizedUnitResult;
-};
-
-const normalizeDocumentOptions = (documentOptions) => {
-  const normalizedDocumentOptions = { ...documentOptions };
-  Object.keys(documentOptions).forEach((key) => {
-    // eslint-disable-next-line default-case
-    switch (key) {
-      case 'pageSize':
-      case 'margins':
-        normalizedDocumentOptions[key] = normalizeUnits(
-          documentOptions[key],
-          defaultDocumentOptions[key]
-        );
-        break;
-      case 'fontSize':
-      case 'complexScriptFontSize':
-        normalizedDocumentOptions[key] = fixupFontSize(documentOptions[key]);
-        break;
-    }
-  });
-
-  return normalizedDocumentOptions;
-};
-
 // Ref: https://en.wikipedia.org/wiki/Office_Open_XML_file_formats
 // http://officeopenxml.com/anatomyofOOXML.php
 async function addFilesToContainer(
   zip,
   htmlString,
-  suppliedDocumentOptions,
+  documentOptions,
   headerHTMLString,
   footerHTMLString
 ) {
-  const normalizedDocumentOptions = normalizeDocumentOptions(suppliedDocumentOptions);
-  const documentOptions = mergeOptions(defaultDocumentOptions, normalizedDocumentOptions);
-
   if (documentOptions.header && !headerHTMLString) {
     // eslint-disable-next-line no-param-reassign
     headerHTMLString = defaultHTMLString;

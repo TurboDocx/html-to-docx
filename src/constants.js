@@ -32,8 +32,8 @@ const defaultTableBorderOptions = {
 };
 const defaultTableBorderAttributeOptions = {
   size: 1,
-  stroke: 'single'
-}
+  stroke: 'single',
+};
 const defaultDocumentOptions = {
   orientation: defaultOrientation,
   margins: cloneDeep(portraitMargins),
@@ -76,6 +76,9 @@ const defaultDocumentOptions = {
   },
   decodeUnicode: false,
   defaultLang,
+  preprocessing: {
+    skipHTMLMinify: false,
+  },
 };
 const defaultHTMLString = '<p></p>';
 const relsFolderName = '_rels';
@@ -147,5 +150,5 @@ export {
   verticalAlignValues,
   defaultLang,
   defaultPercentageMarginValue,
-  defaultTableBorderAttributeOptions
+  defaultTableBorderAttributeOptions,
 };

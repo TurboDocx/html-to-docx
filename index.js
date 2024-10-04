@@ -1,18 +1,17 @@
 /* eslint-disable no-useless-escape */
 import JSZip from 'jszip';
+import { minify } from 'html-minifier-terser';
+
+import createDocumentOptionsAndMergeWithDefaults from './src/utils/options-utils';
 import addFilesToContainer from './src/html-to-docx';
 
-const minifyHTMLString = (htmlString) => {
+const minifyHTMLString = async (htmlString) => {
   try {
     if (typeof htmlString === 'string' || htmlString instanceof String) {
-      const minifiedHTMLString = htmlString
-        .replace(/\n/g, ' ')
-        .replace(/\r/g, ' ')
-        .replace(/\r\n/g, ' ')
-        .replace(/[\t]+\</g, '<')
-        .replace(/\>[\t ]+\</g, '><')
-        .replace(/\>[\t ]+$/g, '>');
-
+      const minifiedHTMLString = await minify(htmlString, {
+        collapseWhitespace: true,
+        removeComments: true,
+      });
       return minifiedHTMLString;
     }
 
@@ -30,20 +29,22 @@ async function generateContainer(
 ) {
   const zip = new JSZip();
 
+  const normalizedDocumentOptions = createDocumentOptionsAndMergeWithDefaults(documentOptions);
+
   let contentHTML = htmlString;
   let headerHTML = headerHTMLString;
   let footerHTML = footerHTMLString;
-  if (htmlString) {
-    contentHTML = minifyHTMLString(contentHTML);
+  if (htmlString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
+    contentHTML = await minifyHTMLString(contentHTML);
   }
-  if (headerHTMLString) {
-    headerHTML = minifyHTMLString(headerHTML);
+  if (headerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
+    headerHTML = await minifyHTMLString(headerHTML);
   }
-  if (footerHTMLString) {
-    footerHTML = minifyHTMLString(footerHTML);
+  if (footerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
+    footerHTML = await minifyHTMLString(footerHTML);
   }
 
-  await addFilesToContainer(zip, contentHTML, documentOptions, headerHTML, footerHTML);
+  await addFilesToContainer(zip, contentHTML, normalizedDocumentOptions, headerHTML, footerHTML);
 
   const buffer = await zip.generateAsync({ type: 'arraybuffer' });
   if (Object.prototype.hasOwnProperty.call(global, 'Buffer')) {

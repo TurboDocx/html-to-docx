@@ -1654,6 +1654,7 @@ const htmlString = `<!DOCTYPE html>
         table: { row: { cantSplit: true } },
         footer: true,
         pageNumber: true,
+        preprocessing: { skipHTMLMinify: false }
     });
 
     fs.writeFile(filePath, fileBuffer, (error) => {
