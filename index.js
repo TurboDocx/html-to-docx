@@ -1,19 +1,16 @@
 /* eslint-disable no-useless-escape */
 import JSZip from 'jszip';
+import { minify } from 'html-minifier-terser';
+
 import createDocumentOptionsAndMergeWithDefaults from './src/utils/options-utils';
 import addFilesToContainer from './src/html-to-docx';
 
-const minifyHTMLString = (htmlString) => {
+const minifyHTMLString = async (htmlString) => {
   try {
     if (typeof htmlString === 'string' || htmlString instanceof String) {
-      const minifiedHTMLString = htmlString
-        .replace(/\n/g, ' ')
-        .replace(/\r/g, ' ')
-        .replace(/\r\n/g, ' ')
-        .replace(/[\t]+\</g, '<')
-        .replace(/\>[\t ]+\</g, '><')
-        .replace(/\>[\t ]+$/g, '>');
-
+      const minifiedHTMLString = await minify(htmlString, {
+        collapseWhitespace: true,
+      });
       return minifiedHTMLString;
     }
 
@@ -37,13 +34,13 @@ async function generateContainer(
   let headerHTML = headerHTMLString;
   let footerHTML = footerHTMLString;
   if (htmlString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
-    contentHTML = minifyHTMLString(contentHTML);
+    contentHTML = await minifyHTMLString(contentHTML);
   }
   if (headerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
-    headerHTML = minifyHTMLString(headerHTML);
+    headerHTML = await minifyHTMLString(headerHTML);
   }
   if (footerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
-    footerHTML = minifyHTMLString(footerHTML);
+    footerHTML = await minifyHTMLString(footerHTML);
   }
 
   await addFilesToContainer(zip, contentHTML, normalizedDocumentOptions, headerHTML, footerHTML);
