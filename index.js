@@ -10,6 +10,7 @@ const minifyHTMLString = async (htmlString) => {
     if (typeof htmlString === 'string' || htmlString instanceof String) {
       const minifiedHTMLString = await minify(htmlString, {
         collapseWhitespace: true,
+        removeComments: true,
       });
       return minifiedHTMLString;
     }
