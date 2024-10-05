@@ -19,6 +19,7 @@ import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { getMimeType } from '../utils/image';
 import { cloneDeep } from 'lodash';
+import { buildHorizontalRule } from '../helpers/xml-builder';
 
 const convertHTML = HTMLToVDOM({
   VNode,
@@ -308,6 +309,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
     case 'br':
       const linebreakFragment = await xmlBuilder.buildParagraph(null, {});
       xmlFragment.import(linebreakFragment);
+      return;
+    case 'hr':
+      const hrFragment = buildHorizontalRule();
+      xmlFragment.import(hrFragment);
       return;
     case 'head':
       return;

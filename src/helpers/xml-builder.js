@@ -179,6 +179,22 @@ const buildTableRowHeight = (tableRowHeight) =>
     .att('@w', 'hRule', 'atLeast')
     .up();
 
+const buildHorizontalRule = () => {
+  const hrFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'p');
+  const pPr = hrFragment.ele('@w', 'pPr');
+  const pBdr = pPr.ele('@w', 'pBdr');
+  pBdr.ele('@w', 'bottom', {
+    'w:val': 'single',
+    'w:sz': '24',
+    'w:space': '1',
+    'w:color': '000000'
+  });
+  pBdr.up();
+  pPr.up();
+  hrFragment.up();
+  return hrFragment;
+};
+
 const buildVerticalAlignment = (verticalAlignment) => {
   if (verticalAlignment.toLowerCase() === 'middle') {
     verticalAlignment = 'center';
@@ -854,7 +870,6 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
             case 'b':
               tempAttributes.strong = true;
               break;
-            case 'em':
             case 'i':
               tempAttributes.i = true;
               break;
@@ -1450,25 +1465,30 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
 
           computeImageDimensions(childVNode, modifiedAttributes);
         }
-        const runOrHyperlinkFragments = await buildRunOrHyperLink(
-          childVNode,
-          isVNode(childVNode) && childVNode.tagName === 'img'
-            ? { ...modifiedAttributes, type: 'picture', description: childVNode.properties.alt }
-            : modifiedAttributes,
-          docxDocumentInstance
-        );
-        if (Array.isArray(runOrHyperlinkFragments)) {
-          for (
-            let iteratorIndex = 0;
-            iteratorIndex < runOrHyperlinkFragments.length;
-            iteratorIndex++
-          ) {
-            const runOrHyperlinkFragment = runOrHyperlinkFragments[iteratorIndex];
-
-            paragraphFragment.import(runOrHyperlinkFragment);
-          }
+        if (childVNode.tagName === 'hr') {
+          const hrFragment = buildHorizontalRule();
+          paragraphFragment.import(hrFragment);
         } else {
-          paragraphFragment.import(runOrHyperlinkFragments);
+          const runOrHyperlinkFragments = await buildRunOrHyperLink(
+            childVNode,
+            isVNode(childVNode) && childVNode.tagName === 'img'
+              ? { ...modifiedAttributes, type: 'picture', description: childVNode.properties.alt }
+              : modifiedAttributes,
+            docxDocumentInstance
+          );
+          if (Array.isArray(runOrHyperlinkFragments)) {
+            for (
+              let iteratorIndex = 0;
+              iteratorIndex < runOrHyperlinkFragments.length;
+              iteratorIndex++
+            ) {
+              const runOrHyperlinkFragment = runOrHyperlinkFragments[iteratorIndex];
+
+              paragraphFragment.import(runOrHyperlinkFragment);
+            }
+          } else {
+            paragraphFragment.import(runOrHyperlinkFragments);
+          }
         }
       }
     }
@@ -2513,6 +2533,9 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
             }
           }
         }
+      } else if (isVNode(childVNode) && childVNode.tagName === 'hr') {
+        const hrFragment = buildHorizontalRule(docxDocumentInstance);
+        tableCellFragment.import(hrFragment);
       } else if (isVNode(childVNode) && ['ul', 'ol'].includes(childVNode.tagName)) {
         // render list in table
         if (vNodeHasChildren(childVNode)) {
@@ -3603,4 +3626,5 @@ export {
   buildUnderline,
   buildDrawing,
   fixupLineHeight,
+  buildHorizontalRule
 };
