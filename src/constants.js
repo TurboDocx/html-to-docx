@@ -34,6 +34,12 @@ const defaultTableBorderAttributeOptions = {
   size: 1,
   stroke: 'single',
 };
+const defaultHorizontalRuleOptions = {
+  val: 'single',
+  sz: '24',
+  space: '1',
+  color: '000000',
+};
 const defaultDocumentOptions = {
   orientation: defaultOrientation,
   margins: cloneDeep(portraitMargins),
@@ -124,6 +130,7 @@ export {
   defaultDocumentOptions,
   defaultTableBorderOptions,
   defaultHTMLString,
+  defaultHorizontalRuleOptions,
   relsFolderName,
   headerFileName,
   footerFileName,

@@ -83,6 +83,11 @@ full fledged examples can be found under `example/`
   - `lang` <?[String]> language localization code for spell checker to work properly. Defaults to `en-US`.
   - `preProcessing` <?[Object]>
     - `skipHTMLMinify` <?[Boolean]> flag to skip minification of HTML. Defaults to `false`.
+  - `hrStyles` <?[Object]>
+    - `val` <String> The border style (e.g., `single`, `dashed`). Defaults to `single`.
+    - `sz` <Number> The size of the border. Defaults to `24`.
+    - `space` <Number> The space around border. Defaults to `1`.
+    - `color` <String> The color of the border. Defaults to `000000`.
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns
