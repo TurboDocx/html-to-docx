@@ -4,6 +4,7 @@ import { minify } from 'html-minifier-terser';
 
 import createDocumentOptionsAndMergeWithDefaults from './src/utils/options-utils';
 import addFilesToContainer from './src/html-to-docx';
+import { defaultHorizontalRuleOptions } from './src/constants';
 
 const minifyHTMLString = async (htmlString) => {
   try {
@@ -25,9 +26,14 @@ async function generateContainer(
   htmlString,
   headerHTMLString,
   documentOptions = {},
-  footerHTMLString
+  footerHTMLString,
+  customDefaults = {}
 ) {
   const zip = new JSZip();
+
+  if (customDefaults.hrStyles) {
+    Object.assign(defaultHorizontalRuleOptions, customDefaults.hrStyles);
+  }
 
   const normalizedDocumentOptions = createDocumentOptionsAndMergeWithDefaults(documentOptions);
 

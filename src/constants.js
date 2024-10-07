@@ -38,7 +38,7 @@ const defaultHorizontalRuleOptions = {
   val: 'single',
   sz: '24',
   space: '1',
-  color: '000000',
+  color: 'FF0000',
 };
 const defaultDocumentOptions = {
   orientation: defaultOrientation,

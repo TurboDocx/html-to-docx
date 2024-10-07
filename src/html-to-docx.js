@@ -1,3 +1,4 @@
+// html-to-docx.js
 import { create } from 'xmlbuilder2';
 import VNode from 'virtual-dom/vnode/vnode';
 import VText from 'virtual-dom/vnode/vtext';
@@ -22,6 +23,7 @@ import {
   themeFolder,
   themeType,
 } from './constants';
+import { buildHorizontalRule } from './helpers/xml-builder';
 
 const convertHTML = HTMLToVDOM({
   VNode,

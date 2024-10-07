@@ -1,3 +1,4 @@
+// render-document-file.js
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-case-declarations */
 import { fragment } from 'xmlbuilder2';
@@ -311,7 +312,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
       xmlFragment.import(linebreakFragment);
       return;
     case 'hr':
-      const hrFragment = buildHorizontalRule();
+      const hrFragment = buildHorizontalRule(vNode, vNode.properties.style);
       xmlFragment.import(hrFragment);
       return;
     case 'head':

@@ -12,7 +12,6 @@ import { cloneDeep } from 'lodash';
 import imageToBase64 from 'image-to-base64';
 import sizeOf from 'image-size';
 import { getMimeType } from '../utils/image'
-
 import namespaces from '../namespaces';
 import {
   rgbToHex,
@@ -55,7 +54,8 @@ import {
   imageType,
   internalRelationship,
   defaultTableBorderOptions,
-  defaultTableBorderAttributeOptions
+  defaultTableBorderAttributeOptions,
+  defaultHorizontalRuleOptions,
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
@@ -179,22 +179,44 @@ const buildTableRowHeight = (tableRowHeight) =>
     .att('@w', 'hRule', 'atLeast')
     .up();
 
-const buildHorizontalRule = () => {
-  const hrFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'p');
-  const pPr = hrFragment.ele('@w', 'pPr');
-  const pBdr = pPr.ele('@w', 'pBdr');
-  pBdr.ele('@w', 'bottom', {
-    'w:val': 'single',
-    'w:sz': '24',
-    'w:space': '1',
-    'w:color': '000000'
+const buildHorizontalRule = (element, styles = {}) => {
+  // Parse inline styles from the element
+  const inlineStyles = (styleString => {
+    const styles = {};
+    if (styleString) {
+      styleString.split(";").forEach(style => {
+        const [key, value] = style.split(":").map(s => s.trim());
+        if (key && value) {
+          styles[key] = value;
+        }
+      });
+    }
+    return styles;
+  })(element && typeof element.getAttribute === 'function' ? element.getAttribute("style") : "");
+
+  // Merge inline styles with default styles and additional styles
+  const mergedStyles = { ...defaultHorizontalRuleOptions, ...styles, ...inlineStyles };
+
+  // Use the imported fragment directly
+  const hrFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele("@w", "p");
+  const pPr = hrFragment.ele("@w", "pPr");
+  const pBdr = pPr.ele("@w", "pBdr");
+
+  // Define the bottom border properties
+  pBdr.ele("@w", "bottom", {
+    "w:val": mergedStyles.val || 'single',
+    "w:sz": mergedStyles.sz || '4',
+    "w:space": mergedStyles.space || '1',
+    "w:color": mergedStyles.color || 'auto'
   });
+
   pBdr.up();
   pPr.up();
   hrFragment.up();
-  return hrFragment;
-};
 
+  return hrFragment;
+}; 
+    
 const buildVerticalAlignment = (verticalAlignment) => {
   if (verticalAlignment.toLowerCase() === 'middle') {
     verticalAlignment = 'center';
