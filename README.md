@@ -84,10 +84,18 @@ full fledged examples can be found under `example/`
   - `preProcessing` <?[Object]>
     - `skipHTMLMinify` <?[Boolean]> flag to skip minification of HTML. Defaults to `false`.
   - `hrStyles` <?[Object]>
-    - `val` <String> The border style (e.g., `single`, `dashed`). Defaults to `single`.
-    - `sz` <Number> The size of the border. Defaults to `24`.
-    - `space` <Number> The space around border. Defaults to `1`.
-    - `color` <String> The color of the border. Defaults to `000000`.
+    - `height` <Number> The size of the border. Defaults to `24`.
+    - `width` <Number> The space around border. Defaults to `1`.
+    - `backgroundColor` <String> The color of the border. Defaults to `000000`.
+    - `borderOptions` <?[Object]>
+      - `size` <?[Number]> denotes the border size. Defaults to `0`.
+      - `val` <?[String]> denotes the style of the borderStyle. Defaults to `solid`.
+      - `color` <?[String]> determines the border color. Defaults to `000000`.
+    - `margins` <?[Object]>
+      - `top` <[Number]> distance between the top of the text margins for the main document and the top of the page for all pages in this section in [TWIP]. Defaults to 1440. Supports equivalent measurement in [pixel], [cm] or [inch].
+      - `right` <[Number]> distance between the right edge of the page and the right edge of the text extents for this document in [TWIP]. Defaults to 1800. Supports equivalent measurement in [pixel], [cm] or [inch].
+      - `bottom` <[Number]> distance between the bottom of text margins for the document and the bottom of the page in [TWIP]. Defaults to 1440. Supports equivalent measurement in [pixel], [cm] or [inch].
+      - `left` <[Number]> distance between the left edge of the page and the left edge of the text extents for this document in [TWIP]. Defaults to 1800. Supports equivalent measurement in [pixel], [cm] or [inch].
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns

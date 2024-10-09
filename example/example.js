@@ -15,7 +15,7 @@ const htmlString = `<!DOCTYPE html>
     <body>
         <div>
             <p>Taken from wikipedia</p>
-            <hr>
+            <hr style="height:2px;border-width:0;color:gray;background-color:gray">
             <p>This is a test for hr tag</p>
             <hr>
             <img

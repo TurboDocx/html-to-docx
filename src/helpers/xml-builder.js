@@ -179,43 +179,61 @@ const buildTableRowHeight = (tableRowHeight) =>
     .att('@w', 'hRule', 'atLeast')
     .up();
 
-const buildHorizontalRule = (element, styles = {}) => {
-  // Parse inline styles from the element
-  const inlineStyles = (styleString => {
-    const styles = {};
-    if (styleString) {
-      styleString.split(";").forEach(style => {
-        const [key, value] = style.split(":").map(s => s.trim());
-        if (key && value) {
-          styles[key] = value;
-        }
-      });
-    }
-    return styles;
-  })(element && typeof element.getAttribute === 'function' ? element.getAttribute("style") : "");
-
-  // Merge inline styles with default styles and additional styles
-  const mergedStyles = { ...defaultHorizontalRuleOptions, ...styles, ...inlineStyles };
-
-  // Use the imported fragment directly
-  const hrFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele("@w", "p");
-  const pPr = hrFragment.ele("@w", "pPr");
-  const pBdr = pPr.ele("@w", "pBdr");
-
-  // Define the bottom border properties
-  pBdr.ele("@w", "bottom", {
-    "w:val": mergedStyles.val || 'single',
-    "w:sz": mergedStyles.sz || '4',
-    "w:space": mergedStyles.space || '1',
-    "w:color": mergedStyles.color || 'auto'
-  });
-
-  pBdr.up();
-  pPr.up();
-  hrFragment.up();
-
-  return hrFragment;
-}; 
+    const buildHorizontalRuleProperties = (attributes) => {
+      const horizontalRulePropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'pPr');
+    
+      if (attributes && typeof attributes === 'object') {
+        const spacingFragment = buildSpacing(
+          attributes.lineHeight,
+          attributes.beforeSpacing,
+          attributes.afterSpacing
+        );
+        horizontalRulePropertiesFragment.import(spacingFragment);
+    
+        const borderFragment = buildBorder(
+          'bottom',
+          attributes.borderOptions.size,
+          attributes.borderOptions.val,
+          attributes.borderOptions.color
+        );
+        horizontalRulePropertiesFragment.import(borderFragment);
+    
+        const shadingFragment = buildShading(attributes.backgroundColor);
+        horizontalRulePropertiesFragment.import(shadingFragment);
+    
+        horizontalRulePropertiesFragment.up();
+      }
+    
+      return horizontalRulePropertiesFragment;
+    };
+    
+    const buildHorizontalRule = (vNode, attributes, docxDocumentInstance) => {
+      const options = {
+        isParagraph: false,
+      };
+    
+      const modifiedAttributes = modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, attributes, options);
+    
+      if (!modifiedAttributes.borderOptions) {
+        modifiedAttributes.borderOptions = defaultHorizontalRuleOptions.borderOptions;
+      }
+    
+      const horizontalRuleFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'hr');
+      const horizontalRulePropertiesFragment = buildHorizontalRuleProperties(modifiedAttributes);
+      horizontalRuleFragment.import(horizontalRulePropertiesFragment);
+      
+      horizontalRuleFragment.ele('w:r')
+        .ele('@w','rPr')
+        .ele('@w','shd', { 'w:fill': modifiedAttributes.backgroundColor }).up()
+        .ele('@w','bdr', { 'w:val': modifiedAttributes.borderOptions.val, 'w:sz': modifiedAttributes.borderOptions.size, 'w:color': modifiedAttributes.borderOptions.color }).up()
+        .up()
+        .ele('@w', 't', { 'xml:space': 'preserve' }, ' '.repeat(modifiedAttributes.width))
+        .up()
+        .up()
+        .up();
+    
+      return horizontalRuleFragment;
+    };
     
 const buildVerticalAlignment = (verticalAlignment) => {
   if (verticalAlignment.toLowerCase() === 'middle') {
@@ -470,11 +488,9 @@ const fixupColumnWidth = (columnWidthString, parentWidth = 0) => {
 const fixupMargin = (marginString) => {
   if (pointRegex.test(marginString)) {
     const matchedParts = marginString.match(pointRegex);
-    // convert point to half point
     return pointToTWIP(matchedParts[1]);
   } else if (pixelRegex.test(marginString)) {
     const matchedParts = marginString.match(pixelRegex);
-    // convert pixels to half point
     return pixelToTWIP(matchedParts[1]);
   } else if (cmRegex.test(marginString)) {
     const matchedParts = marginString.match(cmRegex);
@@ -483,22 +499,19 @@ const fixupMargin = (marginString) => {
     const matchedParts = marginString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
   } else if (percentageRegex.test(marginString)) {
-    // This requires changes in lot of functions. So, for now, we are returning the percentage value as it is.
-    // TODO: Revisit this and see how margins in percentages are handled and change in respective functions.
     const matchedParts = marginString.match(percentageRegex);
-    return matchedParts[1]
+    return matchedParts[1];
   }
 };
 
 const borderStyleParser = (style) => {
-  // Accepted OOXML Values for border style: http://officeopenxml.com/WPtableBorders.php
   if (['dashed', 'dotted', 'double', 'inset', 'outset', 'none'].includes(style)) {
     return style;
   } else if (style === 'hidden') {
     return 'nil';
   }
-  return 'single'
-}
+  return 'single';
+};
 
 const borderSizeParser = (borderSize) => {
   if (pointRegex.test(borderSize)) {

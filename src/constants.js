@@ -35,10 +35,20 @@ const defaultTableBorderAttributeOptions = {
   stroke: 'single',
 };
 const defaultHorizontalRuleOptions = {
-  val: 'single',
-  sz: '24',
-  space: '1',
-  color: 'FF0000',
+  height: 0,
+  width: 100,
+  backgroundColor: '000000',
+  borderOptions: {
+    size: 0,
+    val: 'solid',
+    color: '000000',
+  },
+  margins: {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
 };
 const defaultDocumentOptions = {
   orientation: defaultOrientation,
@@ -65,6 +75,7 @@ const defaultDocumentOptions = {
     },
     borderOptions: defaultTableBorderOptions,
   },
+  hrStyles: defaultHorizontalRuleOptions,
   pageSize: {
     width: landscapeHeight,
     height: landscapeWidth,
