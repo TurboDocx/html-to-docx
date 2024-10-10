@@ -16,9 +16,9 @@ const htmlString = `<!DOCTYPE html>
         <div>
             <p>Taken from wikipedia</p>
             <p>Taken from wikipedia</p>
-            <hr style="height:30px;background-color: blue; border: 20px solid; color: blue">
+            <hr style="height:45px; background-color: blue; color: blue">
             <p>This is a test for hr tag</p>
-            <hr>
+            <hr style="height:2px; background-color: red; border: 5px dashed; color: green">
             <img
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Red dot"

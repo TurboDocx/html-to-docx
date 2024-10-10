@@ -35,11 +35,11 @@ const defaultTableBorderAttributeOptions = {
   stroke: 'single',
 };
 const defaultHorizontalRuleOptions = {
-  height: 0,
+  height: 10,
   width: 100,
   backgroundColor: '000000',
   borderOptions: {
-    size: 0,
+    size: 10,
     val: 'solid',
     color: '000000',
   },

@@ -178,63 +178,55 @@ const buildTableRowHeight = (tableRowHeight) =>
     .att('@w', 'val', tableRowHeight)
     .att('@w', 'hRule', 'atLeast')
     .up();
+    
+const buildHorizontalRuleProperties = (vNode) => {
+  const horizontalRulePropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('w:pPr');
+  
+  const modifiedAttributes = modifiedStyleAttributesBuilder(null, vNode, {}, { isParagraph: false });
+  console.log(modifiedAttributes);
+  if (modifiedAttributes.lineHeight || modifiedAttributes.beforeSpacing || modifiedAttributes.afterSpacing) {
+    const spacingFragment = buildSpacing(
+      modifiedAttributes.lineHeight,
+      modifiedAttributes.beforeSpacing,
+      modifiedAttributes.afterSpacing
+    );
+    horizontalRulePropertiesFragment.import(spacingFragment);
+  }
 
-    const buildHorizontalRuleProperties = (attributes) => {
-      const horizontalRulePropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'pPr');
-    
-      if (attributes && typeof attributes === 'object') {
-        const spacingFragment = buildSpacing(
-          attributes.lineHeight,
-          attributes.beforeSpacing,
-          attributes.afterSpacing
-        );
-        horizontalRulePropertiesFragment.import(spacingFragment);
-    
-        const borderFragment = buildBorder(
-          'bottom',
-          attributes.borderOptions.size,
-          attributes.borderOptions.val,
-          attributes.borderOptions.color
-        );
-        horizontalRulePropertiesFragment.import(borderFragment);
-    
-        const shadingFragment = buildShading(attributes.backgroundColor);
-        horizontalRulePropertiesFragment.import(shadingFragment);
-    
-        horizontalRulePropertiesFragment.up();
-      }
-    
-      return horizontalRulePropertiesFragment;
-    };
-    
-    const buildHorizontalRule = (vNode, attributes, docxDocumentInstance) => {
-      const options = {
-        isParagraph: false,
-      };
-    
-      const modifiedAttributes = modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, attributes, options);
-    
-      if (!modifiedAttributes.borderOptions) {
-        modifiedAttributes.borderOptions = defaultHorizontalRuleOptions.borderOptions;
-      }
-    
-      const horizontalRuleFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'hr');
-      const horizontalRulePropertiesFragment = buildHorizontalRuleProperties(modifiedAttributes);
-      horizontalRuleFragment.import(horizontalRulePropertiesFragment);
-      
-      horizontalRuleFragment.ele('w:r')
-        .ele('@w','rPr')
-        .ele('@w','shd', { 'w:fill': modifiedAttributes.backgroundColor }).up()
-        .ele('@w','bdr', { 'w:val': modifiedAttributes.borderOptions.val, 'w:sz': modifiedAttributes.borderOptions.size, 'w:color': modifiedAttributes.borderOptions.color }).up()
-        .up()
-        .ele('@w', 't', { 'xml:space': 'preserve' }, ' '.repeat(modifiedAttributes.width))
-        .up()
-        .up()
-        .up();
-    
-      return horizontalRuleFragment;
-    };
-    
+  if (modifiedAttributes.backgroundColor) {
+    const shadingFragment = buildShading(modifiedAttributes.backgroundColor);
+    horizontalRulePropertiesFragment.import(shadingFragment);
+  }
+
+  const { border = '' } = vNode.properties.style || {};
+  let [borderSize, borderVal, borderColor] = cssBorderParser(border, defaultHorizontalRuleOptions.borderOptions);
+  if (modifiedAttributes.height) {
+    const heightValue = parseInt(modifiedAttributes.height, 10);
+    console.log(heightValue);
+    borderSize = heightValue;
+  }
+  const borderFragment = buildBorder('bottom', borderSize, borderVal, borderColor);
+  horizontalRulePropertiesFragment.import(borderFragment);
+
+  horizontalRulePropertiesFragment.up();
+  console.log(horizontalRulePropertiesFragment);
+  return horizontalRulePropertiesFragment;
+};
+
+const buildHorizontalRule = (vNode) => {
+  const horizontalRuleFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('w:p');
+  console.log(vNode);
+  const propertiesFragment = buildHorizontalRuleProperties(vNode);
+  horizontalRuleFragment.import(propertiesFragment);
+
+  const runFragment = horizontalRuleFragment.ele('w:r');
+  runFragment.ele('w:rPr');
+  runFragment.up();
+  horizontalRuleFragment.up();
+
+  return horizontalRuleFragment;
+};    
+
 const buildVerticalAlignment = (verticalAlignment) => {
   if (verticalAlignment.toLowerCase() === 'middle') {
     verticalAlignment = 'center';
@@ -526,7 +518,7 @@ const borderSizeParser = (borderSize) => {
   return borderSize
 }
 
-const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableBorderOptions, stroke: 'single' }) => {
+const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultHorizontalRuleOptions.borderOptions, stroke: 'single' }) => {
   const tokens = borderString.split(' ');
 
   let { size, stroke, color } = defaultBorderOptions
@@ -575,7 +567,6 @@ const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableB
 
 const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes, options) => {
   const modifiedAttributes = { ...attributes };
-
   // styles
   if (isVNode(vNode) && vNode.properties && vNode.properties.style) {
     const vNodeStyle = vNode.properties.style;
@@ -610,6 +601,8 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         }
       } else if (vNodeStyleKey === 'font-family') {
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
+      } else if (vNodeStyleKey === 'height') {
+        modifiedAttributes.height = vNodeStyleValue;
       } else if (vNodeStyleKey === 'font-size') {
         modifiedAttributes.fontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
       } else if (vNodeStyleKey === 'line-height') {
