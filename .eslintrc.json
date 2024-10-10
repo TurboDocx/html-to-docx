@@ -6,7 +6,19 @@
   "plugins": ["prettier"],
   "rules": {
     "prettier/prettier": ["error"],
-    "default-case": "off"
+    "default-case": "off",
+    "import/extensions": ["error", "ignorePackages", {
+      "js": "always",
+      "jsx": "always"
+    }],
+    "import/no-unresolved": "off",
+    "settings": {
+      "import/resolver": {
+        "node": {
+          "extensions": [".js", ".jsx"]
+        }
+      }
+    }
   },
   "ignorePatterns": "dist/**/*.js"
 }

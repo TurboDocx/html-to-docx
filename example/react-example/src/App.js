@@ -12,6 +12,10 @@ const htmlString = `<!DOCTYPE html>
     <body>
         <div>
             <p>Taken from wikipedia</p>
+            <p>Taken from wikipedia</p>
+            <hr>
+            <p>This is a test for hr tag</p>
+            <hr>
             <img
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Red dot"
