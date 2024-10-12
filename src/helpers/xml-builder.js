@@ -183,7 +183,6 @@ const buildHorizontalRuleProperties = (vNode) => {
   const horizontalRulePropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('w:pPr');
   
   const modifiedAttributes = modifiedStyleAttributesBuilder(null, vNode, {}, { isParagraph: false });
-  console.log(modifiedAttributes);
   if (modifiedAttributes.lineHeight || modifiedAttributes.beforeSpacing || modifiedAttributes.afterSpacing) {
     const spacingFragment = buildSpacing(
       modifiedAttributes.lineHeight,
@@ -202,30 +201,41 @@ const buildHorizontalRuleProperties = (vNode) => {
   let [borderSize, borderVal, borderColor] = cssBorderParser(border, defaultHorizontalRuleOptions.borderOptions);
   if (modifiedAttributes.height) {
     const heightValue = parseInt(modifiedAttributes.height, 10);
-    console.log(heightValue);
     borderSize = heightValue;
   }
   const borderFragment = buildBorder('bottom', borderSize, borderVal, borderColor);
   horizontalRulePropertiesFragment.import(borderFragment);
 
   horizontalRulePropertiesFragment.up();
-  console.log(horizontalRulePropertiesFragment);
   return horizontalRulePropertiesFragment;
 };
 
 const buildHorizontalRule = (vNode) => {
   const horizontalRuleFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('w:p');
-  console.log(vNode);
   const propertiesFragment = buildHorizontalRuleProperties(vNode);
   horizontalRuleFragment.import(propertiesFragment);
 
   const runFragment = horizontalRuleFragment.ele('w:r');
-  runFragment.ele('w:rPr');
+  const runPropertiesFragment = runFragment.ele('w:rPr');
+
+  const {
+    height = defaultHorizontalRuleOptions.height,
+    width = defaultHorizontalRuleOptions.width,
+    backgroundColor = defaultHorizontalRuleOptions.backgroundColor,
+    border = `${defaultHorizontalRuleOptions.borderOptions.size}px ${defaultHorizontalRuleOptions.borderOptions.val} ${defaultHorizontalRuleOptions.borderOptions.color}`
+  } = vNode.properties.style || {};
+
+  const [borderSize, borderVal, borderColor] = cssBorderParser(border, defaultHorizontalRuleOptions.borderOptions);
+
+  runPropertiesFragment.ele('w:shd', { 'w:fill': backgroundColor }).up();
+  runPropertiesFragment.ele('w:bdr', { 'w:val': borderVal, 'w:sz': borderSize, 'w:color': borderColor }).up();
+
+  runFragment.ele('w:t', { 'xml:space': 'preserve' }, ' '.repeat(parseInt(width, 10) || 1)).up();
   runFragment.up();
   horizontalRuleFragment.up();
 
   return horizontalRuleFragment;
-};    
+};
 
 const buildVerticalAlignment = (verticalAlignment) => {
   if (verticalAlignment.toLowerCase() === 'middle') {
@@ -781,6 +791,8 @@ const buildFormatting = (htmlTag, options) => {
       return buildTextDecoration(options && options.textDecoration ? options.textDecoration : {});
     case 'textShadow':
       return buildTextShadow();
+    case 'hr':
+      return buildHorizontalRule();
   }
 
   return null;
