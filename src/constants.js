@@ -34,6 +34,22 @@ const defaultTableBorderAttributeOptions = {
   size: 1,
   stroke: 'single',
 };
+const defaultHorizontalRuleOptions = {
+  height: 10,
+  width: 100,
+  backgroundColor: '000000',
+  borderOptions: {
+    size: 10,
+    val: 'solid',
+    color: '000000',
+  },
+  margins: {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+};
 const defaultDocumentOptions = {
   orientation: defaultOrientation,
   margins: cloneDeep(portraitMargins),
@@ -59,6 +75,7 @@ const defaultDocumentOptions = {
     },
     borderOptions: defaultTableBorderOptions,
   },
+  hrStyles: defaultHorizontalRuleOptions,
   pageSize: {
     width: landscapeHeight,
     height: landscapeWidth,
@@ -124,6 +141,7 @@ export {
   defaultDocumentOptions,
   defaultTableBorderOptions,
   defaultHTMLString,
+  defaultHorizontalRuleOptions,
   relsFolderName,
   headerFileName,
   footerFileName,

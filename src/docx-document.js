@@ -160,6 +160,7 @@ class DocxDocument {
     this.tableBorders =
       (properties.table && properties.table.borderOptions) ||
       defaultDocumentOptions.table.borderOptions;
+    this.horizontalRule = properties.horizontalRule || defaultDocumentOptions.hrStyles;
     this.pageNumber = properties.pageNumber || false;
     this.skipFirstHeaderFooter = properties.skipFirstHeaderFooter || false;
     this.lineNumber = properties.lineNumber ? properties.lineNumberOptions : null;
