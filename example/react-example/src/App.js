@@ -1616,6 +1616,95 @@ const htmlString = `<!DOCTYPE html>
             </li>
             <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Heading 3</span></li>
         </ul>
+        <div>
+            <p>Table with empty row that could corrupt</p>
+                <table style="border-collapse: collapse; width: 100%; margin-top: 20px;" cellspacing="0">
+            <thead>
+                <tr>
+                <th style="background-color: #0e693a; color: #ffffff; border: 1px solid #000; padding: 8px;">Task</th>
+                <th style="background-color: #0e693a; color: #ffffff; border: 1px solid #000; padding: 8px;">Frequency</th>
+                </tr>
+            </thead>
+            <tbody>
+            <tr>
+            <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Showroom</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Wipe down display cars</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Clean glass walls &amp; windows</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Mop &amp; polish floors</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Dust furniture &amp; charging stations</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Service Bay</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Sweep &amp; mop floors</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Empty trash &amp; oil disposal bins</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Clean workbenches &amp; tool areas</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Wipe down customer drop-off zone</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Waiting Area</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Vacuum carpets &amp; seating</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Sanitize coffee station &amp; touchscreens</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Restock magazines &amp; charging cables</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Restrooms</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Refill soap &amp; paper products</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Disinfect sinks &amp; counters</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Mop floors</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr>
+            <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Employee Lounge</td>
+            </tr>
+            <tr>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Wipe tables &amp; kitchen counters</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
+            </tr>
+            <tr></tr>
+            </tbody>
+            </table>
+        </div>
     </body>
 </html>`;
 
