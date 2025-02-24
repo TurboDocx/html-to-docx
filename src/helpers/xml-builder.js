@@ -1040,8 +1040,7 @@ const buildRunOrRuns = async (vNode, attributes, docxDocumentInstance) => {
       );
 
       const tempRunFragments = await buildRun(childVNode, isVNode(childVNode) && childVNode.tagName === 'img'
-        ? { ...modifiedAttributes, type: 'picture', description: childVNode.properties.alt }
-        : modifiedAttributes, docxDocumentInstance);
+        ? { ...modifiedAttributes, type: 'picture', description: childVNode.properties.alt } : modifiedAttributes, docxDocumentInstance);
       runFragments = runFragments.concat(
         Array.isArray(tempRunFragments) ? tempRunFragments : [tempRunFragments]
       );
@@ -2701,6 +2700,16 @@ const buildTableRowProperties = (attributes) => {
   return tableRowPropertiesFragment;
 };
 
+const isEmptyTableRow = (vNode) => {
+  if (!vNode || !vNode.children || vNode.children.length === 0) {
+    return true;
+  }
+
+  // Only check if the row has any cells, don't check cell contents
+  const cells = vNode.children.filter(child => ['td', 'th'].includes(child.tagName));
+  return cells.length === 0;
+};
+
 /**
  * Builds a table row fragment
  * 
@@ -2712,6 +2721,11 @@ const buildTableRowProperties = (attributes) => {
  * @returns {any} Returns the table row fragment
  */
 const buildTableRow = async (vNode, attributes, rowSpanMap, docxDocumentInstance, rowIndexEquivalent) => {
+  // Skip empty rows
+  if (isEmptyTableRow(vNode)) {
+    return null;
+  }
+
   const tableRowFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tr');
   const modifiedAttributes = cloneDeep(attributes)
 
@@ -3220,7 +3234,9 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
               docxDocumentInstance,
               setBorderIndexEquivalent(iteratorIndex, childVNode.children.length)
             );
-            tableFragment.import(tableRowFragment);
+            if (tableRowFragment) {
+              tableFragment.import(tableRowFragment);
+            }
           }
         }
       } else if (childVNode.tagName === 'tbody') {
@@ -3242,7 +3258,9 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
               docxDocumentInstance,
               setBorderIndexEquivalent(iteratorIndex, childVNode.children.length)
             );
-            tableFragment.import(tableRowFragment);
+            if (tableRowFragment) {
+              tableFragment.import(tableRowFragment);
+            }
           }
         }
       } else if (childVNode.tagName === 'tr') {
@@ -3257,7 +3275,9 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
           docxDocumentInstance,
           setBorderIndexEquivalent(index, vNode.children.length)
         );
-        tableFragment.import(tableRowFragment);
+        if (tableRowFragment) {
+          tableFragment.import(tableRowFragment);
+        }
       }
     }
   }
