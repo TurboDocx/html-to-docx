@@ -1039,7 +1039,7 @@ const buildRunOrRuns = async (vNode, attributes, docxDocumentInstance) => {
         attributes
       );
 
-      const tempRunFragments = await buildRun(childVNode, isVNode(childVNode) && childVNode.tagName === 'img'
+      const tempRunFragments = await buildRunOrHyperLink(childVNode, isVNode(childVNode) && childVNode.tagName === 'img'
         ? { ...modifiedAttributes, type: 'picture', description: childVNode.properties.alt } : modifiedAttributes, docxDocumentInstance);
       runFragments = runFragments.concat(
         Array.isArray(tempRunFragments) ? tempRunFragments : [tempRunFragments]
