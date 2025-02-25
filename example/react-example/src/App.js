@@ -93,6 +93,17 @@ const htmlString = `<!DOCTYPE html>
                     </strong>
                 </a>
             </li>
+            <li>
+                <span>
+                    Black
+                    <a href="https://en.wikipedia.org/wiki/Coffee">
+                        Strong
+                        <strong>
+                            <u>Coffee</u>
+                        </strong>
+                    </a>
+                </span>
+            </li>
             <li>Tea
                 <ol>
                     <li>Black tea
