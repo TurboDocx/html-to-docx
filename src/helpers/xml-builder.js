@@ -12,7 +12,6 @@ import { cloneDeep } from 'lodash';
 import imageToBase64 from 'image-to-base64';
 import sizeOf from 'image-size';
 import { getMimeType } from '../utils/image'
-
 import namespaces from '../namespaces';
 import {
   rgbToHex,
@@ -55,7 +54,8 @@ import {
   imageType,
   internalRelationship,
   defaultTableBorderOptions,
-  defaultTableBorderAttributeOptions
+  defaultTableBorderAttributeOptions,
+  defaultHorizontalRuleOptions,
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
@@ -178,6 +178,64 @@ const buildTableRowHeight = (tableRowHeight) =>
     .att('@w', 'val', tableRowHeight)
     .att('@w', 'hRule', 'atLeast')
     .up();
+    
+const buildHorizontalRuleProperties = (vNode) => {
+  const horizontalRulePropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('w:pPr');
+  
+  const modifiedAttributes = modifiedStyleAttributesBuilder(null, vNode, {}, { isParagraph: false });
+  if (modifiedAttributes.lineHeight || modifiedAttributes.beforeSpacing || modifiedAttributes.afterSpacing) {
+    const spacingFragment = buildSpacing(
+      modifiedAttributes.lineHeight,
+      modifiedAttributes.beforeSpacing,
+      modifiedAttributes.afterSpacing
+    );
+    horizontalRulePropertiesFragment.import(spacingFragment);
+  }
+
+  if (modifiedAttributes.backgroundColor) {
+    const shadingFragment = buildShading(modifiedAttributes.backgroundColor);
+    horizontalRulePropertiesFragment.import(shadingFragment);
+  }
+
+  const { border = '' } = vNode.properties.style || {};
+  let [borderSize, borderVal, borderColor] = cssBorderParser(border, defaultHorizontalRuleOptions.borderOptions);
+  if (modifiedAttributes.height) {
+    const heightValue = parseInt(modifiedAttributes.height, 10);
+    borderSize = heightValue;
+  }
+  const borderFragment = buildBorder('bottom', borderSize, borderVal, borderColor);
+  horizontalRulePropertiesFragment.import(borderFragment);
+
+  horizontalRulePropertiesFragment.up();
+  return horizontalRulePropertiesFragment;
+};
+
+const buildHorizontalRule = (vNode) => {
+  const horizontalRuleFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('w:p');
+  const propertiesFragment = buildHorizontalRuleProperties(vNode);
+  horizontalRuleFragment.import(propertiesFragment);
+
+  const runFragment = horizontalRuleFragment.ele('w:r');
+  const runPropertiesFragment = runFragment.ele('w:rPr');
+
+  const {
+    height = defaultHorizontalRuleOptions.height,
+    width = defaultHorizontalRuleOptions.width,
+    backgroundColor = defaultHorizontalRuleOptions.backgroundColor,
+    border = `${defaultHorizontalRuleOptions.borderOptions.size}px ${defaultHorizontalRuleOptions.borderOptions.val} ${defaultHorizontalRuleOptions.borderOptions.color}`
+  } = vNode.properties.style || {};
+
+  const [borderSize, borderVal, borderColor] = cssBorderParser(border, defaultHorizontalRuleOptions.borderOptions);
+
+  runPropertiesFragment.ele('w:shd', { 'w:fill': backgroundColor }).up();
+  runPropertiesFragment.ele('w:bdr', { 'w:val': borderVal, 'w:sz': borderSize, 'w:color': borderColor }).up();
+
+  runFragment.ele('w:t', { 'xml:space': 'preserve' }, ' '.repeat(parseInt(width, 10) || 1)).up();
+  runFragment.up();
+  horizontalRuleFragment.up();
+
+  return horizontalRuleFragment;
+};
 
 const buildVerticalAlignment = (verticalAlignment) => {
   if (verticalAlignment.toLowerCase() === 'middle') {
@@ -432,11 +490,9 @@ const fixupColumnWidth = (columnWidthString, parentWidth = 0) => {
 const fixupMargin = (marginString) => {
   if (pointRegex.test(marginString)) {
     const matchedParts = marginString.match(pointRegex);
-    // convert point to half point
     return pointToTWIP(matchedParts[1]);
   } else if (pixelRegex.test(marginString)) {
     const matchedParts = marginString.match(pixelRegex);
-    // convert pixels to half point
     return pixelToTWIP(matchedParts[1]);
   } else if (cmRegex.test(marginString)) {
     const matchedParts = marginString.match(cmRegex);
@@ -445,22 +501,19 @@ const fixupMargin = (marginString) => {
     const matchedParts = marginString.match(inchRegex);
     return inchToTWIP(matchedParts[1]);
   } else if (percentageRegex.test(marginString)) {
-    // This requires changes in lot of functions. So, for now, we are returning the percentage value as it is.
-    // TODO: Revisit this and see how margins in percentages are handled and change in respective functions.
     const matchedParts = marginString.match(percentageRegex);
-    return matchedParts[1]
+    return matchedParts[1];
   }
 };
 
 const borderStyleParser = (style) => {
-  // Accepted OOXML Values for border style: http://officeopenxml.com/WPtableBorders.php
   if (['dashed', 'dotted', 'double', 'inset', 'outset', 'none'].includes(style)) {
     return style;
   } else if (style === 'hidden') {
     return 'nil';
   }
-  return 'single'
-}
+  return 'single';
+};
 
 const borderSizeParser = (borderSize) => {
   if (pointRegex.test(borderSize)) {
@@ -475,7 +528,7 @@ const borderSizeParser = (borderSize) => {
   return borderSize
 }
 
-const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableBorderOptions, stroke: 'single' }) => {
+const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultHorizontalRuleOptions.borderOptions, stroke: 'single' }) => {
   const tokens = borderString.split(' ');
 
   let { size, stroke, color } = defaultBorderOptions
@@ -524,7 +577,6 @@ const cssBorderParser = (borderString, defaultBorderOptions = { ...defaultTableB
 
 const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes, options) => {
   const modifiedAttributes = { ...attributes };
-
   // styles
   if (isVNode(vNode) && vNode.properties && vNode.properties.style) {
     const vNodeStyle = vNode.properties.style;
@@ -559,6 +611,8 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         }
       } else if (vNodeStyleKey === 'font-family') {
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
+      } else if (vNodeStyleKey === 'height') {
+        modifiedAttributes.height = vNodeStyleValue;
       } else if (vNodeStyleKey === 'font-size') {
         modifiedAttributes.fontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
       } else if (vNodeStyleKey === 'line-height') {
@@ -737,6 +791,8 @@ const buildFormatting = (htmlTag, options) => {
       return buildTextDecoration(options && options.textDecoration ? options.textDecoration : {});
     case 'textShadow':
       return buildTextShadow();
+    case 'hr':
+      return buildHorizontalRule();
   }
 
   return null;
@@ -854,7 +910,6 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
             case 'b':
               tempAttributes.strong = true;
               break;
-            case 'em':
             case 'i':
               tempAttributes.i = true;
               break;
@@ -1449,25 +1504,30 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
 
           computeImageDimensions(childVNode, modifiedAttributes);
         }
-        const runOrHyperlinkFragments = await buildRunOrHyperLink(
-          childVNode,
-          isVNode(childVNode) && childVNode.tagName === 'img'
-            ? { ...modifiedAttributes, type: 'picture', description: childVNode.properties.alt }
-            : modifiedAttributes,
-          docxDocumentInstance
-        );
-        if (Array.isArray(runOrHyperlinkFragments)) {
-          for (
-            let iteratorIndex = 0;
-            iteratorIndex < runOrHyperlinkFragments.length;
-            iteratorIndex++
-          ) {
-            const runOrHyperlinkFragment = runOrHyperlinkFragments[iteratorIndex];
-
-            paragraphFragment.import(runOrHyperlinkFragment);
-          }
+        if (childVNode.tagName === 'hr') {
+          const hrFragment = buildHorizontalRule();
+          paragraphFragment.import(hrFragment);
         } else {
-          paragraphFragment.import(runOrHyperlinkFragments);
+          const runOrHyperlinkFragments = await buildRunOrHyperLink(
+            childVNode,
+            isVNode(childVNode) && childVNode.tagName === 'img'
+              ? { ...modifiedAttributes, type: 'picture', description: childVNode.properties.alt }
+              : modifiedAttributes,
+            docxDocumentInstance
+          );
+          if (Array.isArray(runOrHyperlinkFragments)) {
+            for (
+              let iteratorIndex = 0;
+              iteratorIndex < runOrHyperlinkFragments.length;
+              iteratorIndex++
+            ) {
+              const runOrHyperlinkFragment = runOrHyperlinkFragments[iteratorIndex];
+
+              paragraphFragment.import(runOrHyperlinkFragment);
+            }
+          } else {
+            paragraphFragment.import(runOrHyperlinkFragments);
+          }
         }
       }
     }
@@ -2512,6 +2572,9 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
             }
           }
         }
+      } else if (isVNode(childVNode) && childVNode.tagName === 'hr') {
+        const hrFragment = buildHorizontalRule(docxDocumentInstance);
+        tableCellFragment.import(hrFragment);
       } else if (isVNode(childVNode) && ['ul', 'ol'].includes(childVNode.tagName)) {
         // render list in table
         if (vNodeHasChildren(childVNode)) {
@@ -3623,4 +3686,5 @@ export {
   buildUnderline,
   buildDrawing,
   fixupLineHeight,
+  buildHorizontalRule
 };
