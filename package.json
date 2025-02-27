@@ -1,12 +1,12 @@
 {
   "name": "@turbodocx/html-to-docx",
-  "version": "1.10.2",
+  "version": "1.11.0",
   "description": "HTML to DOCX converter",
   "keywords": [
-    "html",
-    "docx",
     "html-to-docx",
     "html to docx",
+    "html",
+    "docx",
     "office",
     "word",
     "pptx",
@@ -30,6 +30,7 @@
     "create",
     "make",
     "Office Open XML",
+    "OOXML",
     "document generation software",
     "automated document creation",
     "batch document generation",
@@ -74,7 +75,8 @@
     "braun1928",
     "juralio-james",
     "robinminso",
-    "shareefalis"
+    "shareefalis",
+    "adymo"
   ],
   "license": "MIT",
   "bugs": {
