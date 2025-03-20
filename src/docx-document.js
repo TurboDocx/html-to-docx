@@ -163,13 +163,10 @@ class DocxDocument {
     this.pageNumber = properties.pageNumber || false;
     this.skipFirstHeaderFooter = properties.skipFirstHeaderFooter || false;
     this.lineNumber = properties.lineNumber ? properties.lineNumberOptions : null;
-
-    // Follow the same pattern as other table properties
     this.addSpacingAfterTable =
       properties.table && properties.table.addSpacingAfter !== undefined
         ? properties.table.addSpacingAfter
         : defaultDocumentOptions.table.addSpacingAfter;
-
     this.lastNumberingId = 0;
     this.lastMediaId = 0;
     this.lastHeaderId = 0;
