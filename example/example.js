@@ -1718,16 +1718,50 @@ const htmlString = `<!DOCTYPE html>
             <tr></tr>
             </tbody>
             </table>
+            <div>
+                <p>Testing for paragraph after table spacing if addSpacingAfterTable is true or false</p>
+                <table
+                    style="
+                        border-collapse: collapse;
+                        border-left: 1px solid black;
+                        border-right: 2px solid brown;
+                        border-top: 2px solid yellow;
+                        border-bottom: 4px solid orange;
+                        margin: 0;
+                        padding: 0;
+                    "
+                >
+                    <tbody>
+                        <tr>
+                            <td>Row 1, Col 1</td>
+                            <td>Row 1, Col 2</td>
+                        </tr>
+                        <tr>
+                            <td>Row 2, Col 1</td>
+                            <td>Row 2, Col 2</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin: 0; line-height: 1;">
+                    Mid Merge Border (No Space After Table)
+                </p>
+            </div>
         </div>
     </body>
 </html>`;
 
 (async () => {
     const fileBuffer = await HTMLtoDOCX(htmlString, null, {
-        table: { row: { cantSplit: true } },
+        table: {
+            row: { cantSplit: true },
+            addSpacingAfterTable: true,
+        },
         footer: true,
         pageNumber: true,
-        preprocessing: { skipHTMLMinify: false }
+        preprocessing: {
+            skipHTMLMinify: false,
+        }
+
     });
 
     fs.writeFile(filePath, fileBuffer, (error) => {

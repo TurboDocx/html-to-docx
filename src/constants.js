@@ -58,6 +58,7 @@ const defaultDocumentOptions = {
       cantSplit: false,
     },
     borderOptions: defaultTableBorderOptions,
+    addSpacingAfter: true,
   },
   pageSize: {
     width: landscapeHeight,

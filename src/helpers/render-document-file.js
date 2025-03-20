@@ -12,13 +12,13 @@ import imageToBase64 from 'image-to-base64';
 
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
+import { cloneDeep } from 'lodash';
 import * as xmlBuilder from './xml-builder';
 import namespaces from '../namespaces';
 import { imageType, internalRelationship } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { getMimeType } from '../utils/image';
-import { cloneDeep } from 'lodash';
 
 const convertHTML = HTMLToVDOM({
   VNode,
@@ -142,8 +142,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
           ) {
             accumulator[accumulator.length - 1].node.children.push(childVNode);
           } else {
-            const properties =
-            {
+            const properties = {
               attributes: {
                 ...(parentVNodeProperties?.attributes || {}),
                 ...(childVNode?.properties?.attributes || {}),
@@ -161,23 +160,23 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 ? [childVNode]
                 : // eslint-disable-next-line no-nested-ternary
                 isVNode(childVNode)
-                  ? childVNode.tagName.toLowerCase() === 'li'
-                    ? [...childVNode.children]
-                    : [childVNode]
-                  : []
+                ? childVNode.tagName.toLowerCase() === 'li'
+                  ? [...childVNode.children]
+                  : [childVNode]
+                : []
             );
 
             childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
 
             const generatedNode = isVNode(childVNode)
               ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-              childVNode.tagName.toLowerCase() === 'li'
+                childVNode.tagName.toLowerCase() === 'li'
                 ? childVNode
                 : childVNode.tagName.toLowerCase() !== 'p'
-                  ? paragraphVNode
-                  : childVNode
+                ? paragraphVNode
+                : childVNode
               : // eslint-disable-next-line prettier/prettier
-              paragraphVNode;
+                paragraphVNode;
 
             accumulator.push({
               // eslint-disable-next-line prettier/prettier, no-nested-ternary
@@ -269,9 +268,11 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               docxDocumentInstance
             );
             xmlFragment.import(tableFragment);
-            // Adding empty paragraph for space after table
-            const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
-            xmlFragment.import(emptyParagraphFragment);
+            // Adding empty paragraph for space after table only if the option is enabled
+            if (docxDocumentInstance.addSpacingAfterTable) {
+              const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
+              xmlFragment.import(emptyParagraphFragment);
+            }
           } else if (childVNode.tagName === 'img') {
             const imageFragment = await buildImage(docxDocumentInstance, childVNode);
             if (imageFragment) {
@@ -291,9 +292,11 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         docxDocumentInstance
       );
       xmlFragment.import(tableFragment);
-      // Adding empty paragraph for space after table
-      const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
-      xmlFragment.import(emptyParagraphFragment);
+      // Adding empty paragraph for space after table only if the option is enabled
+      if (docxDocumentInstance.addSpacingAfterTable) {
+        const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
+        xmlFragment.import(emptyParagraphFragment);
+      }
       return;
     case 'ol':
     case 'ul':
