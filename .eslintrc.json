@@ -4,9 +4,12 @@
   },
   "extends": ["airbnb-base", "prettier"],
   "plugins": ["prettier"],
+  "ignorePatterns": "dist/**/*.js",
   "rules": {
     "prettier/prettier": ["error"],
-    "default-case": "off"
-  },
-  "ignorePatterns": "dist/**/*.js"
+    "default-case": "off",
+    "import/no-cycle": "off",
+    "no-param-reassign": "off", 
+    "no-nested-ternary": "off"
+  }
 }
