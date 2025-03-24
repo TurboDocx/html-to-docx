@@ -116,6 +116,7 @@ class DocxDocument {
     this.htmlString = properties.htmlString;
     this.orientation = properties.orientation;
     this.pageSize = properties.pageSize || defaultDocumentOptions.pageSize;
+    this.isRTL = properties.isRTL || false;
 
     const isPortraitOrientation = this.orientation === defaultOrientation;
     const height = this.pageSize.height ? this.pageSize.height : landscapeHeight;
@@ -212,7 +213,7 @@ class DocxDocument {
   generateDocumentXML() {
     const documentXML = create(
       { encoding: 'UTF-8', standalone: true },
-      generateDocumentTemplate(this.width, this.height, this.orientation, this.margins)
+      generateDocumentTemplate(this.width, this.height, this.orientation, this.margins, this.isRTL)
     );
     documentXML.root().first().import(this.documentXML);
 

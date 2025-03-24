@@ -78,6 +78,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
         originalWidth: imageProperties.width,
         originalHeight: imageProperties.height,
+        isRTL: docxDocumentInstance.isRTL, // Pass RTL flag
       },
       docxDocumentInstance
     );
@@ -110,6 +111,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
         tempVNodeObject.node,
         {
           numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
+          isRTL: docxDocumentInstance.isRTL,
         },
         docxDocumentInstance
       );
@@ -227,6 +229,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         vNode,
         {
           paragraphStyle: `Heading${vNode.tagName[1]}`,
+          isRTL: docxDocumentInstance.isRTL,
         },
         docxDocumentInstance
       );
@@ -250,7 +253,13 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
     case 'blockquote':
     case 'code':
     case 'pre':
-      const paragraphFragment = await xmlBuilder.buildParagraph(vNode, {}, docxDocumentInstance);
+      const paragraphFragment = await xmlBuilder.buildParagraph(
+        vNode,
+        {
+          isRTL: docxDocumentInstance.isRTL, // Pass RTL flag
+        },
+        docxDocumentInstance
+      );
       xmlFragment.import(paragraphFragment);
       return;
     case 'figure':
@@ -264,13 +273,16 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               {
                 maximumWidth: docxDocumentInstance.availableDocumentSpace,
                 rowCantSplit: docxDocumentInstance.tableRowCantSplit,
+                isRTL: docxDocumentInstance.isRTL,
               },
               docxDocumentInstance
             );
             xmlFragment.import(tableFragment);
             // Adding empty paragraph for space after table only if the option is enabled
             if (docxDocumentInstance.addSpacingAfterTable) {
-              const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
+              const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {
+                isRTL: docxDocumentInstance.isRTL,
+              });
               xmlFragment.import(emptyParagraphFragment);
             }
           } else if (childVNode.tagName === 'img') {
@@ -288,13 +300,16 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         {
           maximumWidth: docxDocumentInstance.availableDocumentSpace,
           rowCantSplit: docxDocumentInstance.tableRowCantSplit,
+          isRTL: docxDocumentInstance.isRTL,
         },
         docxDocumentInstance
       );
       xmlFragment.import(tableFragment);
       // Adding empty paragraph for space after table only if the option is enabled
       if (docxDocumentInstance.addSpacingAfterTable) {
-        const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
+        const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {
+          isRTL: docxDocumentInstance.isRTL,
+        });
         xmlFragment.import(emptyParagraphFragment);
       }
       return;
@@ -309,7 +324,9 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
       }
       return;
     case 'br':
-      const linebreakFragment = await xmlBuilder.buildParagraph(null, {});
+      const linebreakFragment = await xmlBuilder.buildParagraph(null, {
+        isRTL: docxDocumentInstance.isRTL,
+      });
       xmlFragment.import(linebreakFragment);
       return;
     case 'head':
@@ -340,7 +357,13 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
   } else if (isVNode(vTree)) {
     await findXMLEquivalent(docxDocumentInstance, vTree, xmlFragment);
   } else if (isVText(vTree)) {
-    const paragraphFragment = await xmlBuilder.buildParagraph(vTree, {}, docxDocumentInstance);
+    const paragraphFragment = await xmlBuilder.buildParagraph(
+      vTree,
+      {
+        isRTL: docxDocumentInstance.isRTL,
+      },
+      docxDocumentInstance
+    );
     xmlFragment.import(paragraphFragment);
   }
   return xmlFragment;
