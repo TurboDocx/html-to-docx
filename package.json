@@ -1,5 +1,5 @@
 {
-  "name": "@turbodocx/html-to-docx",
+  "name": "html-to-docx-rtl",
   "version": "1.12.0",
   "description": "HTML to DOCX converter",
   "keywords": [
@@ -45,8 +45,7 @@
     "lint": "eslint --fix .",
     "prettier:check": "prettier --check '**/*.{js}'",
     "validate": "run-s lint prettier:check",
-    "build": "rollup -c",
-    "prepare": "husky install"
+    "build": "rollup -c"
   },
   "repository": {
     "type": "git",
