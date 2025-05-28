@@ -41,6 +41,12 @@
   "main": "dist/html-to-docx.umd.js",
   "module": "dist/html-to-docx.esm.js",
   "types": "index.d.ts",
+  "files": [
+    "dist",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "npm run build && node example/example-node.js",
     "prerelease": "rollup -c",
