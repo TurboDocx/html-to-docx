@@ -48,26 +48,31 @@ const htmlString = `<!DOCTYPE html>
 const headerHtml = `<p style="text-align: right;">TurboDocx Example</p>`;
 const footerHtml = `<p style="text-align: center;">Page <span id="pageNumber">X</span> of <span id="totalPages">Y</span></p>`;
 
+async function saveDocxFile(docResult: Buffer | ArrayBuffer | Blob, fileName: string, docType: string) {
+    let docData: Buffer;
+    if (docResult instanceof Buffer) {
+        docData = docResult;
+    } else if (docResult instanceof ArrayBuffer) {
+        docData = Buffer.from(docResult);
+    } else if (typeof Blob !== 'undefined' && docResult instanceof Blob) {
+        console.log(`Received Blob for ${docType}, converting to ArrayBuffer then Buffer...`);
+        const arrayBuffer = await docResult.arrayBuffer();
+        docData = Buffer.from(arrayBuffer);
+    } else {
+        console.error(`Unexpected result type for ${docType}:`, typeof docResult);
+        // @ts-ignore
+        console.log(`${docType} constructor name:`, docResult?.constructor?.name);
+        return;
+    }
+    fs.writeFileSync(path.join(__dirname, fileName), docData);
+    console.log(`${docType} document created: ${fileName}`);
+}
+
 async function generateDocuments() {
     try {
         // Basic example
         const basicDocResult = await HTMLtoDOCX(htmlString);
-        let basicDocData: Buffer | Uint8Array;
-        if (basicDocResult instanceof Buffer) {
-            basicDocData = basicDocResult;
-        } else if (basicDocResult instanceof ArrayBuffer) {
-            basicDocData = Buffer.from(basicDocResult);
-        } else if (typeof Blob !== 'undefined' && basicDocResult instanceof Blob) {
-            console.log("Received Blob for basicDocResult, converting to ArrayBuffer then Buffer...");
-            const arrayBuffer = await basicDocResult.arrayBuffer();
-            basicDocData = Buffer.from(arrayBuffer);
-        } else {
-            console.error("Unexpected result type for basicDocResult:", typeof basicDocResult);
-            console.log("basicDocResult constructor name:", basicDocResult?.constructor?.name);
-            return;
-        }
-        fs.writeFileSync(path.join(__dirname, "basic-example.docx"), basicDocData);
-        console.log("Basic document created: basic-example.docx");
+        await saveDocxFile(basicDocResult, "basic-example.docx", "Basic");
 
         // Advanced example with all options
         const advancedDocResult = await HTMLtoDOCX(
@@ -112,22 +117,7 @@ async function generateDocuments() {
             footerHtml
         );
         
-        let advancedDocData: Buffer | Uint8Array;
-        if (advancedDocResult instanceof Buffer) {
-            advancedDocData = advancedDocResult;
-        } else if (advancedDocResult instanceof ArrayBuffer) {
-            advancedDocData = Buffer.from(advancedDocResult);
-        } else if (typeof Blob !== 'undefined' && advancedDocResult instanceof Blob) {
-            console.log("Received Blob for advancedDocResult, converting to ArrayBuffer then Buffer...");
-            const arrayBuffer = await advancedDocResult.arrayBuffer();
-            advancedDocData = Buffer.from(arrayBuffer);
-        } else {
-            console.error("Unexpected result type for advancedDocResult:", typeof advancedDocResult);
-            console.log("advancedDocResult constructor name:", advancedDocResult?.constructor?.name);
-            return;
-        }
-        fs.writeFileSync(path.join(__dirname, "advanced-example.docx"), advancedDocData);
-        console.log("Advanced document created: advanced-example.docx");
+        await saveDocxFile(advancedDocResult, "advanced-example.docx", "Advanced");
         
     } catch (error) {
         console.error("Error generating documents:", error);
