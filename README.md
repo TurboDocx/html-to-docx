@@ -100,6 +100,7 @@ async function complete() {
     footerHtml
   );
 }
+```
 
 For more comprehensive TypeScript examples, check out the following files in the `example/typescript` directory:
 
