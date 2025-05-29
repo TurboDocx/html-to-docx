@@ -118,8 +118,6 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@oozcitak/dom": "1.15.6",
-    "@oozcitak/util": "8.3.4",
     "color-name": "^1.1.4",
     "html-entities": "^2.3.3",
     "html-minifier-terser": "^7.2.0",
