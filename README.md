@@ -22,6 +22,115 @@ Use the npm to install the project.
 npm install @turbodocx/html-to-docx
 ```
 
+### TypeScript Support
+
+This package includes TypeScript typings. No additional installation is required to use it with TypeScript projects.
+
+### TypeScript Example
+
+```typescript
+import HtmlToDocx from "@turbodocx/html-to-docx";
+
+const htmlString = `<!DOCTYPE html>
+    <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <title>Document</title>
+        </head>
+        <body>
+            <h1>Hello world</h1>
+        </body>
+    </html>`;
+
+// Basic usage
+async function basicExample() {
+  const docx = await HtmlToDocx(htmlString);
+  // docx is ArrayBuffer in Node.js or Blob in browser environments
+}
+
+// With header
+async function withHeader() {
+  const headerHtml = "<p>Document Header</p>";
+  const docx = await HtmlToDocx(htmlString, headerHtml);
+}
+
+// With document options
+async function withOptions() {
+  const docx = await HtmlToDocx(htmlString, null, {
+    orientation: "landscape",
+    title: "TypeScript Example",
+    creator: "TurboDocx",
+    table: {
+      row: {
+        cantSplit: true,
+      },
+      borderOptions: {
+        size: 1,
+        color: "000000"
+      }
+    },
+    pageNumber: true,
+    footer: true
+  });
+}
+
+// With all parameters
+async function complete() {
+  const headerHtml = "<p>Document Header</p>";
+  const footerHtml = "<p>Page Footer</p>";
+  
+  const docx = await HtmlToDocx(
+    htmlString,
+    headerHtml,
+    {
+      orientation: "landscape",
+      pageSize: {
+        width: 12240,
+        height: 15840
+      },
+      margins: {
+        top: 1440,
+        right: 1800,
+        bottom: 1440,
+        left: 1800
+      },
+      title: "Complete Example",
+      creator: "TurboDocx",
+    },
+    footerHtml
+  );
+}
+```
+
+For more comprehensive TypeScript examples, check out the following files in the `example/typescript` directory:
+
+- `typescript-example.ts` - A complete example showing how to generate and save DOCX files using TypeScript
+- `type-test.ts` - Demonstrates the type checking capabilities provided by the TypeScript definitions
+
+### Running the TypeScript Examples
+
+To run the TypeScript examples:
+
+```bash
+# Navigate to the example directory
+cd example/typescript
+
+# Install ts-node globally (if not already installed)
+npm install -g ts-node typescript
+
+# Ensure @turbodocx/html-to-docx is built and accessible
+# From the root directory of the project:
+# npm install
+# npm run build
+
+# Run the TypeScript example directly
+ts-node typescript-example.ts
+```
+
+This will generate two DOCX files in the `example/typescript` directory:
+- `basic-example.docx` - A simple document with minimal configuration
+- `advanced-example.docx` - A document with headers, footers, and advanced formatting options
+
 ## Usage
 
 ```js
