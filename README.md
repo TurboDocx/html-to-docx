@@ -3,6 +3,7 @@
 html-to-docx
 ============
 [![NPM Version][npm-image]][npm-url]
+[![Type Script](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
 [![npm](https://img.shields.io/npm/dw/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
