@@ -118,7 +118,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "color-name": "^1.1.4",
+    "color-name": "^2.0.0",
     "html-entities": "^2.3.3",
     "html-minifier-terser": "^7.2.0",
     "html-to-vdom": "^0.7.0",
