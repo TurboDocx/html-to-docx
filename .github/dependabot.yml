@@ -1,25 +1,32 @@
-version: 2
+version: 3
 
 updates:
-  # NPM dependencies
+  # NPM dependencies - security updates only
   - package-ecosystem: "npm"
-    directory: "/"                # adjust if package.json is in a subdirectory
+    directory: "/"            
     schedule:
       interval: "daily"
     target-branch: "develop"
     commit-message:
-      prefix: "deps"
+      prefix: "security"
       include: "scope"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: "all"
+        update-type: "security"   # Only security updates
     rebase-strategy: "auto"
 
-  # GitHub Actions dependencies
+  # GitHub Actions dependencies - security updates only  
   - package-ecosystem: "github-actions"
-    directory: "/"                # always root
+    directory: "/"                
     schedule:
       interval: "weekly"
     target-branch: "develop"
     commit-message:
-      prefix: "deps"
+      prefix: "security"
       include: "scope"
+    open-pull-requests-limit: 0  
+    allow:
+      - dependency-type: "all"
+        update-type: "security"   # Only security updates
     rebase-strategy: "auto"
