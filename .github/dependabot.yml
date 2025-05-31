@@ -10,10 +10,10 @@ updates:
     commit-message:
       prefix: "security"
       include: "scope"
+    # Disable version updates for npm dependencies
     open-pull-requests-limit: 0
     allow:
       - dependency-type: "all"
-        update-type: "security"   # Only security updates
     rebase-strategy: "auto"
 
   # GitHub Actions dependencies - security updates only  
@@ -25,8 +25,8 @@ updates:
     commit-message:
       prefix: "security"
       include: "scope"
+    # Disable version updates for GitHub Actions dependencies
     open-pull-requests-limit: 0  
     allow:
       - dependency-type: "all"
-        update-type: "security"   # Only security updates
     rebase-strategy: "auto"
