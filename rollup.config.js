@@ -7,6 +7,8 @@ import builtins from 'rollup-plugin-node-builtins';
 
 import * as meta from './package.json';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export default {
   input: 'index.js',
   external: ['color-name', 'html-to-vdom', 'jszip', 'virtual-dom', 'xmlbuilder2', 'html-entities'],
@@ -26,7 +28,7 @@ export default {
     {
       file: 'dist/html-to-docx.esm.js',
       format: 'es',
-      sourcemap: true,
+      sourcemap: !isProduction,
       banner: `// ${meta.homepage} v${meta.version} Copyright ${new Date().getFullYear()} ${
         meta.author
       }`,
@@ -35,7 +37,7 @@ export default {
       file: 'dist/html-to-docx.umd.js',
       format: 'umd',
       name: 'HTMLToDOCX',
-      sourcemap: true,
+      sourcemap: !isProduction,
       banner: `// ${meta.homepage} v${meta.version} Copyright ${new Date().getFullYear()} ${
         meta.author
       }`,
