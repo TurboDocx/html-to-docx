@@ -20,6 +20,7 @@ const htmlString = `<!DOCTYPE html>
                 src="https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
                 alt="Red dot"
             />
+            <blockquote>Quote <span>from <a href="https://www.wikipedia.org/">Wikipedia</a></span></blockquote>
         </div>
         <div>
             <h1>This is heading 1</h1>

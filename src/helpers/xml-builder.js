@@ -1410,7 +1410,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         paragraphFragment.import(runOrHyperlinkFragments);
       }
     } else if (vNode.tagName === 'blockquote') {
-      const runFragmentOrFragments = await buildRun(vNode, attributes);
+      const runFragmentOrFragments = await buildRun(vNode, attributes, docxDocumentInstance);
       if (Array.isArray(runFragmentOrFragments)) {
         for (let index = 0; index < runFragmentOrFragments.length; index++) {
           paragraphFragment.import(runFragmentOrFragments[index]);
