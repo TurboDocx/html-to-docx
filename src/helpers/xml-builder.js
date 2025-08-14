@@ -953,6 +953,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
     const textFragment = buildTextElement(transformText(vNode.text, attributes.textTransform));
     runFragment.import(textFragment);
   } else if (attributes && attributes.type === 'picture') {
+    console.log(`[DEBUG] buildRunOrHyperLink: Processing picture with src: ${vNode.properties?.src ? vNode.properties.src.substring(0, 100) + '...' : 'null'}`);
 
     const imageSource = vNode.properties.src;
     let requiresConversion = false;
@@ -1273,21 +1274,38 @@ const calculateAbsoluteValues = (attribute, originalAttributeInEMU) => {
 };
 
 const computeImageDimensions = (vNode, attributes) => {
+  console.log(`[DEBUG] computeImageDimensions: Input attributes - maximumWidth: ${attributes.maximumWidth}, originalWidth: ${attributes.originalWidth}, originalHeight: ${attributes.originalHeight}`);
   const { maximumWidth, originalWidth, originalHeight } = attributes;
+  console.log(`[DEBUG] computeImageDimensions: Destructured values - maximumWidth: ${maximumWidth}, originalWidth: ${originalWidth}, originalHeight: ${originalHeight}`);
+  
   const aspectRatio = originalWidth / originalHeight;
+  console.log(`[DEBUG] computeImageDimensions: aspectRatio: ${aspectRatio}`);
+  
   const maximumWidthInEMU = TWIPToEMU(maximumWidth);
+  console.log(`[DEBUG] computeImageDimensions: maximumWidthInEMU: ${maximumWidthInEMU}`);
+  
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
+  console.log(`[DEBUG] computeImageDimensions: originalWidthInEMU: ${originalWidthInEMU}, originalHeightInEMU: ${originalHeightInEMU}`);
+  
   if (originalWidthInEMU > maximumWidthInEMU) {
+    console.log(`[DEBUG] computeImageDimensions: Image is too wide, scaling down`);
     originalWidthInEMU = maximumWidthInEMU;
     originalHeightInEMU = Math.round(originalWidthInEMU / aspectRatio);
+    console.log(`[DEBUG] computeImageDimensions: After scaling - originalWidthInEMU: ${originalWidthInEMU}, originalHeightInEMU: ${originalHeightInEMU}`);
   }
   let modifiedHeight;
   let modifiedWidth;
   let modifiedMaxHeight;
   let modifiedMaxWidth;
 
+  console.log(`[DEBUG] computeImageDimensions: vNode:`, vNode);
+  console.log(`[DEBUG] computeImageDimensions: vNode.properties:`, vNode?.properties);
+  console.log(`[DEBUG] computeImageDimensions: vNode.properties.style:`, vNode?.properties?.style);
+  console.log(`[DEBUG] computeImageDimensions: Condition check - vNode?.properties?.style is truthy:`, !!vNode?.properties?.style);
+  
   if (vNode?.properties?.style) {
+    console.log(`[DEBUG] computeImageDimensions: vNode has style properties:`, vNode.properties.style);
     const styleWidth = vNode.properties.style.width;
     const styleHeight = vNode.properties.style.height;
     const styleMaxWidth = vNode.properties.style['max-width'];
@@ -1348,14 +1366,26 @@ const computeImageDimensions = (vNode, attributes) => {
       modifiedWidth = Math.round(modifiedHeight * aspectRatio);
     }
   } else {
+    console.log(`[DEBUG] computeImageDimensions: No style properties, using original dimensions`);
+    modifiedWidth = originalWidthInEMU;
+    modifiedHeight = originalHeightInEMU;
+    console.log(`[DEBUG] computeImageDimensions: Set modifiedWidth: ${modifiedWidth}, modifiedHeight: ${modifiedHeight}`);
+  }
+
+  // Safety fallback: if modifiedWidth/Height are still undefined, use original scaled values
+  if (modifiedWidth === undefined || modifiedHeight === undefined) {
+    console.log(`[DEBUG] computeImageDimensions: FALLBACK - modifiedWidth or modifiedHeight undefined, using scaled originals`);
     modifiedWidth = originalWidthInEMU;
     modifiedHeight = originalHeightInEMU;
   }
-
+  
+  console.log(`[DEBUG] computeImageDimensions: Before assignment - modifiedWidth: ${modifiedWidth}, modifiedHeight: ${modifiedHeight}`);
   // eslint-disable-next-line no-param-reassign
   attributes.width = modifiedWidth;
   // eslint-disable-next-line no-param-reassign
   attributes.height = modifiedHeight;
+  console.log(`[DEBUG] computeImageDimensions: After assignment - attributes.width: ${attributes.width}, attributes.height: ${attributes.height}`);
+  console.log(`[DEBUG] computeImageDimensions: Final dimensions - width: ${modifiedWidth}, height: ${modifiedHeight}`);
 };
 
 const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
@@ -1368,6 +1398,14 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       isParagraph: true,
     }
   );
+  // Ensure spacing attributes are set for paragraphs containing images
+  if (isVNode(vNode) && vNode.children && vNode.children.some(child => child.tagName === 'img')) {
+    console.log(`[DEBUG] buildParagraph: Paragraph contains image, ensuring spacing attributes`);
+    modifiedAttributes.lineHeight = modifiedAttributes.lineHeight || 240;
+    modifiedAttributes.beforeSpacing = modifiedAttributes.beforeSpacing || 0;
+    modifiedAttributes.afterSpacing = modifiedAttributes.afterSpacing || 0;
+  }
+  
   const paragraphPropertiesFragment = buildParagraphProperties(modifiedAttributes);
   paragraphFragment.import(paragraphPropertiesFragment);
   if (isVNode(vNode) && vNodeHasChildren(vNode)) {
@@ -1419,9 +1457,12 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         paragraphFragment.import(runFragmentOrFragments);
       }
     } else {
+      console.log(`[DEBUG] buildParagraph: Processing paragraph with ${vNode.children.length} children`);
       for (let index = 0; index < vNode.children.length; index++) {
         const childVNode = vNode.children[index];
+        console.log(`[DEBUG] buildParagraph: Child ${index} tagName: ${childVNode.tagName || 'not vNode'}`);
         if (childVNode.tagName === 'img') {
+          console.log(`[DEBUG] buildParagraph: Found IMG tag with src: ${childVNode.properties?.src ? childVNode.properties.src.substring(0, 100) + '...' : 'null'}`);
           let base64String;
           const imageSource = childVNode.properties.src;
           if (isValidUrl(imageSource)) {
@@ -3601,6 +3642,8 @@ const buildInlineDrawing = (graphicType, attributes) => {
 };
 
 const buildDrawing = (inlineOrAnchored = false, graphicType, attributes) => {
+  console.log(`[DEBUG] buildDrawing: inlineOrAnchored: ${inlineOrAnchored}, graphicType: ${graphicType}`);
+  console.log(`[DEBUG] buildDrawing: attributes - width: ${attributes?.width}, height: ${attributes?.height}, originalWidth: ${attributes?.originalWidth}, originalHeight: ${attributes?.originalHeight}`);
   const drawingFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'drawing');
   const inlineOrAnchoredDrawingFragment = inlineOrAnchored
     ? buildInlineDrawing(graphicType, attributes)

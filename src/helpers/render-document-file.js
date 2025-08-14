@@ -27,62 +27,101 @@ const convertHTML = HTMLToVDOM({
 
 // eslint-disable-next-line consistent-return, no-shadow
 export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = null) => {
+  console.log(`[DEBUG] buildImage: Starting image processing`);
+  console.log(`[DEBUG] buildImage: vNode.properties.src = ${vNode?.properties?.src ? vNode.properties.src.substring(0, 100) + '...' : 'null'}`);
+  
   let response = null;
   let base64Uri = null;
   try {
     const imageSource = vNode.properties.src;
+    console.log(`[DEBUG] buildImage: imageSource length = ${imageSource ? imageSource.length : 'null'}`);
+    
     if (isValidUrl(imageSource)) {
+      console.log(`[DEBUG] buildImage: Processing as URL`);
       const base64String = await imageToBase64(imageSource).catch((error) => {
         // eslint-disable-next-line no-console
         console.warn(`skipping image download and conversion due to ${error}`);
+        return null;
       });
 
       if (base64String) {
-        base64Uri = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
+        const mimeType = getMimeType(imageSource, base64String);
+        console.log(`[DEBUG] buildImage: URL converted to base64, mimeType = ${mimeType}`);
+        base64Uri = `data:${mimeType};base64, ${base64String}`;
+      } else {
+        console.error(`[ERROR] buildImage: Failed to convert URL to base64`);
       }
     } else {
+      console.log(`[DEBUG] buildImage: Processing as base64 URI`);
       base64Uri = decodeURIComponent(vNode.properties.src);
+      console.log(`[DEBUG] buildImage: Decoded URI length = ${base64Uri ? base64Uri.length : 'null'}`);
     }
+    
     if (base64Uri) {
+      console.log(`[DEBUG] buildImage: Creating media file`);
       response = docxDocumentInstance.createMediaFile(base64Uri);
+      console.log(`[DEBUG] buildImage: Media file created: ${response ? 'success' : 'failed'}`);
+      if (response) {
+        console.log(`[DEBUG] buildImage: Media file details - fileName: ${response.fileName}, extension: ${response.extension}, fileNameWithExtension: ${response.fileNameWithExtension}`);
+      }
+    } else {
+      console.error(`[ERROR] buildImage: No valid base64Uri generated`);
+      return null;
     }
   } catch (error) {
-    // NOOP
+    console.error(`[ERROR] buildImage: Error during image processing:`, error);
+    return null;
   }
+  
   if (response) {
-    docxDocumentInstance.zip
-      .folder('word')
-      .folder('media')
-      .file(response.fileNameWithExtension, Buffer.from(response.fileContent, 'base64'), {
-        createFolders: false,
-      });
+    try {
+      console.log(`[DEBUG] buildImage: Adding file to ZIP`);
+      docxDocumentInstance.zip
+        .folder('word')
+        .folder('media')
+        .file(response.fileNameWithExtension, Buffer.from(response.fileContent, 'base64'), {
+          createFolders: false,
+        });
 
-    const documentRelsId = docxDocumentInstance.createDocumentRelationships(
-      docxDocumentInstance.relationshipFilename,
-      imageType,
-      `media/${response.fileNameWithExtension}`,
-      internalRelationship
-    );
+      console.log(`[DEBUG] buildImage: Creating document relationships`);
+      const documentRelsId = docxDocumentInstance.createDocumentRelationships(
+        docxDocumentInstance.relationshipFilename,
+        imageType,
+        `media/${response.fileNameWithExtension}`,
+        internalRelationship
+      );
+      console.log(`[DEBUG] buildImage: Document relationship ID: ${documentRelsId}`);
 
-    const imageBuffer = Buffer.from(response.fileContent, 'base64');
-    const imageProperties = sizeOf(imageBuffer);
+      console.log(`[DEBUG] buildImage: Getting image properties`);
+      const imageBuffer = Buffer.from(response.fileContent, 'base64');
+      const imageProperties = sizeOf(imageBuffer);
+      console.log(`[DEBUG] buildImage: Image properties - width: ${imageProperties.width}, height: ${imageProperties.height}, type: ${imageProperties.type}`);
 
-    const imageFragment = await xmlBuilder.buildParagraph(
-      vNode,
-      {
-        type: 'picture',
-        inlineOrAnchored: true,
-        relationshipId: documentRelsId,
-        ...response,
-        description: vNode.properties.alt,
-        maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
-        originalWidth: imageProperties.width,
-        originalHeight: imageProperties.height,
-      },
-      docxDocumentInstance
-    );
+      console.log(`[DEBUG] buildImage: Building XML paragraph`);
+      const imageFragment = await xmlBuilder.buildParagraph(
+        vNode,
+        {
+          type: 'picture',
+          inlineOrAnchored: true,
+          relationshipId: documentRelsId,
+          ...response,
+          description: vNode.properties.alt,
+          maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
+          originalWidth: imageProperties.width,
+          originalHeight: imageProperties.height,
+        },
+        docxDocumentInstance
+      );
 
-    return imageFragment;
+      console.log(`[DEBUG] buildImage: Image fragment created successfully`);
+      return imageFragment;
+    } catch (error) {
+      console.error(`[ERROR] buildImage: Error during XML generation:`, error);
+      return null;
+    }
+  } else {
+    console.error(`[ERROR] buildImage: No response from createMediaFile`);
+    return null;
   }
 };
 
@@ -198,6 +237,8 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
 };
 
 async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
+  console.log(`[DEBUG] findXMLEquivalent: Processing vNode with tagName: ${vNode?.tagName || 'null'}`);
+  
   if (
     vNode.tagName === 'div' &&
     (vNode.properties.attributes.class === 'page-break' ||
@@ -274,9 +315,15 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               xmlFragment.import(emptyParagraphFragment);
             }
           } else if (childVNode.tagName === 'img') {
+            console.log(`[DEBUG] findXMLEquivalent: Found img tag in figure! Processing image with src: ${childVNode?.properties?.src ? childVNode.properties.src.substring(0, 100) + '...' : 'null'}`);
             const imageFragment = await buildImage(docxDocumentInstance, childVNode);
             if (imageFragment) {
+              console.log(`[DEBUG] findXMLEquivalent: buildImage succeeded in figure, adding lineRule attribute`);
+              // Add the missing lineRule attribute that exists in direct image processing
+              imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
               xmlFragment.import(imageFragment);
+            } else {
+              console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`);
             }
           }
         }
@@ -303,9 +350,15 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
       await buildList(vNode, docxDocumentInstance, xmlFragment);
       return;
     case 'img':
+      console.log(`[DEBUG] findXMLEquivalent: Found img tag! Processing image with src: ${vNode?.properties?.src ? vNode.properties.src.substring(0, 100) + '...' : 'null'}`);
       const imageFragment = await buildImage(docxDocumentInstance, vNode);
       if (imageFragment) {
+        console.log(`[DEBUG] findXMLEquivalent: buildImage succeeded, adding lineRule attribute`);
+        // Add the missing lineRule attribute that exists in direct image processing
+        imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
+      } else {
+        console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
       }
       return;
     case 'br':
@@ -327,19 +380,26 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
 
 // eslint-disable-next-line consistent-return
 export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment) {
+  console.log(`[DEBUG] convertVTreeToXML: Processing vTree type: ${Array.isArray(vTree) ? 'array' : typeof vTree}, isVNode: ${isVNode(vTree)}, isVText: ${isVText(vTree)}`);
+  
   if (!vTree) {
+    console.log(`[DEBUG] convertVTreeToXML: vTree is null/undefined, returning`);
     // eslint-disable-next-line no-useless-return
     return '';
   }
   if (Array.isArray(vTree) && vTree.length) {
+    console.log(`[DEBUG] convertVTreeToXML: Processing array of ${vTree.length} items`);
     // eslint-disable-next-line no-plusplus
     for (let index = 0; index < vTree.length; index++) {
       const vNode = vTree[index];
+      console.log(`[DEBUG] convertVTreeToXML: Processing array item ${index}, tagName: ${vNode?.tagName || 'not a vNode'}`);
       await convertVTreeToXML(docxDocumentInstance, vNode, xmlFragment);
     }
   } else if (isVNode(vTree)) {
+    console.log(`[DEBUG] convertVTreeToXML: Processing VNode with tagName: ${vTree.tagName}`);
     await findXMLEquivalent(docxDocumentInstance, vTree, xmlFragment);
   } else if (isVText(vTree)) {
+    console.log(`[DEBUG] convertVTreeToXML: Processing VText: ${vTree.text ? vTree.text.substring(0, 50) + '...' : 'null'}`);
     const paragraphFragment = await xmlBuilder.buildParagraph(vTree, {}, docxDocumentInstance);
     xmlFragment.import(paragraphFragment);
   }
@@ -347,7 +407,9 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
 }
 
 async function renderDocumentFile(docxDocumentInstance) {
+  console.log(`[DEBUG] renderDocumentFile: Starting with HTML: ${docxDocumentInstance.htmlString ? docxDocumentInstance.htmlString.substring(0, 200) + '...' : 'null'}`);
   const vTree = convertHTML(docxDocumentInstance.htmlString);
+  console.log(`[DEBUG] renderDocumentFile: Converted to vTree, length: ${Array.isArray(vTree) ? vTree.length : 'not array'}`);
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
 
