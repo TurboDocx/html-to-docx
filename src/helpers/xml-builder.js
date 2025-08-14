@@ -1273,6 +1273,31 @@ const calculateAbsoluteValues = (attribute, originalAttributeInEMU) => {
   return originalAttributeInEMU;
 };
 
+/**
+ * Computes the final dimensions for an image in EMU units for DOCX rendering.
+ * 
+ * This function handles multiple scenarios:
+ * 1. Images with explicit CSS dimensions (width, height, max-width, max-height)
+ * 2. Images with non-dimensional CSS styles (e.g., font-family, color)
+ * 3. Images with no CSS styles at all
+ * 4. Images that exceed the maximum document width (auto-scaling)
+ * 
+ * The function processes images in this order:
+ * 1. Convert dimensions to EMU units
+ * 2. Scale down oversized images to fit maximum width
+ * 3. Apply CSS dimension styles if present
+ * 4. Fallback to scaled original dimensions if no dimensional styles found
+ * 
+ * Note: This function may be called multiple times for the same image during
+ * different processing stages (HTML parsing, XML generation) - this is normal
+ * and ensures images always have valid dimensions.
+ * 
+ * @param {Object} vNode - Virtual DOM node representing the image element
+ * @param {Object} attributes - Image attributes including dimensions and constraints
+ * @param {number} attributes.maximumWidth - Maximum allowed width in TWIP units
+ * @param {number} attributes.originalWidth - Original image width in pixels
+ * @param {number} attributes.originalHeight - Original image height in pixels
+ */
 const computeImageDimensions = (vNode, attributes) => {
   console.log(`[DEBUG] computeImageDimensions: Input attributes - maximumWidth: ${attributes.maximumWidth}, originalWidth: ${attributes.originalWidth}, originalHeight: ${attributes.originalHeight}`);
   const { maximumWidth, originalWidth, originalHeight } = attributes;
@@ -1370,7 +1395,11 @@ const computeImageDimensions = (vNode, attributes) => {
       modifiedWidth = Math.round(modifiedHeight * aspectRatio);
     }
     
-    // Fallback: if style exists but has no dimension properties, use original scaled values
+    // Fallback for images with non-dimensional CSS styles
+    // HTML like <img style="font-family: Poppins;" src="..."> creates a style object
+    // but contains no width/height properties. The function enters this if block but never
+    // sets modifiedWidth/modifiedHeight. Check if dimensions are still undefined after 
+    // processing styles and use the scaled original dimensions as fallback.
     if (modifiedWidth === undefined || modifiedHeight === undefined) {
       console.log(`[DEBUG] computeImageDimensions: Style exists but no dimension properties found, using scaled originals`);
       modifiedWidth = originalWidthInEMU;
@@ -1385,7 +1414,9 @@ const computeImageDimensions = (vNode, attributes) => {
     console.log(`[DEBUG] computeImageDimensions: AFTER assignment - modifiedWidth: ${modifiedWidth}, modifiedHeight: ${modifiedHeight}`);
   }
 
-  // Safety fallback: if modifiedWidth/Height are still undefined, use original scaled values
+  // Final safety net: ensure dimensions are never undefined
+  // This should rarely trigger after the fixes above, but provides absolute guarantee
+  // that image dimensions are always set.
   if (modifiedWidth === undefined || modifiedHeight === undefined) {
     console.log(`[DEBUG] computeImageDimensions: FALLBACK - modifiedWidth or modifiedHeight undefined, using scaled originals`);
     modifiedWidth = originalWidthInEMU;
@@ -1411,7 +1442,8 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       isParagraph: true,
     }
   );
-  // Ensure spacing attributes are set for paragraphs containing images
+  // IMAGE SPACING FIX: Ensure proper spacing for paragraphs containing images
+  // Images in paragraphs need specific spacing attributes to render correctly in DOCX
   if (isVNode(vNode) && vNode.children && vNode.children.some(child => child.tagName === 'img')) {
     console.log(`[DEBUG] buildParagraph: Paragraph contains image, ensuring spacing attributes`);
     modifiedAttributes.lineHeight = modifiedAttributes.lineHeight || 240;

@@ -319,7 +319,9 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
             const imageFragment = await buildImage(docxDocumentInstance, childVNode);
             if (imageFragment) {
               console.log(`[DEBUG] findXMLEquivalent: buildImage succeeded in figure, adding lineRule attribute`);
-              // Add the missing lineRule attribute that exists in direct image processing
+              // Add lineRule attribute for consistency
+              // Direct image processing includes this attribute, but HTML image processing was missing it
+              // This ensures both processing paths generate identical XML structure
               imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
               xmlFragment.import(imageFragment);
             } else {
@@ -354,7 +356,9 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
       const imageFragment = await buildImage(docxDocumentInstance, vNode);
       if (imageFragment) {
         console.log(`[DEBUG] findXMLEquivalent: buildImage succeeded, adding lineRule attribute`);
-        // Add the missing lineRule attribute that exists in direct image processing
+        // Add lineRule attribute for consistency
+        // Direct image processing includes this attribute, but HTML image processing was missing it
+        // This ensures both processing paths generate identical XML structure
         imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
       } else {
