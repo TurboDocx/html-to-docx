@@ -1299,13 +1299,17 @@ const computeImageDimensions = (vNode, attributes) => {
   let modifiedMaxHeight;
   let modifiedMaxWidth;
 
-  console.log(`[DEBUG] computeImageDimensions: vNode:`, vNode);
-  console.log(`[DEBUG] computeImageDimensions: vNode.properties:`, vNode?.properties);
-  console.log(`[DEBUG] computeImageDimensions: vNode.properties.style:`, vNode?.properties?.style);
-  console.log(`[DEBUG] computeImageDimensions: Condition check - vNode?.properties?.style is truthy:`, !!vNode?.properties?.style);
+  console.log(`[DEBUG] computeImageDimensions: vNode type:`, typeof vNode);
+  console.log(`[DEBUG] computeImageDimensions: vNode is null:`, vNode === null);
+  console.log(`[DEBUG] computeImageDimensions: vNode is undefined:`, vNode === undefined);
+  console.log(`[DEBUG] computeImageDimensions: vNode?.properties:`, vNode?.properties);
+  console.log(`[DEBUG] computeImageDimensions: vNode?.properties?.style:`, vNode?.properties?.style);
+  console.log(`[DEBUG] computeImageDimensions: vNode?.properties?.style === undefined:`, vNode?.properties?.style === undefined);
+  console.log(`[DEBUG] computeImageDimensions: !!vNode?.properties?.style:`, !!vNode?.properties?.style);
+  console.log(`[DEBUG] computeImageDimensions: About to enter if statement check`);
   
   if (vNode?.properties?.style) {
-    console.log(`[DEBUG] computeImageDimensions: vNode has style properties:`, vNode.properties.style);
+    console.log(`[DEBUG] computeImageDimensions: ENTERED if block - vNode has style properties:`, vNode.properties.style);
     const styleWidth = vNode.properties.style.width;
     const styleHeight = vNode.properties.style.height;
     const styleMaxWidth = vNode.properties.style['max-width'];
@@ -1365,11 +1369,20 @@ const computeImageDimensions = (vNode, attributes) => {
     } else if (modifiedHeight && !modifiedWidth) {
       modifiedWidth = Math.round(modifiedHeight * aspectRatio);
     }
+    
+    // Fallback: if style exists but has no dimension properties, use original scaled values
+    if (modifiedWidth === undefined || modifiedHeight === undefined) {
+      console.log(`[DEBUG] computeImageDimensions: Style exists but no dimension properties found, using scaled originals`);
+      modifiedWidth = originalWidthInEMU;
+      modifiedHeight = originalHeightInEMU;
+    }
   } else {
-    console.log(`[DEBUG] computeImageDimensions: No style properties, using original dimensions`);
+    console.log(`[DEBUG] computeImageDimensions: ENTERED else block - No style properties, using original dimensions`);
+    console.log(`[DEBUG] computeImageDimensions: originalWidthInEMU before assignment: ${originalWidthInEMU}`);
+    console.log(`[DEBUG] computeImageDimensions: originalHeightInEMU before assignment: ${originalHeightInEMU}`);
     modifiedWidth = originalWidthInEMU;
     modifiedHeight = originalHeightInEMU;
-    console.log(`[DEBUG] computeImageDimensions: Set modifiedWidth: ${modifiedWidth}, modifiedHeight: ${modifiedHeight}`);
+    console.log(`[DEBUG] computeImageDimensions: AFTER assignment - modifiedWidth: ${modifiedWidth}, modifiedHeight: ${modifiedHeight}`);
   }
 
   // Safety fallback: if modifiedWidth/Height are still undefined, use original scaled values
