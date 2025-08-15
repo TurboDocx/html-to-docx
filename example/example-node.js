@@ -23,6 +23,37 @@ const htmlString = `<!DOCTYPE html>
                 src="https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
                 alt="Red dot"
             />
+            <!-- Image edge case tests covering all scenarios addressed by the PR -->
+            <p>Testing images with non-dimensional CSS styles (font-family, color):</p>
+            <img
+                style="font-family: Poppins, Arial, sans-serif;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Test image with font-family style"
+            />
+            <img
+                style="color: red; font-family: monospace;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Test image with color and font-family styles"
+            />
+            
+            <p>Testing images with mixed dimensional and non-dimensional styles:</p>
+            <img
+                style="width: 100px; font-family: Arial; color: blue;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Test image with mixed styles"
+            />
+            
+            <p>Testing images with various non-dimensional styles:</p>
+            <img
+                style="text-align: center; background-color: yellow;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Test image with text-align and background-color"
+            />
+            <img
+                style="border: 2px solid red; margin: 10px;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Test image with border and margin"
+            />
         </div>
         <div>
             <h1>This is heading 1</h1>
@@ -1773,6 +1804,64 @@ const htmlString = `<!DOCTYPE html>
                     Mid Merge Border (No Space After Table)
                 </p>
             </div>
+        </div>
+        
+        <!-- Image edge case tests covering aspect ratio safety, MIME validation, and error handling -->
+        <div>
+            <p>Testing aspect ratio safety with zero/invalid dimensions:</p>
+            <img
+                style="width: 100px; height: 0px;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Test image with zero height"
+            />
+            <img
+                style="width: 0px; height: 100px;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Test image with zero width"
+            />
+            
+            <p>Testing extreme aspect ratios:</p>
+            <img
+                style="width: 500px; height: 1px;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Very wide image"
+            />
+            <img
+                style="width: 1px; height: 500px;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Very tall image"
+            />
+            
+            <p>Testing auto dimensions with CSS styles:</p>
+            <img
+                style="width: auto; height: auto; font-family: serif;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Auto dimensions with non-dimensional styles"
+            />
+            
+            <p>Testing images in figures (lineRule attribute fix):</p>
+            <figure>
+                <img
+                    style="width: 150px;"
+                    src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                    alt="Image in figure tag"
+                />
+                <figcaption>Image with consistent lineRule processing</figcaption>
+            </figure>
+            
+            <p>Testing images with max-width/max-height constraints:</p>
+            <img
+                style="max-width: 200px; max-height: 150px;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Image with max constraints"
+            />
+            
+            <p>Testing images exceeding maximum document width (auto-scaling):</p>
+            <img
+                style="width: 2000px; height: 1500px;"
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Oversized image that should auto-scale"
+            />
         </div>
     </body>
 </html>`;
