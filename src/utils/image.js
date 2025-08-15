@@ -47,7 +47,7 @@ export const getMimeType = (source, base64) => {
   let mimeType = mimeTypes.lookup(source);
 
   // If lookup fails and the input is a base64 string (without the MIME type prefix), try to guess the MIME type
-  if (!mimeType) {
+  if (!mimeType && base64 && base64.length > 0) {
       mimeType = guessMimeTypeFromBase64(base64);
   }
 

@@ -35,54 +35,72 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       const base64String = await imageToBase64(imageSource).catch((error) => {
         // eslint-disable-next-line no-console
         console.warn(`skipping image download and conversion due to ${error}`);
+        return null;
       });
 
       if (base64String) {
-        base64Uri = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
+        const mimeType = getMimeType(imageSource, base64String);
+        base64Uri = `data:${mimeType};base64, ${base64String}`;
+      } else {
+        console.error(`[ERROR] buildImage: Failed to convert URL to base64`);
       }
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
     }
+    
     if (base64Uri) {
       response = docxDocumentInstance.createMediaFile(base64Uri);
+    } else {
+      console.error(`[ERROR] buildImage: No valid base64Uri generated`);
+      return null;
     }
   } catch (error) {
-    // NOOP
+    console.error(`[ERROR] buildImage: Error during image processing:`, error);
+    return null;
   }
+  
   if (response) {
-    docxDocumentInstance.zip
-      .folder('word')
-      .folder('media')
-      .file(response.fileNameWithExtension, Buffer.from(response.fileContent, 'base64'), {
-        createFolders: false,
-      });
+    try {
+      docxDocumentInstance.zip
+        .folder('word')
+        .folder('media')
+        .file(response.fileNameWithExtension, Buffer.from(response.fileContent, 'base64'), {
+          createFolders: false,
+        });
 
-    const documentRelsId = docxDocumentInstance.createDocumentRelationships(
-      docxDocumentInstance.relationshipFilename,
-      imageType,
-      `media/${response.fileNameWithExtension}`,
-      internalRelationship
-    );
+      const documentRelsId = docxDocumentInstance.createDocumentRelationships(
+        docxDocumentInstance.relationshipFilename,
+        imageType,
+        `media/${response.fileNameWithExtension}`,
+        internalRelationship
+      );
 
-    const imageBuffer = Buffer.from(response.fileContent, 'base64');
-    const imageProperties = sizeOf(imageBuffer);
+      const imageBuffer = Buffer.from(response.fileContent, 'base64');
+      const imageProperties = sizeOf(imageBuffer);
 
-    const imageFragment = await xmlBuilder.buildParagraph(
-      vNode,
-      {
-        type: 'picture',
-        inlineOrAnchored: true,
-        relationshipId: documentRelsId,
-        ...response,
-        description: vNode.properties.alt,
-        maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
-        originalWidth: imageProperties.width,
-        originalHeight: imageProperties.height,
-      },
-      docxDocumentInstance
-    );
+      const imageFragment = await xmlBuilder.buildParagraph(
+        vNode,
+        {
+          type: 'picture',
+          inlineOrAnchored: true,
+          relationshipId: documentRelsId,
+          ...response,
+          description: vNode.properties.alt,
+          maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
+          originalWidth: imageProperties.width,
+          originalHeight: imageProperties.height,
+        },
+        docxDocumentInstance
+      );
 
-    return imageFragment;
+      return imageFragment;
+    } catch (error) {
+      console.error(`[ERROR] buildImage: Error during XML generation:`, error);
+      return null;
+    }
+  } else {
+    console.error(`[ERROR] buildImage: No response from createMediaFile`);
+    return null;
   }
 };
 
@@ -276,7 +294,13 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
           } else if (childVNode.tagName === 'img') {
             const imageFragment = await buildImage(docxDocumentInstance, childVNode);
             if (imageFragment) {
+              // Add lineRule attribute for consistency
+              // Direct image processing includes this attribute, but HTML image processing was missing it
+              // This ensures both processing paths generate identical XML structure
+              imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
               xmlFragment.import(imageFragment);
+            } else {
+              console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`);
             }
           }
         }
@@ -305,7 +329,13 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
     case 'img':
       const imageFragment = await buildImage(docxDocumentInstance, vNode);
       if (imageFragment) {
+        // Add lineRule attribute for consistency
+        // Direct image processing includes this attribute, but HTML image processing was missing it
+        // This ensures both processing paths generate identical XML structure
+        imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
+      } else {
+        console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
       }
       return;
     case 'br':
