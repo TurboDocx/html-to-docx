@@ -1299,7 +1299,7 @@ const calculateAbsoluteValues = (attribute, originalAttributeInEMU) => {
  */
 const computeImageDimensions = (vNode, attributes) => {
   const { maximumWidth, originalWidth, originalHeight } = attributes;
-  const aspectRatio = originalWidth / originalHeight;
+  const aspectRatio = originalHeight > 0 ? originalWidth / originalHeight : 1;
   const maximumWidthInEMU = TWIPToEMU(maximumWidth);
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
