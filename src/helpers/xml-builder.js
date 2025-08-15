@@ -1027,7 +1027,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 };
 
 const buildRunOrRuns = async (vNode, attributes, docxDocumentInstance) => {
-  if ((isVNode(vNode) || vNode?.isCoveringNode) && vNode.tagName === 'span') {
+  if ((isVNode(vNode) || vNode?.isCoveringNode) && vNode.tagName === 'span' && vNode.children) {
     let runFragments = [];
 
     for (let index = 0; index < vNode.children.length; index++) {
@@ -1064,7 +1064,8 @@ const buildRunOrHyperLink = async (vNode, attributes, docxDocumentInstance) => {
       .ele('@w', 'hyperlink')
       .att('@r', 'id', `rId${relationshipId}`);
 
-    for (let idx = 0; idx < vNode.children.length; idx++) {
+    if (vNode.children) {
+      for (let idx = 0; idx < vNode.children.length; idx++) {
       const childVNode = vNode.children[idx];
       const modifiedAttributes =
         isVNode(childVNode) && childVNode.tagName === 'img'
@@ -1084,6 +1085,7 @@ const buildRunOrHyperLink = async (vNode, attributes, docxDocumentInstance) => {
         }
       } else {
         hyperlinkFragment.import(runFragments);
+      }
       }
     }
 
@@ -1470,7 +1472,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       } else {
         paragraphFragment.import(runFragmentOrFragments);
       }
-    } else {
+    } else if (vNode.children) {
       for (let index = 0; index < vNode.children.length; index++) {
         const childVNode = vNode.children[index];
         if (childVNode.tagName === 'img') {
@@ -2392,7 +2394,7 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
       // if rowSpan is happening, then there must be some border properties.
       const spanObject = { rowSpan: vNode.properties.rowSpan - 1, colSpan: 0 };
       const { style } = vNode.properties;
-      const styleKeys = Object.keys(style)
+      const styleKeys = style ? Object.keys(style) : [];
       for (const styleKey of styleKeys) {
         // separately set the properties for 4 directions in case shorthands are given
         // as we use directional properties indiviually to generate border
