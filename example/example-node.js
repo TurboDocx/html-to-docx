@@ -1863,6 +1863,35 @@ const htmlString = `<!DOCTYPE html>
                 alt="Oversized image that should auto-scale"
             />
         </div>
+        <!-- Test case for GitHub issue #88: tables with colspan and rowspan attributes -->
+        <table style="min-width: 100%;">
+          <colgroup>
+            <col style="min-width: 25px">
+            <col style="min-width: 25px">
+            <col style="min-width: 25px">
+          </colgroup>
+          <tbody>
+            <tr>
+              <th colspan="2" rowspan="1">
+                <p>testset</p>
+              </th>
+              <th colspan="1" rowspan="1">
+                <p>test</p>
+              </th>
+            </tr>
+            <tr>
+              <td colspan="1" rowspan="2">
+                <p>data1</p>
+              </td>
+              <td colspan="1" rowspan="1">
+                <p>data2</p>
+              </td>
+              <td colspan="1" rowspan="1">
+                <p>data3</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
     </body>
 </html>`;
 
