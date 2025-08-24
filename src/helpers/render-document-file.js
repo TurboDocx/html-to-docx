@@ -15,7 +15,7 @@ import imageToBase64 from 'image-to-base64';
 import { cloneDeep } from 'lodash';
 import * as xmlBuilder from './xml-builder';
 import namespaces from '../namespaces';
-import { imageType, internalRelationship } from '../constants';
+import { imageType, internalRelationship, defaultDocumentOptions } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { getMimeType } from '../utils/image';
@@ -27,6 +27,7 @@ const convertHTML = HTMLToVDOM({
 
 // Image cache to prevent duplicate downloads during the same document generation
 const imageCache = new Map();
+
 
 // Track retry statistics
 let retryStats = {
@@ -57,8 +58,19 @@ export const getImageCacheStats = () => ({
   retryStats
 });
 
+// Helper function for conditional verbose logging
+const logVerbose = (verboseLogging, message, ...args) => {
+  if (verboseLogging) {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
 // eslint-disable-next-line consistent-return, no-shadow
-export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = null) => {
+export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = null, options = {}) => {
+  // Extract image processing options with defaults from constants.js
+  const maxRetries = options.maxRetries || docxDocumentInstance.imageProcessing?.maxRetries || defaultDocumentOptions.imageProcessing.maxRetries;
+  const verboseLogging = options.verboseLogging || docxDocumentInstance.imageProcessing?.verboseLogging || defaultDocumentOptions.imageProcessing.verboseLogging;
   let response = null;
   let base64Uri = null;
   
@@ -70,32 +82,27 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       const cachedData = imageCache.get(imageSource);
       if (cachedData === null) {
         // Previously failed to download in this document generation, skip this image
-        // eslint-disable-next-line no-console
-        console.log(`[CACHE] Skipping previously failed image in this document: ${imageSource}`);
+        logVerbose(verboseLogging, `[CACHE] Skipping previously failed image in this document: ${imageSource}`);
         return null;
       }
-      // eslint-disable-next-line no-console
-      console.log(`[CACHE] Using cached image data for: ${imageSource}`);
+      logVerbose(verboseLogging, `[CACHE] Using cached image data for: ${imageSource}`);
       base64Uri = cachedData;
     } else if (isValidUrl(imageSource)) {
       // Download and cache the image with retry mechanism
-      const maxRetries = 2;
       let base64String = null;
       let lastError = null;
       
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        retryStats.totalAttempts++;
+      for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+        retryStats.totalAttempts += 1;
         
         try {
-          // eslint-disable-next-line no-console
-          console.log(`[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`);
+          logVerbose(verboseLogging, `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`);
           
           base64String = await imageToBase64(imageSource);
           if (base64String) {
             if (attempt > 1) {
-              retryStats.successAfterRetry++;
-              // eslint-disable-next-line no-console
-              console.log(`[RETRY] Success on attempt ${attempt} for: ${imageSource}`);
+              retryStats.successAfterRetry += 1;
+              logVerbose(verboseLogging, `[RETRY] Success on attempt ${attempt} for: ${imageSource}`);
             }
             break;
           }
@@ -104,18 +111,17 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
           // eslint-disable-next-line no-console
           console.warn(`[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`);
           
-          // Add delay before retry (exponential backoff: 500ms, 1000ms)
+          // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
           if (attempt < maxRetries) {
             const delay = 500 * attempt;
-            // eslint-disable-next-line no-console
-            console.log(`[RETRY] Waiting ${delay}ms before retry...`);
+            logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
       
       if (!base64String) {
-        retryStats.finalFailures++;
+        retryStats.finalFailures += 1;
       }
 
       if (base64String) {
@@ -123,8 +129,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         base64Uri = `data:${mimeType};base64, ${base64String}`;
         // Cache the successful result
         imageCache.set(imageSource, base64Uri);
-        // eslint-disable-next-line no-console
-        console.log(`[CACHE] Cached new image data for: ${imageSource}`);
+        logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
       } else {
         // Cache the failure for THIS document generation only after all retries failed
         // Note: Cache is cleared between document generations, so failures can be retried in future runs
@@ -344,7 +349,11 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   return listElements;
 };
 
-async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
+async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, imageOptions = null) {
+  // Use default options if not provided
+  if (!imageOptions) {
+    imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
+  }
   if (
     vNode.tagName === 'div' &&
     (vNode.properties.attributes.class === 'page-break' ||
@@ -421,7 +430,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               xmlFragment.import(emptyParagraphFragment);
             }
           } else if (childVNode.tagName === 'img') {
-            const imageFragment = await buildImage(docxDocumentInstance, childVNode);
+            const imageFragment = await buildImage(docxDocumentInstance, childVNode, null, imageOptions);
             if (imageFragment) {
               // Add lineRule attribute for consistency
               // Direct image processing includes this attribute, but HTML image processing was missing it
@@ -466,7 +475,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
       await buildList(vNode, docxDocumentInstance, xmlFragment);
       return;
     case 'img':
-      const imageFragment = await buildImage(docxDocumentInstance, vNode);
+      const imageFragment = await buildImage(docxDocumentInstance, vNode, null, imageOptions);
       if (imageFragment) {
         // Add lineRule attribute for consistency
         // Direct image processing includes this attribute, but HTML image processing was missing it
@@ -493,13 +502,17 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
       // eslint-disable-next-line no-use-before-define
-      await convertVTreeToXML(docxDocumentInstance, childVNode, xmlFragment);
+      await convertVTreeToXML(docxDocumentInstance, childVNode, xmlFragment, imageOptions);
     }
   }
 }
 
 // eslint-disable-next-line consistent-return
-export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment) {
+export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment, imageOptions = null) {
+  // Use default options if not provided
+  if (!imageOptions) {
+    imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
+  }
   if (!vTree) {
     // eslint-disable-next-line no-useless-return
     return '';
@@ -508,10 +521,10 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
     // eslint-disable-next-line no-plusplus
     for (let index = 0; index < vTree.length; index++) {
       const vNode = vTree[index];
-      await convertVTreeToXML(docxDocumentInstance, vNode, xmlFragment);
+      await convertVTreeToXML(docxDocumentInstance, vNode, xmlFragment, imageOptions);
     }
   } else if (isVNode(vTree)) {
-    await findXMLEquivalent(docxDocumentInstance, vTree, xmlFragment);
+    await findXMLEquivalent(docxDocumentInstance, vTree, xmlFragment, imageOptions);
   } else if (isVText(vTree)) {
     const paragraphFragment = await xmlBuilder.buildParagraph(vTree, {}, docxDocumentInstance);
     xmlFragment.import(paragraphFragment);
@@ -527,9 +540,11 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
  * @returns {Promise<Object>} XML fragment representing the rendered document content
  */
 async function renderDocumentFile(docxDocumentInstance, properties = {}) {
+  // Get image processing options from document instance with centralized defaults
+  const imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
   // Clear image cache at the start of each document generation to allow retrying failed URLs in new documents
   const previousCacheSize = clearImageCache();
-  if (previousCacheSize > 0) {
+  if (previousCacheSize > 0 && imageOptions.verboseLogging) {
     // eslint-disable-next-line no-console
     console.log(`[CACHE] Cleared previous cache (${previousCacheSize} images) for new document generation`);
   }
@@ -566,11 +581,11 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
 
-  const populatedXmlFragment = await convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment);
+  const populatedXmlFragment = await convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment, imageOptions);
 
   // Log cache statistics at the end of document generation
   const cacheStats = getImageCacheStats();
-  if (cacheStats.size > 0 || cacheStats.retryStats.totalAttempts > 0) {
+  if ((cacheStats.size > 0 || cacheStats.retryStats.totalAttempts > 0) && imageOptions.verboseLogging) {
     // eslint-disable-next-line no-console
     console.log(`[CACHE] Image processing statistics:`, {
       totalImages: cacheStats.size,

@@ -2689,7 +2689,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
         const imageFragment = await buildImage(
           docxDocumentInstance,
           childVNode,
-          modifiedAttributes.maximumWidth
+          modifiedAttributes.maximumWidth,
+          docxDocumentInstance.imageProcessing || {}
         );
         if (imageFragment) {
           tableCellFragment.import(imageFragment);
@@ -2703,7 +2704,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
               const imageFragment = await buildImage(
                 docxDocumentInstance,
                 grandChildVNode,
-                modifiedAttributes.maximumWidth
+                modifiedAttributes.maximumWidth,
+                docxDocumentInstance.imageProcessing || {}
               );
               if (imageFragment) {
                 tableCellFragment.import(imageFragment);
