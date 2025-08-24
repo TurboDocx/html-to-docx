@@ -25,13 +25,46 @@ const convertHTML = HTMLToVDOM({
   VText,
 });
 
+// Image cache to prevent duplicate downloads during the same document generation
+const imageCache = new Map();
+
+// Function to clear the image cache (useful for testing or memory management)
+export const clearImageCache = () => {
+  const cacheSize = imageCache.size;
+  imageCache.clear();
+  return cacheSize;
+};
+
+// Function to get cache statistics
+export const getImageCacheStats = () => ({
+  size: imageCache.size,
+  urls: Array.from(imageCache.keys()),
+  successCount: Array.from(imageCache.values()).filter(v => v !== null).length,
+  failureCount: Array.from(imageCache.values()).filter(v => v === null).length
+});
+
 // eslint-disable-next-line consistent-return, no-shadow
 export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = null) => {
   let response = null;
   let base64Uri = null;
+  
   try {
     const imageSource = vNode.properties.src;
-    if (isValidUrl(imageSource)) {
+    
+    // Check cache first for external URLs
+    if (isValidUrl(imageSource) && imageCache.has(imageSource)) {
+      const cachedData = imageCache.get(imageSource);
+      if (cachedData === null) {
+        // Previously failed to download in this document generation, skip this image
+        // eslint-disable-next-line no-console
+        console.log(`[CACHE] Skipping previously failed image in this document: ${imageSource}`);
+        return null;
+      }
+      // eslint-disable-next-line no-console
+      console.log(`[CACHE] Using cached image data for: ${imageSource}`);
+      base64Uri = cachedData;
+    } else if (isValidUrl(imageSource)) {
+      // Download and cache the image
       const base64String = await imageToBase64(imageSource).catch((error) => {
         // eslint-disable-next-line no-console
         console.warn(`skipping image download and conversion due to ${error}`);
@@ -41,9 +74,16 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       if (base64String) {
         const mimeType = getMimeType(imageSource, base64String);
         base64Uri = `data:${mimeType};base64, ${base64String}`;
-      } else {
+        // Cache the successful result
+        imageCache.set(imageSource, base64Uri);
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Failed to convert URL to base64`);
+        console.log(`[CACHE] Cached new image data for: ${imageSource}`);
+      } else {
+        // Cache the failure for THIS document generation only to avoid retrying the same failed URL
+        // Note: Cache is cleared between document generations, so failures can be retried in future runs
+        imageCache.set(imageSource, null);
+        // eslint-disable-next-line no-console
+        console.error(`[ERROR] buildImage: Failed to convert URL to base64 - will skip duplicates in this document`);
       }
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
@@ -433,11 +473,30 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
 }
 
 async function renderDocumentFile(docxDocumentInstance) {
+  // Clear image cache at the start of each document generation to allow retrying failed URLs in new documents
+  const previousCacheSize = clearImageCache();
+  if (previousCacheSize > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[CACHE] Cleared previous cache (${previousCacheSize} images) for new document generation`);
+  }
+  
   const vTree = convertHTML(docxDocumentInstance.htmlString);
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
 
   const populatedXmlFragment = await convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment);
+
+  // Log cache statistics at the end of document generation
+  const cacheStats = getImageCacheStats();
+  if (cacheStats.size > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[CACHE] Image cache statistics:`, {
+      totalImages: cacheStats.size,
+      successful: cacheStats.successCount,
+      failed: cacheStats.failureCount,
+      cacheHitRatio: cacheStats.size > 1 ? 'Cache prevented duplicate downloads' : 'No duplicates found'
+    });
+  }
 
   return populatedXmlFragment;
 }
