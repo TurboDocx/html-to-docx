@@ -80,6 +80,10 @@ const defaultDocumentOptions = {
   preprocessing: {
     skipHTMLMinify: false,
   },
+  imageProcessing: {
+    maxRetries: 2,
+    verboseLogging: false,
+  },
 };
 const defaultHTMLString = '<p></p>';
 const relsFolderName = '_rels';
