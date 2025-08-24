@@ -1313,6 +1313,7 @@ const computeImageDimensions = (vNode, attributes) => {
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
   
+  
   if (originalWidthInEMU > maximumWidthInEMU) {
     originalWidthInEMU = maximumWidthInEMU;
     originalHeightInEMU = Math.round(originalWidthInEMU / aspectRatio);
@@ -1321,6 +1322,30 @@ const computeImageDimensions = (vNode, attributes) => {
   let modifiedWidth;
   let modifiedMaxHeight;
   let modifiedMaxWidth;
+
+  // Check for HTML width and height attributes first (e.g., from TinyMCE)
+  if (vNode?.properties?.attributes) {
+    const htmlWidth = vNode.properties.attributes.width;
+    const htmlHeight = vNode.properties.attributes.height;
+
+    if (htmlWidth) {
+      // HTML attributes without units default to pixels
+      const widthWithPx = pixelRegex.test(htmlWidth) || percentageRegex.test(htmlWidth) ? htmlWidth : `${htmlWidth}px`;
+      modifiedWidth = calculateAbsoluteValues(widthWithPx, originalWidthInEMU);
+    }
+    if (htmlHeight) {
+      // HTML attributes without units default to pixels
+      const heightWithPx = pixelRegex.test(htmlHeight) || percentageRegex.test(htmlHeight) ? htmlHeight : `${htmlHeight}px`;
+      modifiedHeight = calculateAbsoluteValues(heightWithPx, originalHeightInEMU);
+    }
+    
+    // If only width or height is specified, maintain aspect ratio
+    if (modifiedWidth && !modifiedHeight) {
+      modifiedHeight = Math.round(modifiedWidth / aspectRatio);
+    } else if (modifiedHeight && !modifiedWidth) {
+      modifiedWidth = Math.round(modifiedHeight * aspectRatio);
+    }
+  }
 
   if (vNode?.properties?.style) {
     const styleWidth = vNode.properties.style.width;
@@ -1388,13 +1413,23 @@ const computeImageDimensions = (vNode, attributes) => {
     // but contains no width/height properties. The function enters this if block but never
     // sets modifiedWidth/modifiedHeight. Check if dimensions are still undefined after 
     // processing styles and use the scaled original dimensions as fallback.
+    // BUT: Don't override dimensions that were already set from HTML attributes!
     if (modifiedWidth === undefined || modifiedHeight === undefined) {
-      modifiedWidth = originalWidthInEMU;
-      modifiedHeight = originalHeightInEMU;
+      if (modifiedWidth === undefined) {
+        modifiedWidth = originalWidthInEMU;
+      }
+      if (modifiedHeight === undefined) {
+        modifiedHeight = originalHeightInEMU;
+      }
     }
   } else {
-    modifiedWidth = originalWidthInEMU;
-    modifiedHeight = originalHeightInEMU;
+    // No CSS styles - only use original dimensions if HTML attributes didn't set them
+    if (modifiedWidth === undefined) {
+      modifiedWidth = originalWidthInEMU;
+    }
+    if (modifiedHeight === undefined) {
+      modifiedHeight = originalHeightInEMU;
+    }
   }
 
   // Final safety net: ensure dimensions are never undefined
@@ -1409,6 +1444,7 @@ const computeImageDimensions = (vNode, attributes) => {
   attributes.width = modifiedWidth;
   // eslint-disable-next-line no-param-reassign
   attributes.height = modifiedHeight;
+  
 };
 
 const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
