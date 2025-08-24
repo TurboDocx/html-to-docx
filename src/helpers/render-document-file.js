@@ -28,10 +28,23 @@ const convertHTML = HTMLToVDOM({
 // Image cache to prevent duplicate downloads during the same document generation
 const imageCache = new Map();
 
+// Track retry statistics
+let retryStats = {
+  totalAttempts: 0,
+  successAfterRetry: 0,
+  finalFailures: 0
+};
+
 // Function to clear the image cache (useful for testing or memory management)
 export const clearImageCache = () => {
   const cacheSize = imageCache.size;
   imageCache.clear();
+  // Reset retry stats
+  retryStats = {
+    totalAttempts: 0,
+    successAfterRetry: 0,
+    finalFailures: 0
+  };
   return cacheSize;
 };
 
@@ -40,7 +53,8 @@ export const getImageCacheStats = () => ({
   size: imageCache.size,
   urls: Array.from(imageCache.keys()),
   successCount: Array.from(imageCache.values()).filter(v => v !== null).length,
-  failureCount: Array.from(imageCache.values()).filter(v => v === null).length
+  failureCount: Array.from(imageCache.values()).filter(v => v === null).length,
+  retryStats
 });
 
 // eslint-disable-next-line consistent-return, no-shadow
@@ -64,12 +78,45 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       console.log(`[CACHE] Using cached image data for: ${imageSource}`);
       base64Uri = cachedData;
     } else if (isValidUrl(imageSource)) {
-      // Download and cache the image
-      const base64String = await imageToBase64(imageSource).catch((error) => {
-        // eslint-disable-next-line no-console
-        console.warn(`skipping image download and conversion due to ${error}`);
-        return null;
-      });
+      // Download and cache the image with retry mechanism
+      const maxRetries = 2;
+      let base64String = null;
+      let lastError = null;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        retryStats.totalAttempts++;
+        
+        try {
+          // eslint-disable-next-line no-console
+          console.log(`[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`);
+          
+          base64String = await imageToBase64(imageSource);
+          if (base64String) {
+            if (attempt > 1) {
+              retryStats.successAfterRetry++;
+              // eslint-disable-next-line no-console
+              console.log(`[RETRY] Success on attempt ${attempt} for: ${imageSource}`);
+            }
+            break;
+          }
+        } catch (error) {
+          lastError = error;
+          // eslint-disable-next-line no-console
+          console.warn(`[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`);
+          
+          // Add delay before retry (exponential backoff: 500ms, 1000ms)
+          if (attempt < maxRetries) {
+            const delay = 500 * attempt;
+            // eslint-disable-next-line no-console
+            console.log(`[RETRY] Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+      
+      if (!base64String) {
+        retryStats.finalFailures++;
+      }
 
       if (base64String) {
         const mimeType = getMimeType(imageSource, base64String);
@@ -79,11 +126,11 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         // eslint-disable-next-line no-console
         console.log(`[CACHE] Cached new image data for: ${imageSource}`);
       } else {
-        // Cache the failure for THIS document generation only to avoid retrying the same failed URL
+        // Cache the failure for THIS document generation only after all retries failed
         // Note: Cache is cleared between document generations, so failures can be retried in future runs
         imageCache.set(imageSource, null);
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Failed to convert URL to base64 - will skip duplicates in this document`);
+        console.error(`[ERROR] buildImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'} - will skip duplicates in this document`);
       }
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
@@ -488,13 +535,18 @@ async function renderDocumentFile(docxDocumentInstance) {
 
   // Log cache statistics at the end of document generation
   const cacheStats = getImageCacheStats();
-  if (cacheStats.size > 0) {
+  if (cacheStats.size > 0 || cacheStats.retryStats.totalAttempts > 0) {
     // eslint-disable-next-line no-console
-    console.log(`[CACHE] Image cache statistics:`, {
+    console.log(`[CACHE] Image processing statistics:`, {
       totalImages: cacheStats.size,
       successful: cacheStats.successCount,
       failed: cacheStats.failureCount,
-      cacheHitRatio: cacheStats.size > 1 ? 'Cache prevented duplicate downloads' : 'No duplicates found'
+      cacheHitRatio: cacheStats.size > 1 ? 'Cache prevented duplicate downloads' : 'No duplicates found',
+      retries: {
+        totalAttempts: cacheStats.retryStats.totalAttempts,
+        successAfterRetry: cacheStats.retryStats.successAfterRetry,
+        finalFailures: cacheStats.retryStats.finalFailures
+      }
     });
   }
 
