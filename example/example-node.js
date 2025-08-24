@@ -1945,6 +1945,55 @@ const htmlString = `<!DOCTYPE html>
                 height="100"
                 alt="Large image resized to 200x100"
             />
+            
+            <h3>Unit Support Tests</h3>
+            <p><strong>Test 7:</strong> Image with pixel units (explicit px):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="180px"
+                height="90px"
+                alt="180px x 90px image"
+            />
+            
+            <p><strong>Test 8:</strong> Image with point units (pt):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="144pt"
+                height="72pt"
+                alt="144pt x 72pt image (192px x 96px equivalent)"
+            />
+            
+            <p><strong>Test 9:</strong> Image with centimeter units (cm):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="4cm"
+                height="2cm"
+                alt="4cm x 2cm image"
+            />
+            
+            <p><strong>Test 10:</strong> Image with inch units (in):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="1.5in"
+                height="0.75in"
+                alt="1.5in x 0.75in image"
+            />
+            
+            <p><strong>Test 11:</strong> Image with percentage units (% of original size):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="10%"
+                height="10%"
+                alt="10% x 10% of original size"
+            />
+            
+            <p><strong>Test 12:</strong> Mixed units - width in cm, height in inches:</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="3cm"
+                height="1in"
+                alt="3cm width, 1in height"
+            />
         </div>
     </body>
 </html>`;
