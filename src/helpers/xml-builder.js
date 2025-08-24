@@ -1551,7 +1551,17 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         if (childVNode.tagName === 'img') {
           let base64String;
           const imageSource = childVNode.properties.src;
-          if (isValidUrl(imageSource)) {
+          
+          // Check if this is already a data URL (from cache or previous processing)
+          if (imageSource.startsWith('data:')) {
+            // Already processed, extract base64 part
+            const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (!match || !match[2]) {
+              console.warn(`[BUILDPARAGRAPH] Invalid data URL format: ${imageSource}`);
+              continue;
+            }
+            base64String = match[2];
+          } else if (isValidUrl(imageSource)) {
             base64String = await imageToBase64(imageSource).catch((error) => {
               // eslint-disable-next-line no-console
               console.warn(`skipping image download and conversion due to ${error}`);
@@ -1564,14 +1574,6 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
               console.warn(`[BUILDPARAGRAPH] Skipping image due to download failure: ${imageSource}`);
               continue;
             }
-          } else {
-            // eslint-disable-next-line no-useless-escape, prefer-destructuring
-            const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (!match || !match[2]) {
-              console.warn(`[BUILDPARAGRAPH] Invalid data URL format: ${imageSource}`);
-              continue;
-            }
-            base64String = match[2];
           }
           
           // Validate base64String before creating buffer
@@ -1635,7 +1637,18 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     if (isVNode(vNode) && vNode.tagName === 'img') {
       const imageSource = vNode.properties.src;
       let base64String = imageSource;
-      if (isValidUrl(imageSource)) {
+      
+      // Check if this is already a data URL (from cache or previous processing)
+      if (imageSource.startsWith('data:')) {
+        // Already processed, extract base64 part
+        const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!match || !match[2]) {
+          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid data URL format: ${imageSource}`);
+          paragraphFragment.up();
+          return paragraphFragment;
+        }
+        base64String = match[2];
+      } else if (isValidUrl(imageSource)) {
         base64String = await imageToBase64(imageSource).catch((error) => {
           // eslint-disable-next-line no-console
           console.warn(`skipping image download and conversion due to ${error}`);
@@ -1649,15 +1662,6 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           paragraphFragment.up();
           return paragraphFragment;
         }
-      } else {
-        // eslint-disable-next-line no-useless-escape, prefer-destructuring
-        const match = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (!match || !match[2]) {
-          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid data URL format: ${imageSource}`);
-          paragraphFragment.up();
-          return paragraphFragment;
-        }
-        base64String = match[2];
       }
       
       // Validate base64String before creating buffer
