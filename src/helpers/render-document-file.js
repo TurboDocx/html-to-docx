@@ -42,6 +42,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         const mimeType = getMimeType(imageSource, base64String);
         base64Uri = `data:${mimeType};base64, ${base64String}`;
       } else {
+        // eslint-disable-next-line no-console
         console.error(`[ERROR] buildImage: Failed to convert URL to base64`);
       }
     } else {
@@ -51,10 +52,12 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     if (base64Uri) {
       response = docxDocumentInstance.createMediaFile(base64Uri);
     } else {
+      // eslint-disable-next-line no-console
       console.error(`[ERROR] buildImage: No valid base64Uri generated`);
       return null;
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`[ERROR] buildImage: Error during image processing:`, error);
     return null;
   }
@@ -78,10 +81,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       const imageBuffer = Buffer.from(response.fileContent, 'base64');
       const imageProperties = sizeOf(imageBuffer);
 
-      // Check if width/height are specified in HTML attributes (e.g., from TinyMCE)
-      // If present, use those values; otherwise fall back to actual image dimensions
-      const htmlWidth = vNode.properties.width ? parseInt(vNode.properties.width, 10) : null;
-      const htmlHeight = vNode.properties.height ? parseInt(vNode.properties.height, 10) : null;
+      
 
       const imageFragment = await xmlBuilder.buildParagraph(
         vNode,
@@ -92,18 +92,20 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
           ...response,
           description: vNode.properties.alt,
           maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
-          originalWidth: htmlWidth || imageProperties.width,
-          originalHeight: htmlHeight || imageProperties.height,
+          originalWidth: imageProperties.width,
+          originalHeight: imageProperties.height,
         },
         docxDocumentInstance
       );
 
       return imageFragment;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`[ERROR] buildImage: Error during XML generation:`, error);
       return null;
     }
   } else {
+    // eslint-disable-next-line no-console
     console.error(`[ERROR] buildImage: No response from createMediaFile`);
     return null;
   }
@@ -312,6 +314,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
                 );
               xmlFragment.import(imageFragment);
             } else {
+              // eslint-disable-next-line no-console
               console.log(
                 `[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`
               );
@@ -352,6 +355,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
           .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
       } else {
+        // eslint-disable-next-line no-console
         console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
       }
       return;

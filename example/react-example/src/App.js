@@ -1833,11 +1833,65 @@ const htmlString = `<!DOCTYPE html>
                 alt="Oversized image that should auto-scale"
             />
         </div>
+        
+        <!-- Test cases for PR #100 - TinyMCE image dimensions fix -->
+        <!-- Test image: Porsche 992 Turbo S - Original size: 5,807 × 2,817 pixels, 8.35 MB JPEG -->
+        <div class="page-break" style="page-break-after: always"></div>
+        <div>
+            <h2>Testing Image Width/Height Attribute Handling (Fix for TinyMCE dimensions)</h2>
+            <p>These test cases verify that width and height HTML attributes are properly honored in DOCX generation:</p>
+            <p><em>Test image original size: 5,807 × 2,817 pixels (8.35 MB JPEG)</em></p>
+            
+            <p><strong>Test 1:</strong> Image with explicit width and height attributes (should render as 100x100):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="100"
+                height="100"
+                alt="100x100 dimensions test"
+            />
+            
+            <p><strong>Test 2:</strong> Image with only width attribute (height should maintain aspect ratio):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="150"
+                alt="Width only test"
+            />
+            
+            <p><strong>Test 3:</strong> Image with only height attribute (width should maintain aspect ratio):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                height="80"
+                alt="Height only test"
+            />
+            
+            <p><strong>Test 4:</strong> Image with width/height and additional styles (TinyMCE scenario):</p>
+            <img
+                style="font-family: Calibri Light;"
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="120"
+                height="60"
+                alt="TinyMCE style with dimensions"
+            />
+            
+            <p><strong>Test 5:</strong> Image without dimensions (should use original image size - fallback behavior):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                alt="No dimensions - fallback test"
+            />
+            
+            <p><strong>Test 6:</strong> Larger image with custom dimensions (demonstrates actual resize):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+                width="200"
+                height="100"
+                alt="Large image resized to 200x100"
+            />
+        </div>
     </body>
 </html>`;
 
 function App() {
-  async function downloadDocx(params) {
+  async function downloadDocx() {
     const fileBuffer = await HTMLtoDOCX(htmlString, null, {
       table: { 
         row: { cantSplit: true },
