@@ -996,7 +996,31 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
         );
 
         const imageBuffer = Buffer.from(response.fileContent, 'base64');
-        const imageProperties = sizeOf(imageBuffer);
+        
+        // Validate buffer before calling sizeOf
+        if (!imageBuffer || imageBuffer.length === 0) {
+          console.warn(`[BUILDRUN] Empty image buffer for: ${imageSource}`);
+          return runFragment;
+        }
+        
+        // Check if we got HTML instead of image data (common with Wikimedia errors)
+        const firstBytes = imageBuffer.slice(0, 20).toString('utf8');
+        if (firstBytes.startsWith('<!DOCTYPE') || firstBytes.startsWith('<html')) {
+          console.warn(`[BUILDRUN] Received HTML instead of image data for: ${imageSource}`);
+          return runFragment;
+        }
+        
+        let imageProperties;
+        try {
+          imageProperties = sizeOf(imageBuffer);
+          if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+            console.warn(`[BUILDRUN] Invalid image properties for: ${imageSource}`);
+            return runFragment;
+          }
+        } catch (error) {
+          console.warn(`[BUILDRUN] Failed to get image size for ${imageSource}: ${error.message}`);
+          return runFragment;
+        }
 
         attributes.inlineOrAnchored = true;
         attributes.relationshipId = documentRelsId;
@@ -1543,14 +1567,45 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
             if (base64String && getMimeType(imageSource, base64String)) {
               childVNode.properties.src = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
             } else {
-              break;
+              // Skip this image if download failed
+              console.warn(`[BUILDPARAGRAPH] Skipping image due to download failure: ${imageSource}`);
+              continue;
             }
           } else {
             // eslint-disable-next-line no-useless-escape, prefer-destructuring
-            base64String = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)[2];
+            const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (!match || !match[2]) {
+              console.warn(`[BUILDPARAGRAPH] Invalid data URL format: ${imageSource}`);
+              continue;
+            }
+            base64String = match[2];
           }
+          
+          // Validate base64String before creating buffer
+          if (!base64String) {
+            console.warn(`[BUILDPARAGRAPH] No valid base64 string for image: ${imageSource}`);
+            continue;
+          }
+          
           const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
-          const imageProperties = sizeOf(imageBuffer);
+          
+          // Validate buffer before calling sizeOf
+          if (!imageBuffer || imageBuffer.length === 0) {
+            console.warn(`[BUILDPARAGRAPH] Empty image buffer for: ${imageSource}`);
+            continue;
+          }
+          
+          let imageProperties;
+          try {
+            imageProperties = sizeOf(imageBuffer);
+            if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+              console.warn(`[BUILDPARAGRAPH] Invalid image properties for: ${imageSource}`);
+              continue;
+            }
+          } catch (error) {
+            console.warn(`[BUILDPARAGRAPH] Failed to get image size for ${imageSource}: ${error.message}`);
+            continue;
+          }
 
           modifiedAttributes.maximumWidth =
             modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
@@ -1596,17 +1651,51 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         if (base64String && getMimeType(imageSource, base64String)) {
           vNode.properties.src = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
         } else {
+          // Skip this image if download failed
+          console.warn(`[BUILDPARAGRAPH-VNODE] Skipping image due to download failure: ${imageSource}`);
           paragraphFragment.up();
-
           return paragraphFragment;
         }
       } else {
         // eslint-disable-next-line no-useless-escape, prefer-destructuring
-        base64String = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)[2];
+        const match = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!match || !match[2]) {
+          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid data URL format: ${imageSource}`);
+          paragraphFragment.up();
+          return paragraphFragment;
+        }
+        base64String = match[2];
+      }
+      
+      // Validate base64String before creating buffer
+      if (!base64String) {
+        console.warn(`[BUILDPARAGRAPH-VNODE] No valid base64 string for image: ${imageSource}`);
+        paragraphFragment.up();
+        return paragraphFragment;
       }
 
       const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
-      const imageProperties = sizeOf(imageBuffer);
+      
+      // Validate buffer before calling sizeOf
+      if (!imageBuffer || imageBuffer.length === 0) {
+        console.warn(`[BUILDPARAGRAPH-VNODE] Empty image buffer for: ${imageSource}`);
+        paragraphFragment.up();
+        return paragraphFragment;
+      }
+      
+      let imageProperties;
+      try {
+        imageProperties = sizeOf(imageBuffer);
+        if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid image properties for: ${imageSource}`);
+          paragraphFragment.up();
+          return paragraphFragment;
+        }
+      } catch (error) {
+        console.warn(`[BUILDPARAGRAPH-VNODE] Failed to get image size for ${imageSource}: ${error.message}`);
+        paragraphFragment.up();
+        return paragraphFragment;
+      }
 
       modifiedAttributes.maximumWidth =
         modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
