@@ -64,6 +64,13 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
 
   if (response) {
     try {
+      // Validate response has required properties
+      if (!response.fileContent || !response.fileNameWithExtension) {
+        // eslint-disable-next-line no-console
+        console.error(`[ERROR] buildImage: Invalid response object for ${vNode.properties.src}:`, response);
+        return null;
+      }
+
       docxDocumentInstance.zip
         .folder('word')
         .folder('media')
@@ -79,7 +86,35 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       );
 
       const imageBuffer = Buffer.from(response.fileContent, 'base64');
-      const imageProperties = sizeOf(imageBuffer);
+      
+      // Add validation before calling sizeOf
+      if (!imageBuffer || imageBuffer.length === 0) {
+        // eslint-disable-next-line no-console
+        console.error(`[ERROR] buildImage: Empty image buffer for ${vNode.properties.src}`);
+        return null;
+      }
+      
+      // Check if we got HTML instead of image data (common with Wikimedia errors)
+      const firstBytes = imageBuffer.slice(0, 20).toString('utf8');
+      if (firstBytes.startsWith('<!DOCTYPE') || firstBytes.startsWith('<html')) {
+        // eslint-disable-next-line no-console
+        console.error(`[ERROR] buildImage: Received HTML instead of image data for ${vNode.properties.src}`);
+        return null;
+      }
+
+      let imageProperties;
+      try {        
+        imageProperties = sizeOf(imageBuffer);
+        if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+          // eslint-disable-next-line no-console
+          console.error(`[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`, imageProperties);
+          return null;
+        }
+      } catch (sizeError) {
+        // eslint-disable-next-line no-console
+        console.error(`[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`, sizeError.message);
+        return null;
+      }
 
       
 
