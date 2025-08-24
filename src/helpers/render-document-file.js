@@ -78,6 +78,11 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       const imageBuffer = Buffer.from(response.fileContent, 'base64');
       const imageProperties = sizeOf(imageBuffer);
 
+      // Check if width/height are specified in HTML attributes (e.g., from TinyMCE)
+      // If present, use those values; otherwise fall back to actual image dimensions
+      const htmlWidth = vNode.properties.width ? parseInt(vNode.properties.width, 10) : null;
+      const htmlHeight = vNode.properties.height ? parseInt(vNode.properties.height, 10) : null;
+
       const imageFragment = await xmlBuilder.buildParagraph(
         vNode,
         {
@@ -87,8 +92,8 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
           ...response,
           description: vNode.properties.alt,
           maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
-          originalWidth: imageProperties.width,
-          originalHeight: imageProperties.height,
+          originalWidth: htmlWidth || imageProperties.width,
+          originalHeight: htmlHeight || imageProperties.height,
         },
         docxDocumentInstance
       );
@@ -297,10 +302,19 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               // Add lineRule attribute for consistency
               // Direct image processing includes this attribute, but HTML image processing was missing it
               // This ensures both processing paths generate identical XML structure
-              imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+              imageFragment
+                .first()
+                .first()
+                .att(
+                  'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+                  'lineRule',
+                  'auto'
+                );
               xmlFragment.import(imageFragment);
             } else {
-              console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`);
+              console.log(
+                `[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`
+              );
             }
           }
         }
@@ -332,7 +346,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         // Add lineRule attribute for consistency
         // Direct image processing includes this attribute, but HTML image processing was missing it
         // This ensures both processing paths generate identical XML structure
-        imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+        imageFragment
+          .first()
+          .first()
+          .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
       } else {
         console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
