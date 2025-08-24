@@ -1269,6 +1269,15 @@ const calculateAbsoluteValues = (attribute, originalAttributeInEMU) => {
     } else if (percentageRegex.test(attribute)) {
       const percentageValue = attribute.match(percentageRegex)[1];
       return Math.round((percentageValue / 100) * originalAttributeInEMU);
+    } else if (pointRegex.test(attribute)) {
+      const pointValue = attribute.match(pointRegex)[1];
+      return TWIPToEMU(pointToTWIP(pointValue));
+    } else if (cmRegex.test(attribute)) {
+      const cmValue = attribute.match(cmRegex)[1];
+      return TWIPToEMU(cmToTWIP(cmValue));
+    } else if (inchRegex.test(attribute)) {
+      const inchValue = attribute.match(inchRegex)[1];
+      return TWIPToEMU(inchToTWIP(inchValue));
     }
   }
   return originalAttributeInEMU;
@@ -1323,13 +1332,17 @@ const computeImageDimensions = (vNode, attributes) => {
 
     if (htmlWidth) {
       // HTML attributes without units default to pixels
-      const widthWithPx = pixelRegex.test(htmlWidth) || percentageRegex.test(htmlWidth) ? htmlWidth : `${htmlWidth}px`;
-      modifiedWidth = calculateAbsoluteValues(widthWithPx, originalWidthInEMU);
+      const hasUnits = pixelRegex.test(htmlWidth) || percentageRegex.test(htmlWidth) || 
+                      pointRegex.test(htmlWidth) || cmRegex.test(htmlWidth) || inchRegex.test(htmlWidth);
+      const widthWithUnits = hasUnits ? htmlWidth : `${htmlWidth}px`;
+      modifiedWidth = calculateAbsoluteValues(widthWithUnits, originalWidthInEMU);
     }
     if (htmlHeight) {
       // HTML attributes without units default to pixels
-      const heightWithPx = pixelRegex.test(htmlHeight) || percentageRegex.test(htmlHeight) ? htmlHeight : `${htmlHeight}px`;
-      modifiedHeight = calculateAbsoluteValues(heightWithPx, originalHeightInEMU);
+      const hasUnits = pixelRegex.test(htmlHeight) || percentageRegex.test(htmlHeight) || 
+                      pointRegex.test(htmlHeight) || cmRegex.test(htmlHeight) || inchRegex.test(htmlHeight);
+      const heightWithUnits = hasUnits ? htmlHeight : `${htmlHeight}px`;
+      modifiedHeight = calculateAbsoluteValues(heightWithUnits, originalHeightInEMU);
     }
     
     // If only width or height is specified, maintain aspect ratio
