@@ -88,6 +88,20 @@ async function withOptions() {
   });
 }
 
+// With image processing options
+async function withImageOptions() {
+  const htmlWithImages = `<div>
+    <img src="https://example.com/image.jpg" alt="Example">
+  </div>`;
+  
+  const docx = await HtmlToDocx(htmlWithImages, null, {
+    imageProcessing: {
+      maxRetries: 3,          // Retry failed image downloads up to 3 times
+      verboseLogging: true    // Enable detailed logging for debugging
+    }
+  });
+}
+
 // With all parameters
 async function complete() {
   const headerHtml = "<p>Document Header</p>";
@@ -219,6 +233,9 @@ full fledged examples can be found under `example/`
   - `direction` <?[String]> text direction for RTL (right-to-left) languages. Set to `'rtl'` for Arabic, Hebrew, etc. Defaults to `'ltr'`.
   - `preProcessing` <?[Object]>
     - `skipHTMLMinify` <?[Boolean]> flag to skip minification of HTML. Defaults to `false`.
+  - `imageProcessing` <?[Object]>
+    - `maxRetries` <?[Number]> maximum number of retry attempts for failed image downloads. Defaults to `2`.
+    - `verboseLogging` <?[Boolean]> flag to enable detailed logging of image processing operations. Defaults to `false`.
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns
