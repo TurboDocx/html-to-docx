@@ -996,7 +996,31 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
         );
 
         const imageBuffer = Buffer.from(response.fileContent, 'base64');
-        const imageProperties = sizeOf(imageBuffer);
+        
+        // Validate buffer before calling sizeOf
+        if (!imageBuffer || imageBuffer.length === 0) {
+          console.warn(`[BUILDRUN] Empty image buffer for: ${imageSource}`);
+          return runFragment;
+        }
+        
+        // Check if we got HTML instead of image data (common with Wikimedia errors)
+        const firstBytes = imageBuffer.slice(0, 20).toString('utf8');
+        if (firstBytes.startsWith('<!DOCTYPE') || firstBytes.startsWith('<html')) {
+          console.warn(`[BUILDRUN] Received HTML instead of image data for: ${imageSource}`);
+          return runFragment;
+        }
+        
+        let imageProperties;
+        try {
+          imageProperties = sizeOf(imageBuffer);
+          if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+            console.warn(`[BUILDRUN] Invalid image properties for: ${imageSource}`);
+            return runFragment;
+          }
+        } catch (error) {
+          console.warn(`[BUILDRUN] Failed to get image size for ${imageSource}: ${error.message}`);
+          return runFragment;
+        }
 
         attributes.inlineOrAnchored = true;
         attributes.relationshipId = documentRelsId;
@@ -1269,6 +1293,15 @@ const calculateAbsoluteValues = (attribute, originalAttributeInEMU) => {
     } else if (percentageRegex.test(attribute)) {
       const percentageValue = attribute.match(percentageRegex)[1];
       return Math.round((percentageValue / 100) * originalAttributeInEMU);
+    } else if (pointRegex.test(attribute)) {
+      const pointValue = attribute.match(pointRegex)[1];
+      return TWIPToEMU(pointToTWIP(pointValue));
+    } else if (cmRegex.test(attribute)) {
+      const cmValue = attribute.match(cmRegex)[1];
+      return TWIPToEMU(cmToTWIP(cmValue));
+    } else if (inchRegex.test(attribute)) {
+      const inchValue = attribute.match(inchRegex)[1];
+      return TWIPToEMU(inchToTWIP(inchValue));
     }
   }
   return originalAttributeInEMU;
@@ -1306,6 +1339,7 @@ const computeImageDimensions = (vNode, attributes) => {
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
   
+  
   if (originalWidthInEMU > maximumWidthInEMU) {
     originalWidthInEMU = maximumWidthInEMU;
     originalHeightInEMU = Math.round(originalWidthInEMU / aspectRatio);
@@ -1314,6 +1348,34 @@ const computeImageDimensions = (vNode, attributes) => {
   let modifiedWidth;
   let modifiedMaxHeight;
   let modifiedMaxWidth;
+
+  // Check for HTML width and height attributes first (e.g., from TinyMCE)
+  if (vNode?.properties?.attributes) {
+    const htmlWidth = vNode.properties.attributes.width;
+    const htmlHeight = vNode.properties.attributes.height;
+
+    if (htmlWidth) {
+      // HTML attributes without units default to pixels
+      const hasUnits = pixelRegex.test(htmlWidth) || percentageRegex.test(htmlWidth) || 
+                      pointRegex.test(htmlWidth) || cmRegex.test(htmlWidth) || inchRegex.test(htmlWidth);
+      const widthWithUnits = hasUnits ? htmlWidth : `${htmlWidth}px`;
+      modifiedWidth = calculateAbsoluteValues(widthWithUnits, originalWidthInEMU);
+    }
+    if (htmlHeight) {
+      // HTML attributes without units default to pixels
+      const hasUnits = pixelRegex.test(htmlHeight) || percentageRegex.test(htmlHeight) || 
+                      pointRegex.test(htmlHeight) || cmRegex.test(htmlHeight) || inchRegex.test(htmlHeight);
+      const heightWithUnits = hasUnits ? htmlHeight : `${htmlHeight}px`;
+      modifiedHeight = calculateAbsoluteValues(heightWithUnits, originalHeightInEMU);
+    }
+    
+    // If only width or height is specified, maintain aspect ratio
+    if (modifiedWidth && !modifiedHeight) {
+      modifiedHeight = Math.round(modifiedWidth / aspectRatio);
+    } else if (modifiedHeight && !modifiedWidth) {
+      modifiedWidth = Math.round(modifiedHeight * aspectRatio);
+    }
+  }
 
   if (vNode?.properties?.style) {
     const styleWidth = vNode.properties.style.width;
@@ -1381,13 +1443,23 @@ const computeImageDimensions = (vNode, attributes) => {
     // but contains no width/height properties. The function enters this if block but never
     // sets modifiedWidth/modifiedHeight. Check if dimensions are still undefined after 
     // processing styles and use the scaled original dimensions as fallback.
+    // BUT: Don't override dimensions that were already set from HTML attributes!
     if (modifiedWidth === undefined || modifiedHeight === undefined) {
-      modifiedWidth = originalWidthInEMU;
-      modifiedHeight = originalHeightInEMU;
+      if (modifiedWidth === undefined) {
+        modifiedWidth = originalWidthInEMU;
+      }
+      if (modifiedHeight === undefined) {
+        modifiedHeight = originalHeightInEMU;
+      }
     }
   } else {
-    modifiedWidth = originalWidthInEMU;
-    modifiedHeight = originalHeightInEMU;
+    // No CSS styles - only use original dimensions if HTML attributes didn't set them
+    if (modifiedWidth === undefined) {
+      modifiedWidth = originalWidthInEMU;
+    }
+    if (modifiedHeight === undefined) {
+      modifiedHeight = originalHeightInEMU;
+    }
   }
 
   // Final safety net: ensure dimensions are never undefined
@@ -1402,6 +1474,7 @@ const computeImageDimensions = (vNode, attributes) => {
   attributes.width = modifiedWidth;
   // eslint-disable-next-line no-param-reassign
   attributes.height = modifiedHeight;
+  
 };
 
 const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
@@ -1478,7 +1551,17 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         if (childVNode.tagName === 'img') {
           let base64String;
           const imageSource = childVNode.properties.src;
-          if (isValidUrl(imageSource)) {
+          
+          // Check if this is already a data URL (from cache or previous processing)
+          if (imageSource.startsWith('data:')) {
+            // Already processed, extract base64 part
+            const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (!match || !match[2]) {
+              console.warn(`[BUILDPARAGRAPH] Invalid data URL format: ${imageSource}`);
+              continue;
+            }
+            base64String = match[2];
+          } else if (isValidUrl(imageSource)) {
             base64String = await imageToBase64(imageSource).catch((error) => {
               // eslint-disable-next-line no-console
               console.warn(`skipping image download and conversion due to ${error}`);
@@ -1487,14 +1570,37 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
             if (base64String && getMimeType(imageSource, base64String)) {
               childVNode.properties.src = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
             } else {
-              break;
+              // Skip this image if download failed
+              console.warn(`[BUILDPARAGRAPH] Skipping image due to download failure: ${imageSource}`);
+              continue;
             }
-          } else {
-            // eslint-disable-next-line no-useless-escape, prefer-destructuring
-            base64String = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)[2];
           }
+          
+          // Validate base64String before creating buffer
+          if (!base64String) {
+            console.warn(`[BUILDPARAGRAPH] No valid base64 string for image: ${imageSource}`);
+            continue;
+          }
+          
           const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
-          const imageProperties = sizeOf(imageBuffer);
+          
+          // Validate buffer before calling sizeOf
+          if (!imageBuffer || imageBuffer.length === 0) {
+            console.warn(`[BUILDPARAGRAPH] Empty image buffer for: ${imageSource}`);
+            continue;
+          }
+          
+          let imageProperties;
+          try {
+            imageProperties = sizeOf(imageBuffer);
+            if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+              console.warn(`[BUILDPARAGRAPH] Invalid image properties for: ${imageSource}`);
+              continue;
+            }
+          } catch (error) {
+            console.warn(`[BUILDPARAGRAPH] Failed to get image size for ${imageSource}: ${error.message}`);
+            continue;
+          }
 
           modifiedAttributes.maximumWidth =
             modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
@@ -1531,7 +1637,18 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     if (isVNode(vNode) && vNode.tagName === 'img') {
       const imageSource = vNode.properties.src;
       let base64String = imageSource;
-      if (isValidUrl(imageSource)) {
+      
+      // Check if this is already a data URL (from cache or previous processing)
+      if (imageSource.startsWith('data:')) {
+        // Already processed, extract base64 part
+        const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!match || !match[2]) {
+          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid data URL format: ${imageSource}`);
+          paragraphFragment.up();
+          return paragraphFragment;
+        }
+        base64String = match[2];
+      } else if (isValidUrl(imageSource)) {
         base64String = await imageToBase64(imageSource).catch((error) => {
           // eslint-disable-next-line no-console
           console.warn(`skipping image download and conversion due to ${error}`);
@@ -1540,17 +1657,42 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         if (base64String && getMimeType(imageSource, base64String)) {
           vNode.properties.src = `data:${getMimeType(imageSource, base64String)};base64, ${base64String}`;
         } else {
+          // Skip this image if download failed
+          console.warn(`[BUILDPARAGRAPH-VNODE] Skipping image due to download failure: ${imageSource}`);
           paragraphFragment.up();
-
           return paragraphFragment;
         }
-      } else {
-        // eslint-disable-next-line no-useless-escape, prefer-destructuring
-        base64String = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)[2];
+      }
+      
+      // Validate base64String before creating buffer
+      if (!base64String) {
+        console.warn(`[BUILDPARAGRAPH-VNODE] No valid base64 string for image: ${imageSource}`);
+        paragraphFragment.up();
+        return paragraphFragment;
       }
 
       const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
-      const imageProperties = sizeOf(imageBuffer);
+      
+      // Validate buffer before calling sizeOf
+      if (!imageBuffer || imageBuffer.length === 0) {
+        console.warn(`[BUILDPARAGRAPH-VNODE] Empty image buffer for: ${imageSource}`);
+        paragraphFragment.up();
+        return paragraphFragment;
+      }
+      
+      let imageProperties;
+      try {
+        imageProperties = sizeOf(imageBuffer);
+        if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid image properties for: ${imageSource}`);
+          paragraphFragment.up();
+          return paragraphFragment;
+        }
+      } catch (error) {
+        console.warn(`[BUILDPARAGRAPH-VNODE] Failed to get image size for ${imageSource}: ${error.message}`);
+        paragraphFragment.up();
+        return paragraphFragment;
+      }
 
       modifiedAttributes.maximumWidth =
         modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
@@ -2544,7 +2686,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
         const imageFragment = await buildImage(
           docxDocumentInstance,
           childVNode,
-          modifiedAttributes.maximumWidth
+          modifiedAttributes.maximumWidth,
+          docxDocumentInstance.imageProcessing || {}
         );
         if (imageFragment) {
           tableCellFragment.import(imageFragment);
@@ -2558,7 +2701,8 @@ const buildTableCell = async (vNode, attributes, rowSpanMap, columnIndex, docxDo
               const imageFragment = await buildImage(
                 docxDocumentInstance,
                 grandChildVNode,
-                modifiedAttributes.maximumWidth
+                modifiedAttributes.maximumWidth,
+                docxDocumentInstance.imageProcessing || {}
               );
               if (imageFragment) {
                 tableCellFragment.import(imageFragment);
