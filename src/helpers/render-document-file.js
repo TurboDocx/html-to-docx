@@ -87,6 +87,8 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       }
       logVerbose(verboseLogging, `[CACHE] Using cached image data for: ${imageSource}`);
       base64Uri = cachedData;
+      // Update vNode to reflect the cached data URL for subsequent processing
+      vNode.properties.src = base64Uri;
     } else if (isValidUrl(imageSource)) {
       // Download and cache the image with retry mechanism
       let base64String = null;
@@ -130,6 +132,8 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         // Cache the successful result
         imageCache.set(imageSource, base64Uri);
         logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
+        // Update vNode to reflect the new data URL for subsequent processing
+        vNode.properties.src = base64Uri;
       } else {
         // Cache the failure for THIS document generation only after all retries failed
         // Note: Cache is cleared between document generations, so failures can be retried in future runs
