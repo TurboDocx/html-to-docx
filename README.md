@@ -1,19 +1,32 @@
 [![TurboDocx](./banner.png)](https://www.turbodocx.com)
 
-html-to-docx
-============
+@turbodocx/html-to-docx
+====================
 [![NPM Version][npm-image]][npm-url]
+[![GitHub Stars](https://img.shields.io/github/stars/turbodocx/html-to-docx?style=social)](https://github.com/turbodocx/html-to-docx)
 [![Type Script](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
-[![npm](https://img.shields.io/npm/dw/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
+[![npm](https://img.shields.io/npm/dm/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
 
-`@turbodocx/html-to-docx` is a powerful JavaScript library designed to convert HTML documents to DOCX format, compatible with Microsoft Word 2007+, LibreOffice Writer, Google Docs, WPS Writer, and other word processors. Inspired by [@PrivateOmega]("https://github.com/privateOmega/"), this is supported by TurboDocx to ensure ongoing development and improvements.
+Convert HTML to Word, Google Docs, and DOCX files with the fastest, most reliable JavaScript library available. Built for modern applications that demand speed and precision—from AI-powered document generation to enterprise reporting systems.
 
-### Disclaimer
+Based on the original work and assisted by the original contributors of [privateOmega/html-to-docx](https://github.com/privateOmega/html-to-docx), this library is now actively maintained and enhanced by TurboDocx, ensuring continuous improvements and long-term support for production environments.
 
-While `@turbodocx/html-to-docx` is robust and used in production environments, it is continually evolving. Please ensure it meets your specific needs through thorough testing. Note that it currently does not work directly in the browser.
+## Why @turbodocx/html-to-docx?
+
+🚀 **Lightning Fast Performance** - Pure JavaScript implementation with no dependencies on headless browsers or external binaries. Perfect for AI applications that need rapid document generation.
+
+🔄 **Active Maintenance & Support** - Backed by TurboDocx with regular updates, bug fixes, and feature enhancements. Not another abandoned open-source project.
+
+🤖 **AI-Ready Architecture** - Designed for modern AI workflows where speed matters. Generate thousands of documents without the overhead of browser automation.
+
+⚡ **Zero External Dependencies** - No need for Puppeteer, Chrome, or LibreOffice. Pure Node.js implementation that works in any environment.
+
+🎯 **Production Battle-Tested** - Used in production environments processing thousands of documents. Reliable, stable, and performant at scale.
+
+🛠️ **Developer Experience** - Full TypeScript support, comprehensive documentation, and extensive examples to get you up and running in minutes.
 
 ## Installation
 
@@ -274,3 +287,7 @@ MIT
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
+
+---
+
+**Note:** Currently optimized for Node.js environments. Browser support is planned for future releases.
