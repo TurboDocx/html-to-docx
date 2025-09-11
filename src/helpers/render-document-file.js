@@ -42,23 +42,26 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         const mimeType = getMimeType(imageSource, base64String);
         base64Uri = `data:${mimeType};base64, ${base64String}`;
       } else {
+        // eslint-disable-next-line no-console
         console.error(`[ERROR] buildImage: Failed to convert URL to base64`);
       }
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
     }
-    
+
     if (base64Uri) {
       response = docxDocumentInstance.createMediaFile(base64Uri);
     } else {
+      // eslint-disable-next-line no-console
       console.error(`[ERROR] buildImage: No valid base64Uri generated`);
       return null;
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`[ERROR] buildImage: Error during image processing:`, error);
     return null;
   }
-  
+
   if (response) {
     try {
       docxDocumentInstance.zip
@@ -95,10 +98,12 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
 
       return imageFragment;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`[ERROR] buildImage: Error during XML generation:`, error);
       return null;
     }
   } else {
+    // eslint-disable-next-line no-console
     console.error(`[ERROR] buildImage: No response from createMediaFile`);
     return null;
   }
@@ -312,10 +317,20 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               // Add lineRule attribute for consistency
               // Direct image processing includes this attribute, but HTML image processing was missing it
               // This ensures both processing paths generate identical XML structure
-              imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+              imageFragment
+                .first()
+                .first()
+                .att(
+                  'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+                  'lineRule',
+                  'auto'
+                );
               xmlFragment.import(imageFragment);
             } else {
-              console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`);
+              // eslint-disable-next-line no-console
+              console.log(
+                `[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`
+              );
             }
           }
         }
@@ -347,9 +362,13 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         // Add lineRule attribute for consistency
         // Direct image processing includes this attribute, but HTML image processing was missing it
         // This ensures both processing paths generate identical XML structure
-        imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+        imageFragment
+          .first()
+          .first()
+          .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
       } else {
+        // eslint-disable-next-line no-console
         console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
       }
       return;
