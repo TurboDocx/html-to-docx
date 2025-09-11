@@ -3677,4 +3677,5 @@ export {
   buildUnderline,
   buildDrawing,
   fixupLineHeight,
+  modifiedStyleAttributesBuilder,
 };
