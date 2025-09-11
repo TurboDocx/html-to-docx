@@ -107,12 +107,21 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   const listElements = [];
 
+  const listContainerStyles = xmlBuilder.modifiedStyleAttributesBuilder(
+    docxDocumentInstance,
+    vNode,
+    {},
+    { isParagraph: true }
+  );
+
   let vNodeObjects = [
     {
       node: vNode,
       level: 0,
       type: vNode.tagName,
       numberingId: docxDocumentInstance.createNumbering(vNode.tagName, vNode.properties),
+      // Store the container styles to pass down to child elements
+      containerStyles: listContainerStyles,
     },
   ];
   while (vNodeObjects.length) {
@@ -124,9 +133,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       isVText(tempVNodeObject.node) ||
       (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
     ) {
+      // Pass container styles as base, let buildParagraph handle   individual item style overrides
+
       const paragraphFragment = await xmlBuilder.buildParagraph(
         tempVNodeObject.node,
         {
+          ...tempVNodeObject.containerStyles,
           numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
         },
         docxDocumentInstance
@@ -150,6 +162,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
               childVNode.tagName,
               childVNode.properties
             ),
+            containerStyles: tempVNodeObject.containerStyles,
           });
         } else {
           // eslint-disable-next-line no-lonely-if
@@ -202,6 +215,8 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
               level: tempVNodeObject.level,
               type: tempVNodeObject.type,
               numberingId: tempVNodeObject.numberingId,
+              // Pass down the container styles to individual list items
+              containerStyles: tempVNodeObject.containerStyles,
             });
           }
         }
