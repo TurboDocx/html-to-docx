@@ -89,13 +89,7 @@ const setBorderIndexEquivalent = (index, length) => {
   return 'middle';
 };
 
-const isThickness = (value) =>
-  ['auto', 'from-text'].includes(value) ||
-  pointRegex.test(value) ||
-  pixelRegex.test(value) ||
-  cmRegex.test(value) ||
-  inchRegex.test(value) ||
-  percentageRegex.test(value);
+
 
 const isTextDecorationLine = (line) =>
   ['overline', 'underline', 'line-through', 'blink', 'none'].includes(line);
@@ -2668,8 +2662,8 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
         cellProperties.tableCellBorder.colors = { ...cellProperties.tableCellBorder.colors, right: fixupColorCode(spanObject[spanObjectKey]) };
       } else if (spanObjectKey === 'border-top-color') {
         cellProperties.tableCellBorder.colors = { ...cellProperties.tableCellBorder.colors, top: fixupColorCode(spanObject[spanObjectKey]) };
-      } else if (spanObjectKey === 'border-top-color') {
-        tableBorders.colors = { ...tableBorders.colors, top: fixupColorCode(spanObject[spanObjectKey]) };
+      } else if (spanObjectKey === 'border-bottom-color') {
+        cellProperties.tableCellBorder.colors = { ...cellProperties.tableCellBorder.colors, bottom: fixupColorCode(spanObject[spanObjectKey]) };
       } else if (spanObjectKey === 'border-style') {
         cellProperties.tableCellBorder = {
           ...cellProperties.tableCellBorder,
