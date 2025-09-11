@@ -293,17 +293,54 @@ class DocxDocument {
     return generateXMLString(webSettingsXMLString);
   }
 
-  generateStylesXML() {
-    // Handled the rtl issue
-    // return generateXMLString(
-    //   generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
-    // );
-    const stylesDoc = create(
-      { encoding: 'UTF-8', standalone: true },
-      generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
-    );
+  // Original implementation - commented out for reference
+  // generateStylesXML() {
+  //   // Handled the rtl issue
+  //   // return generateXMLString(
+  //   //   generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
+  //   // );
+  //   const stylesDoc = create(
+  //     { encoding: 'UTF-8', standalone: true },
+  //     generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
+  //   );
 
-    if (this.direction === 'rtl') {
+  //   if (this.direction === 'rtl') {
+  //     const rtlStyle = fragment({ namespaceAlias: { w: namespaces.w } })
+  //       .ele('@w', 'style')
+  //       .att('@w', 'type', 'paragraph')
+  //       .att('@w', 'styleId', 'RTLDefault')
+  //       .ele('@w', 'name')
+  //       .att('@w', 'val', 'RTL Default')
+  //       .up()
+  //       .ele('@w', 'pPr')
+  //       .ele('@w', 'jc')
+  //       .att('@w', 'val', 'right')
+  //       .up()
+  //       .ele('@w', 'bidi')
+  //       .up()
+  //       .up()
+  //       .up();
+
+  //     stylesDoc.root().import(rtlStyle);
+  //   }
+
+  //   return stylesDoc.toString({ prettyPrint: true });
+  // }
+
+  // New implementation using extracted generateXMLString with arguments
+  generateStylesXML() {
+    return this.generateXMLStringWithRTL(
+      generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang),
+      this.direction
+    );
+  }
+
+  // Extracted generateXMLString function with RTL support
+  // eslint-disable-next-line class-methods-use-this
+  generateXMLStringWithRTL(xmlString, direction) {
+    const stylesDoc = create({ encoding: 'UTF-8', standalone: true }, xmlString);
+
+    if (direction === 'rtl') {
       const rtlStyle = fragment({ namespaceAlias: { w: namespaces.w } })
         .ele('@w', 'style')
         .att('@w', 'type', 'paragraph')
