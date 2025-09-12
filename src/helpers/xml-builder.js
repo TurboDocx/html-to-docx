@@ -93,7 +93,6 @@ const setBorderIndexEquivalent = (index, length) => {
   return 'middle';
 };
 
-// eslint-disable-next-line no-unused-vars
 const isThickness = (value) =>
   ['auto', 'from-text'].includes(value) ||
   pointRegex.test(value) ||
@@ -989,7 +988,6 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
     if (isValidUrl(imageSource)) {
       requiresConversion = true;
       const base64String = await imageToBase64(imageSource).catch((error) => {
-        // eslint-disable-next-line no-console
         console.warn(`skipping image download and conversion due to ${error}`);
       });
       if (base64String) {
