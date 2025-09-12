@@ -70,8 +70,30 @@ function generateSectionReferenceXML(documentXML, documentSectionType, objects, 
   }
 }
 
-function generateXMLString(xmlString) {
+function generateXMLString(xmlString, direction) {
   const xmlDocumentString = create({ encoding: 'UTF-8', standalone: true }, xmlString);
+
+  // RTL condition xml styles addition
+  if (direction === 'rtl') {
+    const rtlStyle = fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'style')
+      .att('@w', 'type', 'paragraph')
+      .att('@w', 'styleId', 'RTLDefault')
+      .ele('@w', 'name')
+      .att('@w', 'val', 'RTL Default')
+      .up()
+      .ele('@w', 'pPr')
+      .ele('@w', 'jc')
+      .att('@w', 'val', 'right')
+      .up()
+      .ele('@w', 'bidi')
+      .up()
+      .up()
+      .up();
+
+    xmlDocumentString.root().import(rtlStyle);
+  }
+
   return xmlDocumentString.toString({ prettyPrint: true });
 }
 
@@ -271,74 +293,11 @@ class DocxDocument {
     return generateXMLString(webSettingsXMLString);
   }
 
-  // Original implementation - commented out for reference
-  // generateStylesXML() {
-  //   // Handled the rtl issue
-  //   // return generateXMLString(
-  //   //   generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
-  //   // );
-  //   const stylesDoc = create(
-  //     { encoding: 'UTF-8', standalone: true },
-  //     generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
-  //   );
-
-  //   if (this.direction === 'rtl') {
-  //     const rtlStyle = fragment({ namespaceAlias: { w: namespaces.w } })
-  //       .ele('@w', 'style')
-  //       .att('@w', 'type', 'paragraph')
-  //       .att('@w', 'styleId', 'RTLDefault')
-  //       .ele('@w', 'name')
-  //       .att('@w', 'val', 'RTL Default')
-  //       .up()
-  //       .ele('@w', 'pPr')
-  //       .ele('@w', 'jc')
-  //       .att('@w', 'val', 'right')
-  //       .up()
-  //       .ele('@w', 'bidi')
-  //       .up()
-  //       .up()
-  //       .up();
-
-  //     stylesDoc.root().import(rtlStyle);
-  //   }
-
-  //   return stylesDoc.toString({ prettyPrint: true });
-  // }
-
-  // New implementation using extracted generateXMLString with arguments
   generateStylesXML() {
-    return this.generateXMLStringWithRTL(
+    return generateXMLString(
       generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang),
       this.direction
     );
-  }
-
-  // Extracted generateXMLString function with RTL support
-  // eslint-disable-next-line class-methods-use-this
-  generateXMLStringWithRTL(xmlString, direction) {
-    const stylesDoc = create({ encoding: 'UTF-8', standalone: true }, xmlString);
-
-    if (direction === 'rtl') {
-      const rtlStyle = fragment({ namespaceAlias: { w: namespaces.w } })
-        .ele('@w', 'style')
-        .att('@w', 'type', 'paragraph')
-        .att('@w', 'styleId', 'RTLDefault')
-        .ele('@w', 'name')
-        .att('@w', 'val', 'RTL Default')
-        .up()
-        .ele('@w', 'pPr')
-        .ele('@w', 'jc')
-        .att('@w', 'val', 'right')
-        .up()
-        .ele('@w', 'bidi')
-        .up()
-        .up()
-        .up();
-
-      stylesDoc.root().import(rtlStyle);
-    }
-
-    return stylesDoc.toString({ prettyPrint: true });
   }
 
   generateFontTableXML() {
