@@ -66,6 +66,7 @@ declare namespace HTMLtoDOCX {
         };
         decodeUnicode?: boolean;
         lang?: string;
+        direction?: "ltr" | "rtl";
         preprocessing?: {
             skipHTMLMinify?: boolean;
         };
