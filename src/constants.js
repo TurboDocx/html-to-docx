@@ -25,6 +25,7 @@ const portraitMargins = {
 const defaultFont = 'Times New Roman';
 const defaultFontSize = 22;
 const defaultLang = 'en-US';
+const defaultDirection = 'ltr';
 const defaultTableBorderOptions = {
   size: 0,
   stroke: 'nil',
@@ -77,6 +78,7 @@ const defaultDocumentOptions = {
   },
   decodeUnicode: false,
   defaultLang,
+  direction: defaultDirection,
   preprocessing: {
     skipHTMLMinify: false,
   },
@@ -150,6 +152,7 @@ export {
   colorlessColors,
   verticalAlignValues,
   defaultLang,
+  defaultDirection,
   defaultPercentageMarginValue,
   defaultTableBorderAttributeOptions,
 };

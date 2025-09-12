@@ -64,7 +64,9 @@ async function saveDocxFile(docResult: Buffer | ArrayBuffer | Blob, fileName: st
         console.log(`${docType} constructor name:`, docResult?.constructor?.name);
         return;
     }
-    fs.writeFileSync(path.join(__dirname, fileName), docData);
+    // Save to root directory as requested
+    const rootPath = path.join(__dirname, '../../', fileName);
+    fs.writeFileSync(rootPath, docData);
     console.log(`${docType} document created: ${fileName}`);
 }
 
@@ -118,6 +120,20 @@ async function generateDocuments() {
         );
         
         await saveDocxFile(advancedDocResult, "advanced-example.docx", "Advanced");
+        
+        // RTL Direction test
+        const rtlTestResult = await HTMLtoDOCX(
+            `<h1>Direction Test</h1><p>This tests the direction property in TypeScript.</p>`,
+            null,
+            {
+                direction: "rtl",
+                lang: "ar-SA",
+                title: "RTL Direction Test",
+                creator: "TypeScript RTL Test"
+            }
+        );
+        
+        await saveDocxFile(rtlTestResult, "typescript-rtl-test.docx", "RTL Test");
         
     } catch (error) {
         console.error("Error generating documents:", error);
