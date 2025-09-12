@@ -69,6 +69,10 @@ declare namespace HTMLtoDOCX {
         preprocessing?: {
             skipHTMLMinify?: boolean;
         };
+        imageProcessing?: {
+            maxRetries?: number;
+            verboseLogging?: boolean;
+        };
     }
 }
 

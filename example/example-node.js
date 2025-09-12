@@ -1892,6 +1892,109 @@ const htmlString = `<!DOCTYPE html>
             </tr>
           </tbody>
         </table>
+        
+        <!-- Test cases for PR #100 - TinyMCE image dimensions fix -->
+        <!-- Test image: Porsche 992 Turbo S - Original size: 5,807 × 2,817 pixels, 8.35 MB JPEG -->
+        <div class="page-break" style="page-break-after: always"></div>
+        <div>
+            <h2>Testing Image Width/Height Attribute Handling (Fix for TinyMCE dimensions)</h2>
+            <p>These test cases verify that width and height HTML attributes are properly honored in DOCX generation:</p>
+            <p><em>Test image original size: 5,807 × 2,817 pixels (8.35 MB JPEG)</em></p>
+            
+            <p><strong>Test 1:</strong> Image with explicit width and height attributes (should render as 100x100):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="100"
+                height="100"
+                alt="100x100 dimensions test"
+            />
+            
+            <p><strong>Test 2:</strong> Image with only width attribute (height should maintain aspect ratio):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="150"
+                alt="Width only test"
+            />
+            
+            <p><strong>Test 3:</strong> Image with only height attribute (width should maintain aspect ratio):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                height="80"
+                alt="Height only test"
+            />
+            
+            <p><strong>Test 4:</strong> Image with width/height and additional styles (TinyMCE scenario):</p>
+            <img
+                style="font-family: Calibri Light;"
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="120"
+                height="60"
+                alt="TinyMCE style with dimensions"
+            />
+            
+            <p><strong>Test 5:</strong> Image without dimensions (should use original image size - fallback behavior):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                alt="No dimensions - fallback test"
+            />
+            
+            <p><strong>Test 6:</strong> Larger image with custom dimensions (demonstrates actual resize):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+                width="200"
+                height="100"
+                alt="Large image resized to 200x100"
+            />
+            
+            <h3>Unit Support Tests</h3>
+            <p><strong>Test 7:</strong> Image with pixel units (explicit px):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="180px"
+                height="90px"
+                alt="180px x 90px image"
+            />
+            
+            <p><strong>Test 8:</strong> Image with point units (pt):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="144pt"
+                height="72pt"
+                alt="144pt x 72pt image (192px x 96px equivalent)"
+            />
+            
+            <p><strong>Test 9:</strong> Image with centimeter units (cm):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="4cm"
+                height="2cm"
+                alt="4cm x 2cm image"
+            />
+            
+            <p><strong>Test 10:</strong> Image with inch units (in):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="1.5in"
+                height="0.75in"
+                alt="1.5in x 0.75in image"
+            />
+            
+            <p><strong>Test 11:</strong> Image with percentage units (% of original size):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="10%"
+                height="10%"
+                alt="10% x 10% of original size"
+            />
+            
+            <p><strong>Test 12:</strong> Mixed units - width in cm, height in inches:</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="3cm"
+                height="1in"
+                alt="3cm width, 1in height"
+            />
+        </div>
     </body>
 </html>`;
 
