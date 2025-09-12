@@ -33,7 +33,6 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     const imageSource = vNode.properties.src;
     if (isValidUrl(imageSource)) {
       const base64String = await imageToBase64(imageSource).catch((error) => {
-        // eslint-disable-next-line no-console
         console.warn(`skipping image download and conversion due to ${error}`);
         return null;
       });
@@ -42,7 +41,6 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         const mimeType = getMimeType(imageSource, base64String);
         base64Uri = `data:${mimeType};base64, ${base64String}`;
       } else {
-        // eslint-disable-next-line no-console
         console.error(`[ERROR] buildImage: Failed to convert URL to base64`);
       }
     } else {
@@ -52,12 +50,10 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     if (base64Uri) {
       response = docxDocumentInstance.createMediaFile(base64Uri);
     } else {
-      // eslint-disable-next-line no-console
       console.error(`[ERROR] buildImage: No valid base64Uri generated`);
       return null;
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error(`[ERROR] buildImage: Error during image processing:`, error);
     return null;
   }
@@ -98,12 +94,10 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
 
       return imageFragment;
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error(`[ERROR] buildImage: Error during XML generation:`, error);
       return null;
     }
   } else {
-    // eslint-disable-next-line no-console
     console.error(`[ERROR] buildImage: No response from createMediaFile`);
     return null;
   }
@@ -327,7 +321,6 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
                 );
               xmlFragment.import(imageFragment);
             } else {
-              // eslint-disable-next-line no-console
               console.log(
                 `[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`
               );
@@ -368,7 +361,6 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
           .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
       } else {
-        // eslint-disable-next-line no-console
         console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
       }
       return;
