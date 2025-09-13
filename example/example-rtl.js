@@ -37,7 +37,7 @@ async function generateDoc() {
 
   // Save the buffer to file
   fs.writeFileSync('example-rtl.docx', docxBuffer);
-  console.log('✅ DOCX created: test.docx');
+  console.log('✅ DOCX created: example-rtl.docx');
 }
 
 generateDoc();
