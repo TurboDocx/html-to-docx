@@ -70,8 +70,30 @@ function generateSectionReferenceXML(documentXML, documentSectionType, objects, 
   }
 }
 
-function generateXMLString(xmlString) {
+function generateXMLString(xmlString, direction) {
   const xmlDocumentString = create({ encoding: 'UTF-8', standalone: true }, xmlString);
+
+  // RTL condition xml styles addition
+  if (direction === 'rtl') {
+    const rtlStyle = fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'style')
+      .att('@w', 'type', 'paragraph')
+      .att('@w', 'styleId', 'RTLDefault')
+      .ele('@w', 'name')
+      .att('@w', 'val', 'RTL Default')
+      .up()
+      .ele('@w', 'pPr')
+      .ele('@w', 'jc')
+      .att('@w', 'val', 'right')
+      .up()
+      .ele('@w', 'bidi')
+      .up()
+      .up()
+      .up();
+
+    xmlDocumentString.root().import(rtlStyle);
+  }
+
   return xmlDocumentString.toString({ prettyPrint: true });
 }
 
@@ -155,6 +177,7 @@ class DocxDocument {
     this.fontSize = properties.fontSize || defaultFontSize;
     this.complexScriptFontSize = properties.complexScriptFontSize || defaultFontSize;
     this.lang = properties.lang || defaultLang;
+    this.direction = properties.direction || 'ltr';
     this.tableRowCantSplit =
       (properties.table && properties.table.row && properties.table.row.cantSplit) || false;
     this.tableBorders =
@@ -272,7 +295,8 @@ class DocxDocument {
 
   generateStylesXML() {
     return generateXMLString(
-      generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
+      generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang),
+      this.direction
     );
   }
 

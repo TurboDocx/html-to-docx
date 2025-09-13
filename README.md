@@ -205,6 +205,7 @@ full fledged examples can be found under `example/`
     - `defaultOrderedListStyleType` <?[String]> default ordered list style type. Defaults to `decimal`.
   - `decodeUnicode` <?[Boolean]> flag to enable unicode decoding of header, body and footer. Defaults to `false`.
   - `lang` <?[String]> language localization code for spell checker to work properly. Defaults to `en-US`.
+  - `direction` <?[String]> text direction for RTL (right-to-left) languages. Set to `'rtl'` for Arabic, Hebrew, etc. Defaults to `'ltr'`.
   - `preProcessing` <?[Object]>
     - `skipHTMLMinify` <?[Boolean]> flag to skip minification of HTML. Defaults to `false`.
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
@@ -239,6 +240,27 @@ Also you could add attribute `data-start="n"` to start the numbering from the n-
 
 `<ol data-start="2">` will start the numbering from ( B. b. II. ii. 2. )
 
+
+## RTL (Right-to-Left) Language Support
+
+The library also supports RTL languages like Arabic and Hebrew. Use the `direction` option to enable RTL text flow:
+
+```javascript
+const htmlString = `
+  <h1>مرحبا بالعالم</h1>
+  <p>هذا نص تجريبي باللغة العربية ليظهر من اليمين إلى اليسار</p>
+`;
+
+const docx = await HTMLtoDOCX(htmlString, null, {
+  direction: 'rtl',        // Enable RTL text direction
+  lang: 'ar-SA',          // Arabic locale (or 'he-IL' for Hebrew)
+  font: 'Arial',          // Use a font that supports RTL characters
+});
+```
+
+For more RTL examples, check `example/react-example/src/example-rtl.js`.
+
+## Font Compatibility
 
 Font family doesnt work consistently for all word processor softwares
 
