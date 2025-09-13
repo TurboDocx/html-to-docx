@@ -4,7 +4,7 @@ const fs = require('fs');
 // const HTMLtoDOCX = require('html-to-docx');
 const HTMLtoDOCX = require('../dist/html-to-docx.umd');
 
-const filePath = './example.docx';
+const filePath = './example-node.docx';
 
 const htmlString = `<!DOCTYPE html>
 <html lang="en">
