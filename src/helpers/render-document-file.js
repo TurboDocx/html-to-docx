@@ -25,6 +25,14 @@ const convertHTML = HTMLToVDOM({
   VText,
 });
 
+// Helper function to add lineRule attribute for image consistency
+const addLineRuleToImageFragment = (imageFragment) => {
+  imageFragment
+    .first()
+    .first()
+    .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+};
+
 // eslint-disable-next-line consistent-return, no-shadow
 export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = null) => {
   let response = null;
@@ -67,14 +75,19 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       // Validate response has required properties
       if (!response.fileContent || !response.fileNameWithExtension) {
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Invalid response object for ${vNode.properties.src}:`, response);
+        console.error(
+          `[ERROR] buildImage: Invalid response object for ${vNode.properties.src}:`,
+          response
+        );
         return null;
       }
+
+      const imageBuffer = Buffer.from(response.fileContent, 'base64');
 
       docxDocumentInstance.zip
         .folder('word')
         .folder('media')
-        .file(response.fileNameWithExtension, Buffer.from(response.fileContent, 'base64'), {
+        .file(response.fileNameWithExtension, imageBuffer, {
           createFolders: false,
         });
 
@@ -85,38 +98,42 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         internalRelationship
       );
 
-      const imageBuffer = Buffer.from(response.fileContent, 'base64');
-      
       // Add validation before calling sizeOf
       if (!imageBuffer || imageBuffer.length === 0) {
         // eslint-disable-next-line no-console
         console.error(`[ERROR] buildImage: Empty image buffer for ${vNode.properties.src}`);
         return null;
       }
-      
+
       // Check if we got HTML instead of image data (common with Wikimedia errors)
       const firstBytes = imageBuffer.slice(0, 20).toString('utf8');
       if (firstBytes.startsWith('<!DOCTYPE') || firstBytes.startsWith('<html')) {
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Received HTML instead of image data for ${vNode.properties.src}`);
+        console.error(
+          `[ERROR] buildImage: Received HTML instead of image data for ${vNode.properties.src}`
+        );
         return null;
       }
 
       let imageProperties;
-      try {        
+      try {
         imageProperties = sizeOf(imageBuffer);
         if (!imageProperties || !imageProperties.width || !imageProperties.height) {
           // eslint-disable-next-line no-console
-          console.error(`[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`, imageProperties);
+          console.error(
+            `[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`,
+            imageProperties
+          );
           return null;
         }
       } catch (sizeError) {
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`, sizeError.message);
+        console.error(
+          `[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`,
+          sizeError.message
+        );
         return null;
       }
-
-      
 
       const imageFragment = await xmlBuilder.buildParagraph(
         vNode,
@@ -339,14 +356,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               // Add lineRule attribute for consistency
               // Direct image processing includes this attribute, but HTML image processing was missing it
               // This ensures both processing paths generate identical XML structure
-              imageFragment
-                .first()
-                .first()
-                .att(
-                  'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
-                  'lineRule',
-                  'auto'
-                );
+              addLineRuleToImageFragment(imageFragment);
               xmlFragment.import(imageFragment);
             } else {
               // eslint-disable-next-line no-console
@@ -384,10 +394,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         // Add lineRule attribute for consistency
         // Direct image processing includes this attribute, but HTML image processing was missing it
         // This ensures both processing paths generate identical XML structure
-        imageFragment
-          .first()
-          .first()
-          .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+        addLineRuleToImageFragment(imageFragment);
         xmlFragment.import(imageFragment);
       } else {
         // eslint-disable-next-line no-console
