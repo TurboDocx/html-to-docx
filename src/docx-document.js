@@ -514,8 +514,9 @@ class DocxDocument {
 
     const base64FileContent = matches[2];
     // matches array contains file type in base64 format - image/jpeg and base64 stringified data
+    const mimeTypePart = matches[1].match(/\/(.*?)$/);
     const fileExtension =
-      matches[1].match(/\/(.*?)$/)[1] === 'octet-stream' ? 'png' : matches[1].match(/\/(.*?)$/)[1];
+      !mimeTypePart || mimeTypePart[1] === 'octet-stream' ? 'png' : mimeTypePart[1];
 
     // Use deterministic IDs when deterministicIds option is enabled (for CI diff testing)
     const imageId = this.deterministicIds ? this.lastMediaId.toString() : nanoid();

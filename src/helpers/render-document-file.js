@@ -25,15 +25,22 @@ const convertHTML = HTMLToVDOM({
   VText,
 });
 
+// Helper function to add lineRule attribute for image consistency
+const addLineRuleToImageFragment = (imageFragment) => {
+  imageFragment
+    .first()
+    .first()
+    .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+};
+
 // Image cache to prevent duplicate downloads during the same document generation
 const imageCache = new Map();
-
 
 // Track retry statistics
 let retryStats = {
   totalAttempts: 0,
   successAfterRetry: 0,
-  finalFailures: 0
+  finalFailures: 0,
 };
 
 // Function to clear the image cache (useful for testing or memory management)
@@ -44,7 +51,7 @@ export const clearImageCache = () => {
   retryStats = {
     totalAttempts: 0,
     successAfterRetry: 0,
-    finalFailures: 0
+    finalFailures: 0,
   };
   return cacheSize;
 };
@@ -53,9 +60,9 @@ export const clearImageCache = () => {
 export const getImageCacheStats = () => ({
   size: imageCache.size,
   urls: Array.from(imageCache.keys()),
-  successCount: Array.from(imageCache.values()).filter(v => v !== null).length,
-  failureCount: Array.from(imageCache.values()).filter(v => v === null).length,
-  retryStats
+  successCount: Array.from(imageCache.values()).filter((v) => v !== null).length,
+  failureCount: Array.from(imageCache.values()).filter((v) => v === null).length,
+  retryStats,
 });
 
 // Helper function for conditional verbose logging
@@ -67,22 +74,36 @@ const logVerbose = (verboseLogging, message, ...args) => {
 };
 
 // eslint-disable-next-line consistent-return, no-shadow
-export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = null, options = {}) => {
+export const buildImage = async (
+  docxDocumentInstance,
+  vNode,
+  maximumWidth = null,
+  options = {}
+) => {
   // Extract image processing options with defaults from constants.js
-  const maxRetries = options.maxRetries || docxDocumentInstance.imageProcessing?.maxRetries || defaultDocumentOptions.imageProcessing.maxRetries;
-  const verboseLogging = options.verboseLogging || docxDocumentInstance.imageProcessing?.verboseLogging || defaultDocumentOptions.imageProcessing.verboseLogging;
+  const maxRetries =
+    options.maxRetries ||
+    docxDocumentInstance.imageProcessing?.maxRetries ||
+    defaultDocumentOptions.imageProcessing.maxRetries;
+  const verboseLogging =
+    options.verboseLogging ||
+    docxDocumentInstance.imageProcessing?.verboseLogging ||
+    defaultDocumentOptions.imageProcessing.verboseLogging;
   let response = null;
   let base64Uri = null;
-  
+
   try {
     const imageSource = vNode.properties.src;
-    
+
     // Check cache first for external URLs
     if (isValidUrl(imageSource) && imageCache.has(imageSource)) {
       const cachedData = imageCache.get(imageSource);
       if (cachedData === null) {
         // Previously failed to download in this document generation, skip this image
-        logVerbose(verboseLogging, `[CACHE] Skipping previously failed image in this document: ${imageSource}`);
+        logVerbose(
+          verboseLogging,
+          `[CACHE] Skipping previously failed image in this document: ${imageSource}`
+        );
         return null;
       }
       logVerbose(verboseLogging, `[CACHE] Using cached image data for: ${imageSource}`);
@@ -93,35 +114,43 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       // Download and cache the image with retry mechanism
       let base64String = null;
       let lastError = null;
-      
+
       for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
         retryStats.totalAttempts += 1;
-        
+
         try {
-          logVerbose(verboseLogging, `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`);
-          
+          logVerbose(
+            verboseLogging,
+            `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`
+          );
+
           base64String = await imageToBase64(imageSource);
           if (base64String) {
             if (attempt > 1) {
               retryStats.successAfterRetry += 1;
-              logVerbose(verboseLogging, `[RETRY] Success on attempt ${attempt} for: ${imageSource}`);
+              logVerbose(
+                verboseLogging,
+                `[RETRY] Success on attempt ${attempt} for: ${imageSource}`
+              );
             }
             break;
           }
         } catch (error) {
           lastError = error;
           // eslint-disable-next-line no-console
-          console.warn(`[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`);
-          
+          console.warn(
+            `[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`
+          );
+
           // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
           if (attempt < maxRetries) {
             const delay = 500 * attempt;
             logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await new Promise((resolve) => setTimeout(resolve, delay));
           }
         }
       }
-      
+
       if (!base64String) {
         retryStats.finalFailures += 1;
       }
@@ -139,7 +168,11 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         // Note: Cache is cleared between document generations, so failures can be retried in future runs
         imageCache.set(imageSource, null);
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'} - will skip duplicates in this document`);
+        console.error(
+          `[ERROR] buildImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${
+            lastError?.message || 'Unknown error'
+          } - will skip duplicates in this document`
+        );
       }
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
@@ -163,14 +196,19 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
       // Validate response has required properties
       if (!response.fileContent || !response.fileNameWithExtension) {
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Invalid response object for ${vNode.properties.src}:`, response);
+        console.error(
+          `[ERROR] buildImage: Invalid response object for ${vNode.properties.src}:`,
+          response
+        );
         return null;
       }
+
+      const imageBuffer = Buffer.from(response.fileContent, 'base64');
 
       docxDocumentInstance.zip
         .folder('word')
         .folder('media')
-        .file(response.fileNameWithExtension, Buffer.from(response.fileContent, 'base64'), {
+        .file(response.fileNameWithExtension, imageBuffer, {
           createFolders: false,
         });
 
@@ -181,38 +219,42 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
         internalRelationship
       );
 
-      const imageBuffer = Buffer.from(response.fileContent, 'base64');
-      
       // Add validation before calling sizeOf
       if (!imageBuffer || imageBuffer.length === 0) {
         // eslint-disable-next-line no-console
         console.error(`[ERROR] buildImage: Empty image buffer for ${vNode.properties.src}`);
         return null;
       }
-      
+
       // Check if we got HTML instead of image data (common with Wikimedia errors)
       const firstBytes = imageBuffer.slice(0, 20).toString('utf8');
       if (firstBytes.startsWith('<!DOCTYPE') || firstBytes.startsWith('<html')) {
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Received HTML instead of image data for ${vNode.properties.src}`);
+        console.error(
+          `[ERROR] buildImage: Received HTML instead of image data for ${vNode.properties.src}`
+        );
         return null;
       }
 
       let imageProperties;
-      try {        
+      try {
         imageProperties = sizeOf(imageBuffer);
         if (!imageProperties || !imageProperties.width || !imageProperties.height) {
           // eslint-disable-next-line no-console
-          console.error(`[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`, imageProperties);
+          console.error(
+            `[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`,
+            imageProperties
+          );
           return null;
         }
       } catch (sizeError) {
         // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`, sizeError.message);
+        console.error(
+          `[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`,
+          sizeError.message
+        );
         return null;
       }
-
-      
 
       const imageFragment = await xmlBuilder.buildParagraph(
         vNode,
@@ -434,19 +476,17 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
               xmlFragment.import(emptyParagraphFragment);
             }
           } else if (childVNode.tagName === 'img') {
-            const imageFragment = await buildImage(docxDocumentInstance, childVNode, null, imageOptions);
+            const imageFragment = await buildImage(
+              docxDocumentInstance,
+              childVNode,
+              null,
+              imageOptions
+            );
             if (imageFragment) {
               // Add lineRule attribute for consistency
               // Direct image processing includes this attribute, but HTML image processing was missing it
               // This ensures both processing paths generate identical XML structure
-              imageFragment
-                .first()
-                .first()
-                .att(
-                  'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
-                  'lineRule',
-                  'auto'
-                );
+              addLineRuleToImageFragment(imageFragment);
               xmlFragment.import(imageFragment);
             } else {
               // eslint-disable-next-line no-console
@@ -484,10 +524,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
         // Add lineRule attribute for consistency
         // Direct image processing includes this attribute, but HTML image processing was missing it
         // This ensures both processing paths generate identical XML structure
-        imageFragment
-          .first()
-          .first()
-          .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+        addLineRuleToImageFragment(imageFragment);
         xmlFragment.import(imageFragment);
       } else {
         // eslint-disable-next-line no-console
@@ -512,7 +549,12 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
 }
 
 // eslint-disable-next-line consistent-return
-export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment, imageOptions = null) {
+export async function convertVTreeToXML(
+  docxDocumentInstance,
+  vTree,
+  xmlFragment,
+  imageOptions = null
+) {
   // Use default options if not provided
   if (!imageOptions) {
     imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
@@ -545,13 +587,17 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
  */
 async function renderDocumentFile(docxDocumentInstance, properties = {}) {
   // Get image processing options from document instance with centralized defaults
-  const imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
+  const imageOptions =
+    docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
   // Clear image cache at the start of each document generation to allow retrying failed URLs in new documents
   const previousCacheSize = clearImageCache();
   if (previousCacheSize > 0 && imageOptions.verboseLogging) {
     // eslint-disable-next-line no-console
-    console.log(`[CACHE] Cleared previous cache (${previousCacheSize} images) for new document generation`);
+    console.log(
+      `[CACHE] Cleared previous cache (${previousCacheSize} images) for new document generation`
+    );
   }
+
   const vTree = convertHTML(docxDocumentInstance.htmlString);
 
   if (!vTree) {
@@ -585,22 +631,31 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
 
-  const populatedXmlFragment = await convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment, imageOptions);
+  const populatedXmlFragment = await convertVTreeToXML(
+    docxDocumentInstance,
+    vTree,
+    xmlFragment,
+    imageOptions
+  );
 
   // Log cache statistics at the end of document generation
   const cacheStats = getImageCacheStats();
-  if ((cacheStats.size > 0 || cacheStats.retryStats.totalAttempts > 0) && imageOptions.verboseLogging) {
+  if (
+    (cacheStats.size > 0 || cacheStats.retryStats.totalAttempts > 0) &&
+    imageOptions.verboseLogging
+  ) {
     // eslint-disable-next-line no-console
     console.log(`[CACHE] Image processing statistics:`, {
       totalImages: cacheStats.size,
       successful: cacheStats.successCount,
       failed: cacheStats.failureCount,
-      cacheHitRatio: cacheStats.size > 1 ? 'Cache prevented duplicate downloads' : 'No duplicates found',
+      cacheHitRatio:
+        cacheStats.size > 1 ? 'Cache prevented duplicate downloads' : 'No duplicates found',
       retries: {
         totalAttempts: cacheStats.retryStats.totalAttempts,
         successAfterRetry: cacheStats.retryStats.successAfterRetry,
-        finalFailures: cacheStats.retryStats.finalFailures
-      }
+        finalFailures: cacheStats.retryStats.finalFailures,
+      },
     });
   }
 
