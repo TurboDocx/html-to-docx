@@ -49,7 +49,6 @@
   ],
   "scripts": {
     "test": "npm run build && node example/example-node.js",
-    "test:list_style" : "npm run build && node example/example-list-styles.js",
     "prerelease": "npm run build:prod",
     "release": "standard-version",
     "lint": "eslint --fix .",
