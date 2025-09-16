@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/html-to-docx",
-  "version": "1.13.5",
+  "version": "1.15.0",
   "description": "HTML to DOCX converter",
   "keywords": [
     "html-to-docx",
@@ -36,7 +36,11 @@
     "batch document generation",
     "document templating",
     "typescript",
-    "ts"
+    "ts",
+    "hebrew",
+    "arabic",
+    "rtl",
+    "right to left"
   ],
   "main": "dist/html-to-docx.umd.js",
   "module": "dist/html-to-docx.esm.js",
@@ -49,6 +53,10 @@
   ],
   "scripts": {
     "test": "npm run build && node example/example-node.js",
+    "test:rtl": "npm run build && node example/example-rtl.js",
+    "test:ts": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/typescript-example.ts",
+    "test:ts-rtl": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/rtl-example.ts",
+    "test:all": "npm run test && npm run test:ts && npm run test:ts-rtl",
     "prerelease": "npm run build:prod",
     "release": "standard-version",
     "lint": "eslint --fix .",
@@ -88,7 +96,8 @@
     "juralio-james",
     "robinminso",
     "shareefalis",
-    "adymo"
+    "adymo", 
+    "Srajan-Sanjay-Saxena"
   ],
   "license": "MIT",
   "bugs": {

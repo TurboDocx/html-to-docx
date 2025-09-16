@@ -1869,26 +1869,25 @@ const htmlString = `<!DOCTYPE html>
 </html>`;
 
 (async () => {
-    const fileBuffer = await HTMLtoDOCX(htmlString, null, {
-        table: {
-            row: { cantSplit: true },
-            addSpacingAfterTable: true,
-        },
-        footer: true,
-        pageNumber: true,
-        preprocessing: {
-            skipHTMLMinify: false,
-        }
+  const fileBuffer = await HTMLtoDOCX(htmlString, null, {
+    table: {
+      row: { cantSplit: true },
+      addSpacingAfterTable: true,
+    },
+    footer: true,
+    pageNumber: true,
+    preprocessing: {
+      skipHTMLMinify: false,
+    },
+  });
 
-    });
-
-    fs.writeFile(filePath, fileBuffer, (error) => {
-        if (error) {
-            console.log('Docx file creation failed');
-            return;
-        }
-        console.log('Docx file created successfully');
-    });
+  fs.writeFile(filePath, fileBuffer, (error) => {
+    if (error) {
+      console.log('Docx file creation failed');
+      return;
+    }
+    console.log('Docx file created successfully');
+  });
 })();
 
 //     iterate over table style keys in entered order to follow priority
