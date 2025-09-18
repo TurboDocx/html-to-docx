@@ -558,6 +558,9 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         // FIXME: remove bold check when other font weights are handled.
         if (vNodeStyleValue === 'bold') {
           modifiedAttributes.strong = vNodeStyleValue;
+        } else if (vNodeStyleValue === 'normal') {
+          // Remove any inherited bold formatting
+          modifiedAttributes.strong = false;
         }
       } else if (vNodeStyleKey === 'font-style') {
         if (vNodeStyleValue === 'italic') {
@@ -566,7 +569,9 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
       } else if (vNodeStyleKey === 'font-family') {
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
       } else if (vNodeStyleKey === 'font-size') {
-        modifiedAttributes.fontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
+        const convertedFontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
+        console.log(`[DEBUG] Processing font-size: ${vNodeStyleValue} -> ${convertedFontSize} HIP`);
+        modifiedAttributes.fontSize = convertedFontSize;
       } else if (vNodeStyleKey === 'line-height') {
         modifiedAttributes.lineHeight = fixupLineHeight(
           vNodeStyleValue,
@@ -739,6 +744,9 @@ const buildFormatting = (htmlTag, options) => {
       return buildShading(options && options.color ? options.color : 'black');
     case 'fontSize':
       // does this need a unit of measure?
+      console.log(
+        `[DEBUG] buildFormatting fontSize: options.fontSize=${options?.fontSize}, defaulting to 10 if undefined`
+      );
       return buildFontSize(options && options.fontSize ? options.fontSize : 10);
     case 'hyperlink':
       return buildRunStyleFragment('Hyperlink');
@@ -770,6 +778,11 @@ const buildRunProperties = (attributes) => {
 
       if (key === 'textShadow') {
         options.textShadow = attributes[key];
+      }
+
+      // Skip rendering strong/bold formatting if explicitly set to false
+      if (key === 'strong' && attributes[key] === false) {
+        return;
       }
 
       const formattingFragment = buildFormatting(key, options);
@@ -1115,8 +1128,11 @@ const buildRunOrHyperLink = async (vNode, attributes, docxDocumentInstance) => {
         if (!hasCustomColor) {
           modifiedAttributes.hyperlink = true;
         } else {
-          // Extract custom color from hyperlink and apply it to children
+          // Always apply hyperlink style for proper link formatting (underline, etc.)
+          modifiedAttributes.hyperlink = true;
+          // Extract custom color from hyperlink and merge with existing attributes
           const hyperlinkStyle = modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, {});
+          // Merge hyperlink styles while preserving existing attributes
           Object.assign(modifiedAttributes, hyperlinkStyle);
         }
 
