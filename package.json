@@ -148,6 +148,10 @@
     "bl": "^1.2.3",
     "semver": "^5.7.2"
   },
+  "resolutions": {
+    "bl": "^1.2.3",
+    "semver": "^5.7.2"
+  },
   "lint-staged": {
     "src/**/*.js": [
       "prettier --write",
