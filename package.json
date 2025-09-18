@@ -98,7 +98,7 @@
     "juralio-james",
     "robinminso",
     "shareefalis",
-    "adymo", 
+    "adymo",
     "Srajan-Sanjay-Saxena"
   ],
   "license": "MIT",
@@ -107,7 +107,7 @@
   },
   "homepage": "https://github.com/TurboDocx/html-to-docx#readme",
   "devDependencies": {
-    "@commitlint/cli": "^13.1.0",
+    "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^13.1.0",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^4.1.0",
@@ -143,6 +143,10 @@
     "nanoid": "^3.1.25",
     "virtual-dom": "^2.1.1",
     "xmlbuilder2": "2.1.2"
+  },
+  "overrides": {
+    "bl": "^1.2.3",
+    "semver": "^5.7.2"
   },
   "lint-staged": {
     "src/**/*.js": [
