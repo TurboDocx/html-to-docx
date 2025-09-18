@@ -245,18 +245,6 @@ const htmlString = `<!DOCTYPE html>
             <li><span style="color: red;">Span with red color</span> - red should override navy</li>
             <li>Text with <a href="#" style="color: green;">green link</a> in navy Courier</li>
         </ul>
-                <td>Washington DC</td>
-            </tr>
-            <tr>
-                <td>Bolivia</td>
-                <td>
-                    <ol>
-                        <li>Sucre</li>
-                        <li>La Paz</li>
-                    </ol>
-                </td>
-            </tr>
-        </table>
 
         <div class="page-break" style="page-break-after: always"></div>
         <table align="center" class="Table">
@@ -1752,30 +1740,30 @@ const htmlString = `<!DOCTYPE html>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Clean glass walls &amp; windows</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Clean glass walls & windows</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Mop &amp; polish floors</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Mop & polish floors</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Dust furniture &amp; charging stations</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Dust furniture & charging stations</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
             <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Service Bay</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Sweep &amp; mop floors</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Sweep & mop floors</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Empty trash &amp; oil disposal bins</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Empty trash & oil disposal bins</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Clean workbenches &amp; tool areas</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Clean workbenches & tool areas</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
@@ -1786,26 +1774,26 @@ const htmlString = `<!DOCTYPE html>
             <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Waiting Area</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Vacuum carpets &amp; seating</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Vacuum carpets & seating</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Sanitize coffee station &amp; touchscreens</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Sanitize coffee station & touchscreens</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Restock magazines &amp; charging cables</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Restock magazines & charging cables</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
             <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Restrooms</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Refill soap &amp; paper products</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Refill soap & paper products</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Disinfect sinks &amp; counters</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Disinfect sinks & counters</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr>
@@ -1816,7 +1804,7 @@ const htmlString = `<!DOCTYPE html>
             <td style="font-weight: bold; text-align: center; color: #1274b5; border: 1px solid #000; padding: 8px;" colspan="2">Employee Lounge</td>
             </tr>
             <tr>
-            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Wipe tables &amp; kitchen counters</td>
+            <td style="border: 1px solid #000; padding: 8px; color: #000000;">Wipe tables & kitchen counters</td>
             <td style="border: 1px solid #000; padding: 8px; color: #000000;">Daily</td>
             </tr>
             <tr></tr>
