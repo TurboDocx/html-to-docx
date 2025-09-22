@@ -1,0 +1,59 @@
+name: Update Contributors
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  update-contributors:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update contributors
+        id: update
+        run: |
+          node .github/scripts/update-contributors.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR_EMAIL: ${{ github.event.pull_request.user.email }}
+          REPOSITORY: ${{ github.repository }}
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet package.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: add ${{ github.event.pull_request.user.login }} to contributors"
+          title: "chore: add ${{ github.event.pull_request.user.login }} to contributors"
+          body: |
+            Automatically adding ${{ github.event.pull_request.user.login }} to the contributors list.
+
+            This PR was automatically created after their contribution was merged in PR #${{ github.event.pull_request.number }}.
+
+            🤖 Generated with [Claude Code](https://claude.ai/code)
+          branch: bot/add-contributor-${{ github.event.pull_request.user.login }}
+          delete-branch: true
