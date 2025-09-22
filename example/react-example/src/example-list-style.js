@@ -75,22 +75,7 @@ const ListStyleExample = () => {
       // For demonstration purposes, showing the structure
       console.log('HTML content ready for conversion:', htmlString);
       
-      // Example usage (would need actual library import):
-      // const HTMLtoDOCX = require('@turbodocx/html-to-docx');
-      // const docxBuffer = await HTMLtoDOCX(htmlString, null, {
-      //   table: { row: { cantSplit: true } },
-      //   footer: true,
-      //   pageNumber: true
-      // });
-      
-      // Create and download the file
-      // const blob = new Blob([docxBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-      // const url = URL.createObjectURL(blob);
-      // const a = document.createElement('a');
-      // a.href = url;
-      // a.download = 'list-style-example.docx';
-      // a.click();
-      // URL.revokeObjectURL(url);
+      // TODO: Integrate with html-to-docx library for actual DOCX generation
       
       alert('HTML content logged to console. Integrate with html-to-docx library for actual conversion.');
     } catch (error) {

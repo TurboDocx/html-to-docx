@@ -570,7 +570,7 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
       } else if (vNodeStyleKey === 'font-size') {
         const convertedFontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
-        console.log(`[DEBUG] Processing font-size: ${vNodeStyleValue} -> ${convertedFontSize} HIP`);
+        console.debug(`[DEBUG] Processing font-size: ${vNodeStyleValue} -> ${convertedFontSize} HIP`);
         modifiedAttributes.fontSize = convertedFontSize;
       } else if (vNodeStyleKey === 'line-height') {
         modifiedAttributes.lineHeight = fixupLineHeight(
@@ -744,7 +744,7 @@ const buildFormatting = (htmlTag, options) => {
       return buildShading(options && options.color ? options.color : 'black');
     case 'fontSize':
       // does this need a unit of measure?
-      console.log(
+      console.debug(
         `[DEBUG] buildFormatting fontSize: options.fontSize=${options?.fontSize}, defaulting to 10 if undefined`
       );
       return buildFontSize(options && options.fontSize ? options.fontSize : 10);
