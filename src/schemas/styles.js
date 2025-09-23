@@ -89,12 +89,13 @@ const generateStylesXML = (
 		<w:u w:val="single" />
 	  </w:rPr>
 	</w:style>
-	${generateHeadingStyleXML('Heading1', config.heading1)}
-	${generateHeadingStyleXML('Heading2', config.heading2)}
-	${generateHeadingStyleXML('Heading3', config.heading3)}
-	${generateHeadingStyleXML('Heading4', config.heading4)}
-	${generateHeadingStyleXML('Heading5', config.heading5)}
-	${generateHeadingStyleXML('Heading6', config.heading6)}
+	${Object.entries(config)
+    .filter(([key]) => key.startsWith('heading'))
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) =>
+      generateHeadingStyleXML(key.charAt(0).toUpperCase() + key.slice(1), value)
+    )
+    .join('')}
   </w:styles>
   `;
 };
