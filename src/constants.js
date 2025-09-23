@@ -35,6 +35,63 @@ const defaultTableBorderAttributeOptions = {
   size: 1,
   stroke: 'single',
 };
+const defaultHeadingOptions = {
+  heading1: {
+    font: defaultFont,
+    fontSize: 48,
+    bold: true,
+    spacing: { before: 480, after: 0 },
+    keepLines: true,
+    keepNext: true,
+    outlineLevel: 0,
+  },
+  heading2: {
+    font: defaultFont,
+    fontSize: 36,
+    bold: true,
+    spacing: { before: 360, after: 80 },
+    keepLines: true,
+    keepNext: true,
+    outlineLevel: 1,
+  },
+  heading3: {
+    font: defaultFont,
+    fontSize: 28,
+    bold: true,
+    spacing: { before: 280, after: 80 },
+    keepLines: true,
+    keepNext: true,
+    outlineLevel: 2,
+  },
+  heading4: {
+    font: defaultFont,
+    fontSize: 24,
+    bold: true,
+    spacing: { before: 240, after: 40 },
+    keepLines: true,
+    keepNext: true,
+    outlineLevel: 3,
+  },
+  heading5: {
+    font: defaultFont,
+    fontSize: defaultFontSize,
+    bold: true,
+    spacing: { before: 220, after: 40 },
+    keepLines: true,
+    keepNext: true,
+    outlineLevel: 4,
+  },
+  heading6: {
+    font: defaultFont,
+    fontSize: 20,
+    bold: true,
+    spacing: { before: 200, after: 40 },
+    keepLines: true,
+    keepNext: true,
+    outlineLevel: 5,
+  },
+};
+
 const defaultDocumentOptions = {
   orientation: defaultOrientation,
   margins: cloneDeep(portraitMargins),
@@ -76,62 +133,7 @@ const defaultDocumentOptions = {
   numbering: {
     defaultOrderedListStyleType: 'decimal',
   },
-  heading: {
-    heading1: {
-      font: null, // use default font
-      fontSize: 48,
-      bold: true,
-      spacing: { before: 480, after: 0 },
-      keepLines: true,
-      keepNext: true,
-      outlineLevel: 0,
-    },
-    heading2: {
-      font: null, // use default font
-      fontSize: 36,
-      bold: true,
-      spacing: { before: 360, after: 80 },
-      keepLines: true,
-      keepNext: true,
-      outlineLevel: 1,
-    },
-    heading3: {
-      font: null, // use default font
-      fontSize: 28,
-      bold: true,
-      spacing: { before: 280, after: 80 },
-      keepLines: true,
-      keepNext: true,
-      outlineLevel: 2,
-    },
-    heading4: {
-      font: null, // use default font
-      fontSize: 24,
-      bold: true,
-      spacing: { before: 240, after: 40 },
-      keepLines: true,
-      keepNext: true,
-      outlineLevel: 3,
-    },
-    heading5: {
-      font: null, // use default font
-      fontSize: null, // use default font size
-      bold: true,
-      spacing: { before: 220, after: 40 },
-      keepLines: true,
-      keepNext: true,
-      outlineLevel: 4,
-    },
-    heading6: {
-      font: null, // use default font
-      fontSize: 20,
-      bold: true,
-      spacing: { before: 200, after: 40 },
-      keepLines: true,
-      keepNext: true,
-      outlineLevel: 5,
-    },
-  },
+  heading: defaultHeadingOptions,
   decodeUnicode: false,
   defaultLang,
   direction: defaultDirection,
@@ -181,6 +183,7 @@ const defaultPercentageMarginValue = 0;
 
 export {
   defaultDocumentOptions,
+  defaultHeadingOptions,
   defaultTableBorderOptions,
   defaultHTMLString,
   relsFolderName,
