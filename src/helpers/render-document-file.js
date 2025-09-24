@@ -47,7 +47,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
     }
-    
+
     if (base64Uri) {
       response = docxDocumentInstance.createMediaFile(base64Uri);
     } else {
@@ -58,7 +58,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     console.error(`[ERROR] buildImage: Error during image processing:`, error);
     return null;
   }
-  
+
   if (response) {
     try {
       docxDocumentInstance.zip
@@ -107,12 +107,21 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   const listElements = [];
 
+  const listContainerStyles = xmlBuilder.modifiedStyleAttributesBuilder(
+    docxDocumentInstance,
+    vNode,
+    {},
+    { isParagraph: true }
+  );
+
   let vNodeObjects = [
     {
       node: vNode,
       level: 0,
       type: vNode.tagName,
       numberingId: docxDocumentInstance.createNumbering(vNode.tagName, vNode.properties),
+      // Store the container styles to pass down to child elements
+      containerStyles: listContainerStyles,
     },
   ];
   while (vNodeObjects.length) {
@@ -124,9 +133,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       isVText(tempVNodeObject.node) ||
       (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
     ) {
+      // Pass container styles as base, let buildParagraph handle   individual item style overrides
+
       const paragraphFragment = await xmlBuilder.buildParagraph(
         tempVNodeObject.node,
         {
+          ...tempVNodeObject.containerStyles,
           numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
         },
         docxDocumentInstance
@@ -142,6 +154,14 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
     ) {
       const tempVNodeObjects = tempVNodeObject.node.children.reduce((accumulator, childVNode) => {
         if (['ul', 'ol'].includes(childVNode.tagName)) {
+          // For nested lists, merge parent styles with child's own styles
+          const childContainerStyles = xmlBuilder.modifiedStyleAttributesBuilder(
+            docxDocumentInstance,
+            childVNode,
+            tempVNodeObject.containerStyles, // Use parent styles as base
+            { isParagraph: true }
+          );
+
           accumulator.push({
             node: childVNode,
             level: tempVNodeObject.level + 1,
@@ -150,6 +170,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
               childVNode.tagName,
               childVNode.properties
             ),
+            containerStyles: childContainerStyles,
           });
         } else {
           // eslint-disable-next-line no-lonely-if
@@ -202,6 +223,8 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
               level: tempVNodeObject.level,
               type: tempVNodeObject.type,
               numberingId: tempVNodeObject.numberingId,
+              // Pass down the container styles to individual list items
+              containerStyles: tempVNodeObject.containerStyles,
             });
           }
         }
@@ -297,10 +320,19 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               // Add lineRule attribute for consistency
               // Direct image processing includes this attribute, but HTML image processing was missing it
               // This ensures both processing paths generate identical XML structure
-              imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+              imageFragment
+                .first()
+                .first()
+                .att(
+                  'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+                  'lineRule',
+                  'auto'
+                );
               xmlFragment.import(imageFragment);
             } else {
-              console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`);
+              console.log(
+                `[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`
+              );
             }
           }
         }
@@ -332,7 +364,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         // Add lineRule attribute for consistency
         // Direct image processing includes this attribute, but HTML image processing was missing it
         // This ensures both processing paths generate identical XML structure
-        imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+        imageFragment
+          .first()
+          .first()
+          .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
       } else {
         console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);

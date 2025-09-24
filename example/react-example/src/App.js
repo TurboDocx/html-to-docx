@@ -1,5 +1,6 @@
 import HTMLtoDOCX from 'html-to-docx';
 import { saveAs } from 'file-saver';
+import ListStyleExample from './example-list-style';
 
 import './App.css';
 
@@ -102,12 +103,83 @@ const htmlString = `<!DOCTYPE html>
             <strong>Left and right indented paragraph:</strong>
             <span>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</span>
         </p>
-        <ul style="list-style-type: circle;">
-            <li>Unordered list element</li>
+        <!-- List Style Examples -->
+        <h2>List Style Examples</h2>
+        
+        <!-- Unordered Lists -->
+        <h3>Unordered Lists</h3>
+        <ul style="list-style-type: disc;">
+            <li>Default disc style</li>
+            <li>Another disc item</li>
         </ul>
-        <br>
+        
+        <ul style="list-style-type: circle;">
+            <li>Circle style</li>
+            <li>Another circle item</li>
+        </ul>
+        
+        <ul style="list-style-type: square;">
+            <li>Square style</li>
+            <li>Another square item</li>
+        </ul>
+        
+        <!-- Ordered Lists with Different Styles -->
+        <h3>Ordered Lists</h3>
         <ol style="list-style-type: decimal;">
-            <li>Ordered list element</li>
+            <li>Decimal numbering (default)</li>
+            <li>Second decimal item</li>
+        </ol>
+        
+        <ol style="list-style-type: upper-alpha;">
+            <li>Upper alpha style</li>
+            <li>Second upper alpha item</li>
+        </ol>
+        
+        <ol style="list-style-type: lower-alpha;">
+            <li>Lower alpha style</li>
+            <li>Second lower alpha item</li>
+        </ol>
+        
+        <ol style="list-style-type: upper-roman;">
+            <li>Upper roman style</li>
+            <li>Second upper roman item</li>
+        </ol>
+        
+        <ol style="list-style-type: lower-roman;">
+            <li>Lower roman style</li>
+            <li>Second lower roman item</li>
+        </ol>
+        
+        <ol style="list-style-type: lower-alpha-bracket-end;">
+            <li>Lower alpha with bracket end</li>
+            <li>Second bracket end item</li>
+        </ol>
+        
+        <ol style="list-style-type: decimal-bracket-end;">
+            <li>Decimal with bracket end</li>
+            <li>Second decimal bracket item</li>
+        </ol>
+        
+        <ol style="list-style-type: decimal-bracket;">
+            <li>Decimal with brackets</li>
+            <li>Second decimal bracket item</li>
+        </ol>
+        
+        <!-- Lists with data-start attribute -->
+        <h3>Lists with Custom Start Numbers</h3>
+        <ol style="list-style-type: decimal;" data-start="5">
+            <li>Starting from 5</li>
+            <li>Sixth item</li>
+        </ol>
+        
+        <ol style="list-style-type: upper-alpha;" data-start="3">
+            <li>Starting from C</li>
+            <li>Fourth letter</li>
+        </ol>
+        
+        <ol style="list-style-type: lower-roman;" data-start="4">
+            <li>Starting from iv</li>
+            <li>Fifth roman numeral</li>
         </ol>
         <div class="page-break" style="page-break-after: always"></div>
         <ul>
@@ -1856,9 +1928,12 @@ function App() {
       <header className="App-header">
         {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
         <a className="App-link" href="#" onClick={downloadDocx}>
-          Learn React
+          Download Main Example DOCX
         </a>
       </header>
+      <main style={{ padding: '20px' }}>
+        <ListStyleExample />
+      </main>
     </div>
   );
 }
