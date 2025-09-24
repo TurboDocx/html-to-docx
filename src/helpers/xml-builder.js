@@ -1132,7 +1132,7 @@ const buildRunOrHyperLink = async (vNode, attributes, docxDocumentInstance) => {
           modifiedAttributes.hyperlink = true;
           // Extract custom color from hyperlink and merge with existing attributes
           const hyperlinkStyle = modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, {});
-          // Merge hyperlink styles while preserving existing attributes
+
           Object.assign(modifiedAttributes, hyperlinkStyle);
         }
 
