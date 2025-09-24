@@ -570,7 +570,9 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
       } else if (vNodeStyleKey === 'font-size') {
         const convertedFontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
-        console.debug(`[DEBUG] Processing font-size: ${vNodeStyleValue} -> ${convertedFontSize} HIP`);
+        console.debug(
+          `[DEBUG] Processing font-size: ${vNodeStyleValue} -> ${convertedFontSize} HIP`
+        );
         modifiedAttributes.fontSize = convertedFontSize;
       } else if (vNodeStyleKey === 'line-height') {
         modifiedAttributes.lineHeight = fixupLineHeight(
@@ -780,7 +782,72 @@ const buildRunProperties = (attributes) => {
         options.textShadow = attributes[key];
       }
 
-      // Skip rendering strong/bold formatting if explicitly set to false
+      // ═══════════════════════════════════════════════════════════════════════════════════════════════
+      /*
+        <div style="font-weight: bold">
+          This is bold parent text
+          <span style="font-weight: normal">This should NOT be bold</span>
+          More bold text here
+    </div> 
+*/
+      // For the <span> element with font-weight: normal:
+      // ═══════════════════════════════════════════════════════════════════════════════════════════════
+      //
+      // Step 1: Style Processing (line 563)
+      // ────────────────────────────────────────────────
+      // // This runs and sets:
+      /*
+       Location: Line 557-563 in "modifiedStyleAttributesBuilder"
+
+       } else if (vNodeStyleKey === 'font-weight') {
+    if (vNodeStyleValue === 'bold') {
+      modifiedAttributes.strong = vNodeStyleValue;  // Set bold
+    } else if (vNodeStyleValue === 'normal') {
+      // Remove any inherited bold formatting
+      modifiedAttributes.strong = false;  // ← SET TO FALSE HERE
+  }
+
+}
+
+       */
+      // modifiedAttributes.strong = false;
+      //
+      // Step 2: Without the check in buildRunProperties
+      // ────────────────────────────────────────────────
+      // // The current code has this check:
+      // if (key === 'strong' && attributes[key] === false) {
+      //   return; // Skip processing
+      // }
+      //
+      // // But if we REMOVE this check, the code would continue to:
+      // const formattingFragment = buildFormatting('strong', options);
+      //
+      // Step 3: buildFormatting function would be called with:
+      // ────────────────────────────────────────────────
+      // buildFormatting('strong', options)
+      // // This calls buildBold() function
+      //
+      // Step 4: buildBold() function:
+      // ────────────────────────────────────────────────
+      // const buildBold = () =>
+      //   fragment({ namespaceAlias: { w: namespaces.w } })
+      //     .ele('@w', 'b')  // Creates <w:b/> XML element
+      //     .up();
+      //
+      // The Problem:
+      // ────────────────────────────────────────────────
+      // Without the check:
+      // • Even though attributes.strong = false (meaning "don't make bold")
+      // • The code would still call buildBold()
+      // • This would create <w:b/> XML element in the DOCX
+      // • Result: The span text appears BOLD in the final DOCX (WRONG!)
+      //
+      // With the check:
+      // • When attributes.strong = false, the function returns early
+      // • No buildBold() is called
+      // • No <w:b/> XML is generated
+      // • Result: The span text appears normal in the DOCX (CORRECT!)
+      // ═══════════════════════════════════════════════════════════════════════════════════════════════
       if (key === 'strong' && attributes[key] === false) {
         return;
       }
