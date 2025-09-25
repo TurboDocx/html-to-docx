@@ -376,12 +376,29 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
   return xmlFragment;
 }
 
+/**
+ * Renders a DOCX document by converting HTML to XML and applying inherited properties
+ * @param {Object} docxDocumentInstance - The document instance containing HTML string and metadata
+ * @param {Object} properties - Style properties to inherit from parent elements (e.g., text-align, color, etc.)
+ *                              These properties are applied to all child elements but can be overridden by explicit styles
+ * @returns {Promise<Object>} XML fragment representing the rendered document content
+ */
 async function renderDocumentFile(docxDocumentInstance, properties = {}) {
   const vTree = convertHTML(docxDocumentInstance.htmlString);
 
+  // Apply inherited properties from parent elements to child elements
+  // Properties object contains CSS-style properties that should be inherited (e.g., alignment, fonts)
+  // This enables proper formatting when content is injected into existing document structure
   for (const child of vTree) {
-    // explicitly set child properties take more precedence
-    child.properties.style = { ...properties, ...child.properties.style };
+    // Validate properties object and ensure child.properties.style exists
+    if (properties && typeof properties === 'object' && child.properties) {
+      // Initialize style object if it doesn't exist
+      if (!child.properties.style) {
+        child.properties.style = {};
+      }
+      // Merge inherited properties with explicit child properties (child properties take precedence)
+      child.properties.style = { ...properties, ...child.properties.style };
+    }
   }
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
