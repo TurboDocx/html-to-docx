@@ -47,7 +47,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
     }
-    
+
     if (base64Uri) {
       response = docxDocumentInstance.createMediaFile(base64Uri);
     } else {
@@ -58,7 +58,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     console.error(`[ERROR] buildImage: Error during image processing:`, error);
     return null;
   }
-  
+
   if (response) {
     try {
       docxDocumentInstance.zip
@@ -178,23 +178,23 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 ? [childVNode]
                 : // eslint-disable-next-line no-nested-ternary
                 isVNode(childVNode)
-                ? childVNode.tagName.toLowerCase() === 'li'
-                  ? [...childVNode.children]
-                  : [childVNode]
-                : []
+                  ? childVNode.tagName.toLowerCase() === 'li'
+                    ? [...childVNode.children]
+                    : [childVNode]
+                  : []
             );
 
             childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
 
             const generatedNode = isVNode(childVNode)
               ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-                childVNode.tagName.toLowerCase() === 'li'
+              childVNode.tagName.toLowerCase() === 'li'
                 ? childVNode
                 : childVNode.tagName.toLowerCase() !== 'p'
-                ? paragraphVNode
-                : childVNode
+                  ? paragraphVNode
+                  : childVNode
               : // eslint-disable-next-line prettier/prettier
-                paragraphVNode;
+              paragraphVNode;
 
             accumulator.push({
               // eslint-disable-next-line prettier/prettier, no-nested-ternary
@@ -376,8 +376,30 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
   return xmlFragment;
 }
 
-async function renderDocumentFile(docxDocumentInstance) {
+/**
+ * Renders a DOCX document by converting HTML to XML and applying inherited properties
+ * @param {Object} docxDocumentInstance - The document instance containing HTML string and metadata
+ * @param {Object} properties - Style properties to inherit from parent elements (e.g., text-align, color, etc.)
+ *                              These properties are applied to all child elements but can be overridden by explicit styles
+ * @returns {Promise<Object>} XML fragment representing the rendered document content
+ */
+async function renderDocumentFile(docxDocumentInstance, properties = {}) {
   const vTree = convertHTML(docxDocumentInstance.htmlString);
+
+  // Apply inherited properties from parent elements to child elements
+  // Properties object contains CSS-style properties that should be inherited (e.g., alignment, fonts)
+  // This enables proper formatting when content is injected into existing document structure
+  for (const child of vTree) {
+    // Validate properties object and ensure child.properties.style exists
+    if (properties && typeof properties === 'object' && child.properties) {
+      // Initialize style object if it doesn't exist
+      if (!child.properties.style) {
+        child.properties.style = {};
+      }
+      // Merge inherited properties with explicit child properties (child properties take precedence)
+      child.properties.style = { ...properties, ...child.properties.style };
+    }
+  }
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
 
