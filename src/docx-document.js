@@ -190,6 +190,7 @@ class DocxDocument {
       properties.table && properties.table.addSpacingAfter !== undefined
         ? properties.table.addSpacingAfter
         : defaultDocumentOptions.table.addSpacingAfter;
+    this.heading = properties.heading || defaultDocumentOptions.heading;
     this.lastNumberingId = 0;
     this.lastMediaId = 0;
     this.lastHeaderId = 0;
@@ -295,7 +296,13 @@ class DocxDocument {
 
   generateStylesXML() {
     return generateXMLString(
-      generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang),
+      generateStylesXML(
+        this.font,
+        this.fontSize,
+        this.complexScriptFontSize,
+        this.lang,
+        this.heading
+      ),
       this.direction
     );
   }
