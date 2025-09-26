@@ -1,3 +1,1 @@
-export const isZeroOrTruthy = (value) => {
-  return value === 0 || !!value;
-}
+export const isZeroOrTruthy = (value) => value === 0 || !!value;

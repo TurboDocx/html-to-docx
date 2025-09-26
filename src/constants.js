@@ -82,6 +82,12 @@ const defaultDocumentOptions = {
   preprocessing: {
     skipHTMLMinify: false,
   },
+  imageProcessing: {
+    maxRetries: 2,
+    verboseLogging: false,
+    downloadTimeout: 5000, // 5 seconds per download attempt
+    maxImageSize: 10485760, // 10MB max per image
+  },
 };
 const defaultHTMLString = '<p></p>';
 const relsFolderName = '_rels';
