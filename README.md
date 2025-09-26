@@ -97,7 +97,9 @@ async function withImageOptions() {
   const docx = await HtmlToDocx(htmlWithImages, null, {
     imageProcessing: {
       maxRetries: 3,          // Retry failed image downloads up to 3 times
-      verboseLogging: true    // Enable detailed logging for debugging
+      verboseLogging: true,   // Enable detailed logging for debugging
+      downloadTimeout: 10000, // 10 second timeout per download attempt
+      maxImageSize: 5242880   // 5MB max image size
     }
   });
 }
@@ -236,6 +238,8 @@ full fledged examples can be found under `example/`
   - `imageProcessing` <?[Object]>
     - `maxRetries` <?[Number]> maximum number of retry attempts for failed image downloads. Defaults to `2`.
     - `verboseLogging` <?[Boolean]> flag to enable detailed logging of image processing operations. Defaults to `false`.
+    - `downloadTimeout` <?[Number]> timeout in milliseconds for each image download attempt. Defaults to `5000` (5 seconds).
+    - `maxImageSize` <?[Number]> maximum allowed image size in bytes. Defaults to `10485760` (10MB).
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns

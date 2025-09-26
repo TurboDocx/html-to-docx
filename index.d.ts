@@ -98,6 +98,8 @@ declare namespace HTMLtoDOCX {
         imageProcessing?: {
             maxRetries?: number;
             verboseLogging?: boolean;
+            downloadTimeout?: number;
+            maxImageSize?: number;
         };
     }
 }
