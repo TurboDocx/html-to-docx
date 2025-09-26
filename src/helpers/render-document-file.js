@@ -8,7 +8,6 @@ import isVText from 'virtual-dom/vnode/is-vtext';
 // eslint-disable-next-line import/no-named-default
 import { default as HTMLToVDOM } from 'html-to-vdom';
 import sizeOf from 'image-size';
-import imageToBase64 from 'image-to-base64';
 
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
@@ -18,7 +17,7 @@ import namespaces from '../namespaces';
 import { imageType, internalRelationship, defaultDocumentOptions } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
-import { getMimeType } from '../utils/image';
+import { getMimeType, downloadImageToBase64 } from '../utils/image';
 
 const convertHTML = HTMLToVDOM({
   VNode,
@@ -73,6 +72,7 @@ const logVerbose = (verboseLogging, message, ...args) => {
   }
 };
 
+
 // eslint-disable-next-line consistent-return, no-shadow
 export const buildImage = async (
   docxDocumentInstance,
@@ -124,7 +124,12 @@ export const buildImage = async (
             `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`
           );
 
-          base64String = await imageToBase64(imageSource);
+          // Use configurable timeout, default 5 seconds, with exponential backoff for retries
+          const baseTimeout = Math.max(1000, Math.min(options.downloadTimeout || 5000, 30000)); // 1s-30s range
+          const timeoutMs = baseTimeout * attempt;
+          const maxSizeBytes = Math.max(1024, options.maxImageSize || 10 * 1024 * 1024); // min 1KB
+
+          base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
           if (base64String) {
             if (attempt > 1) {
               retryStats.successAfterRetry += 1;
