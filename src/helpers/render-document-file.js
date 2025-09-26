@@ -5,7 +5,6 @@ import VNode from 'virtual-dom/vnode/vnode';
 import VText from 'virtual-dom/vnode/vtext';
 import isVNode from 'virtual-dom/vnode/is-vnode';
 import isVText from 'virtual-dom/vnode/is-vtext';
-// eslint-disable-next-line import/no-named-default
 import { default as HTMLToVDOM } from 'html-to-vdom';
 import sizeOf from 'image-size';
 import imageToBase64 from 'image-to-base64';
@@ -107,10 +106,49 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   const listElements = [];
 
+  // Build complete inheritance chain for list container with null safety
+  let listAncestorStyles = {};
+  if (vNode && isVNode(vNode) && vNode.parent) {
+    try {
+      let currentNode = vNode.parent;
+      const ancestorChain = [];
+
+      while (currentNode && ancestorChain.length < 20) {
+        // Prevent infinite loops
+        ancestorChain.unshift(currentNode);
+        currentNode = currentNode.parent;
+      }
+
+      ancestorChain.forEach((ancestor) => {
+        if (ancestor && isVNode(ancestor) && ancestor.properties && ancestor.properties.style) {
+          try {
+            const ancestorAttrs = xmlBuilder.modifiedStyleAttributesBuilder(
+              docxDocumentInstance,
+              ancestor,
+              {},
+              {}
+            );
+            if (ancestorAttrs) {
+              listAncestorStyles = xmlBuilder.mergeFormattingAttrs(
+                listAncestorStyles,
+                ancestorAttrs
+              );
+            }
+          } catch (error) {
+            console.warn('[DEBUG] Error processing ancestor styles:', error.message);
+          }
+        }
+      });
+    } catch (error) {
+      console.warn('[DEBUG] Error building ancestor styles:', error.message);
+      listAncestorStyles = {};
+    }
+  }
+
   const listContainerStyles = xmlBuilder.modifiedStyleAttributesBuilder(
     docxDocumentInstance,
     vNode,
-    {},
+    listAncestorStyles,
     { isParagraph: true }
   );
 
@@ -120,118 +158,192 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       level: 0,
       type: vNode.tagName,
       numberingId: docxDocumentInstance.createNumbering(vNode.tagName, vNode.properties),
-      // Store the container styles to pass down to child elements
       containerStyles: listContainerStyles,
     },
   ];
+
   while (vNodeObjects.length) {
     const tempVNodeObject = vNodeObjects.shift();
 
-    const parentVNodeProperties = tempVNodeObject.node.properties;
+    // Strict null safety checks
+    if (!tempVNodeObject || !tempVNodeObject.node) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    const parentVNodeProperties = tempVNodeObject.node.properties || {};
 
     if (
       isVText(tempVNodeObject.node) ||
       (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
     ) {
-      // Pass container styles as base, let buildParagraph handle   individual item style overrides
+      try {
+        if (!tempVNodeObject.node) {
+          console.error('[DEBUG] tempVNodeObject.node is null before buildParagraph');
+          // eslint-disable-next-line no-continue
+          continue;
+        }
 
-      const paragraphFragment = await xmlBuilder.buildParagraph(
-        tempVNodeObject.node,
-        {
-          ...tempVNodeObject.containerStyles,
-          numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
-        },
-        docxDocumentInstance
-      );
+        // Preserve all inherited styles for list items
+        const listItemStyles = { ...tempVNodeObject.containerStyles };
+        
+        // For list items, we want to inherit all styles including text decoration
+        // The inheritance should work the same as regular elements
+        
+        const paragraphFragment = await xmlBuilder.buildParagraph(
+          tempVNodeObject.node,
+          {
+            ...listItemStyles,
+            numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
+          },
+          docxDocumentInstance
+        );
 
-      xmlFragment.import(paragraphFragment);
+        if (paragraphFragment) {
+          xmlFragment.import(paragraphFragment);
+        }
+      } catch (error) {
+        console.error(
+          '[DEBUG] buildParagraph failed for node:',
+          tempVNodeObject.node?.tagName || 'unknown'
+        );
+        console.error('[DEBUG] buildParagraph error:', error.message);
+        console.error('[DEBUG] Full error stack:', error.stack);
+        throw error;
+      }
     }
 
     if (
+      isVNode(tempVNodeObject.node) &&
       tempVNodeObject.node.children &&
       tempVNodeObject.node.children.length &&
       ['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName)
     ) {
       const tempVNodeObjects = tempVNodeObject.node.children.reduce((accumulator, childVNode) => {
-        if (['ul', 'ol'].includes(childVNode.tagName)) {
-          // For nested lists, merge parent styles with child's own styles
+        if (!childVNode) {
+          console.error('[DEBUG] Found null childVNode in reduce');
+          return accumulator;
+        }
+
+        const isChildVNode = isVNode(childVNode);
+        const isChildVText = isVText(childVNode);
+
+        if (!isChildVNode && !isChildVText) {
+          return accumulator;
+        }
+
+        if (isChildVNode && ['ul', 'ol'].includes(childVNode.tagName)) {
           const childContainerStyles = xmlBuilder.modifiedStyleAttributesBuilder(
             docxDocumentInstance,
             childVNode,
-            tempVNodeObject.containerStyles, // Use parent styles as base
+            tempVNodeObject.containerStyles,
             { isParagraph: true }
           );
 
-          accumulator.push({
-            node: childVNode,
-            level: tempVNodeObject.level + 1,
-            type: childVNode.tagName,
-            numberingId: docxDocumentInstance.createNumbering(
-              childVNode.tagName,
-              childVNode.properties
-            ),
-            containerStyles: childContainerStyles,
-          });
+          if (childVNode && tempVNodeObject && tempVNodeObject.level !== undefined) {
+            accumulator.push({
+              node: childVNode,
+              level: tempVNodeObject.level + 1,
+              type: childVNode.tagName,
+              numberingId: docxDocumentInstance.createNumbering(
+                childVNode.tagName,
+                childVNode.properties
+              ),
+              containerStyles: childContainerStyles,
+            });
+          }
         } else {
-          // eslint-disable-next-line no-lonely-if
+          // Handle non-list children
+          const lastAccumulator =
+            accumulator.length > 0 ? accumulator[accumulator.length - 1] : null;
           if (
-            accumulator.length > 0 &&
-            isVNode(accumulator[accumulator.length - 1].node) &&
-            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p'
+            lastAccumulator &&
+            lastAccumulator.node &&
+            isVNode(lastAccumulator.node) &&
+            lastAccumulator.node.tagName &&
+            lastAccumulator.node.tagName.toLowerCase() === 'p' &&
+            lastAccumulator.node.children
           ) {
-            accumulator[accumulator.length - 1].node.children.push(childVNode);
+            console.error('[DEBUG] About to push childVNode to lastAccumulator.node.children');
+            console.error('[DEBUG] lastAccumulator exists:', !!lastAccumulator);
+            console.error('[DEBUG] lastAccumulator.node exists:', !!lastAccumulator.node);
+            console.error('[DEBUG] childVNode exists:', !!childVNode);
+            lastAccumulator.node.children.push(childVNode);
           } else {
             const properties = {
               attributes: {
                 ...(parentVNodeProperties?.attributes || {}),
-                ...(childVNode?.properties?.attributes || {}),
+                ...(isChildVNode && childVNode?.properties?.attributes
+                  ? childVNode.properties.attributes
+                  : {}),
               },
               style: {
                 ...(parentVNodeProperties?.style || {}),
-                ...(childVNode?.properties?.style || {}),
+                ...(isChildVNode && childVNode?.properties?.style
+                  ? childVNode.properties.style
+                  : {}),
               },
             };
+
             const paragraphVNode = new VNode(
               'p',
-              properties, // copy properties for styling purposes
-              // eslint-disable-next-line no-nested-ternary
-              isVText(childVNode)
+              properties,
+              isChildVText
                 ? [childVNode]
-                : // eslint-disable-next-line no-nested-ternary
-                isVNode(childVNode)
+                : isChildVNode
                 ? childVNode.tagName.toLowerCase() === 'li'
                   ? [...childVNode.children]
                   : [childVNode]
                 : []
             );
 
-            childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+            if (isChildVNode) {
+              childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+            }
 
-            const generatedNode = isVNode(childVNode)
-              ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-                childVNode.tagName.toLowerCase() === 'li'
+            const generatedNode = isChildVNode
+              ? childVNode.tagName.toLowerCase() === 'li'
                 ? childVNode
                 : childVNode.tagName.toLowerCase() !== 'p'
                 ? paragraphVNode
                 : childVNode
-              : // eslint-disable-next-line prettier/prettier
-                paragraphVNode;
+              : paragraphVNode;
 
-            accumulator.push({
-              // eslint-disable-next-line prettier/prettier, no-nested-ternary
-              node: generatedNode,
-              level: tempVNodeObject.level,
-              type: tempVNodeObject.type,
-              numberingId: tempVNodeObject.numberingId,
-              // Pass down the container styles to individual list items
-              containerStyles: tempVNodeObject.containerStyles,
-            });
+            if (
+              generatedNode &&
+              tempVNodeObject &&
+              tempVNodeObject.level !== undefined &&
+              tempVNodeObject.type &&
+              tempVNodeObject.numberingId &&
+              tempVNodeObject.containerStyles
+            ) {
+              accumulator.push({
+                node: generatedNode,
+                level: tempVNodeObject.level,
+                type: tempVNodeObject.type,
+                numberingId: tempVNodeObject.numberingId,
+                containerStyles: tempVNodeObject.containerStyles,
+              });
+            }
           }
         }
 
         return accumulator;
       }, []);
-      vNodeObjects = tempVNodeObjects.concat(vNodeObjects);
+
+      // Filter out any null entries to prevent errors
+      const validTempVNodeObjects = tempVNodeObjects.filter((obj) => {
+        if (!obj) {
+          console.warn('[DEBUG] buildList: Filtering out null obj');
+          return false;
+        }
+        if (!obj.node) {
+          console.warn('[DEBUG] buildList: Filtering out obj with null node:', obj);
+          return false;
+        }
+        return true;
+      });
+      vNodeObjects = validTempVNodeObjects.concat(vNodeObjects);
     }
   }
 
@@ -379,6 +491,59 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
       return;
     case 'head':
       return;
+    case 'div':
+      // Check if div has block-level children (like other divs)
+      const hasBlockChildren = vNode.children && vNode.children.some(child => 
+        isVNode(child) && ['div', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'ul', 'ol', 'table'].includes(child.tagName)
+      );
+      
+      if (hasBlockChildren) {
+        // Process children in order, creating paragraphs for text content and processing block children separately
+        if (vNodeHasChildren(vNode)) {
+          let currentTextContent = [];
+          
+          for (let i = 0; i < vNode.children.length; i++) {
+            const child = vNode.children[i];
+            
+            if (isVNode(child) && ['div', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'ul', 'ol', 'table'].includes(child.tagName)) {
+              // Before processing block child, create paragraph for any accumulated text content
+              if (currentTextContent.length > 0) {
+                const textVNode = new VNode(
+                  vNode.tagName,
+                  vNode.properties,
+                  currentTextContent
+                );
+                const textParagraphFragment = await xmlBuilder.buildParagraph(textVNode, {}, docxDocumentInstance);
+                xmlFragment.import(textParagraphFragment);
+                currentTextContent = [];
+              }
+              
+              // Process block child with inheritance
+              child.parent = vNode;
+              await convertVTreeToXML(docxDocumentInstance, child, xmlFragment);
+            } else {
+              // Accumulate text content and inline elements
+              currentTextContent.push(child);
+            }
+          }
+          
+          // Create paragraph for any remaining text content
+          if (currentTextContent.length > 0) {
+            const textVNode = new VNode(
+              vNode.tagName,
+              vNode.properties,
+              currentTextContent
+            );
+            const textParagraphFragment = await xmlBuilder.buildParagraph(textVNode, {}, docxDocumentInstance);
+            xmlFragment.import(textParagraphFragment);
+          }
+        }
+      } else {
+        // Div with only inline content - convert to paragraph
+        const divParagraphFragment = await xmlBuilder.buildParagraph(vNode, {}, docxDocumentInstance);
+        xmlFragment.import(divParagraphFragment);
+      }
+      return;
   }
   if (vNodeHasChildren(vNode)) {
     // eslint-disable-next-line no-plusplus
@@ -411,8 +576,33 @@ export async function convertVTreeToXML(docxDocumentInstance, vTree, xmlFragment
   return xmlFragment;
 }
 
+// Add parent references to virtual DOM tree
+function addParentReferences(vNode, parent = null) {
+  if (!vNode) return;
+
+  if (isVNode(vNode)) {
+    vNode.parent = parent;
+    if (vNode.children && Array.isArray(vNode.children) && vNode.children.length > 0) {
+      vNode.children.forEach((child) => {
+        if (child) {
+          addParentReferences(child, vNode);
+        }
+      });
+    }
+  }
+}
+
 async function renderDocumentFile(docxDocumentInstance) {
   const vTree = convertHTML(docxDocumentInstance.htmlString);
+
+  // Add parent references to enable proper inheritance
+  if (Array.isArray(vTree)) {
+    vTree.forEach((node) => {
+      if (node) addParentReferences(node);
+    });
+  } else if (vTree) {
+    addParentReferences(vTree);
+  }
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
 

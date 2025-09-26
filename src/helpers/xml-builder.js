@@ -61,6 +61,59 @@ import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { isZeroOrTruthy } from '../utils/truthy-check';
 
+// Merge helper that preserves explicit "false" overrides for formatting flags
+// This ensures a child with font-weight: normal or font-style: normal will NOT
+// be re-bolded or re-italicized by parent attributes when objects are merged.
+const mergeFormattingAttrs = (base = {}, override = {}) => {
+  const result = { ...base, ...override };
+  const hardOffKeys = ['strong', 'italic', 'underline', 'subscript', 'superscript'];
+  hardOffKeys.forEach((k) => {
+    if (Object.prototype.hasOwnProperty.call(override, k) && override[k] === false) {
+      result[k] = false;
+    }
+  });
+
+  // Handle text decoration inheritance and combination
+  if (override._hasExplicitTextDecoration) {
+    // Child has explicit text decoration
+    if (override.textDecoration === false) {
+      result.textDecoration = false;
+    } else if (override.textDecoration && base.textDecoration && typeof base.textDecoration === 'object') {
+      // Combine parent and child text decorations
+      const parentDecoration = base.textDecoration;
+      const childDecoration = override.textDecoration;
+      
+      // If both parent and child have different decoration types, combine them
+      if (parentDecoration.line && childDecoration.line && parentDecoration.line !== childDecoration.line) {
+        result.textDecoration = {
+          line: 'both',
+          underlineColor: childDecoration.line === 'underline' ? (childDecoration.color || override.color || base.color) : (parentDecoration.line === 'underline' ? (parentDecoration.color || base.color) : undefined),
+          strikethroughColor: childDecoration.line === 'line-through' ? (childDecoration.color || override.color || base.color) : (parentDecoration.line === 'line-through' ? (parentDecoration.color || base.color) : undefined),
+          style: childDecoration.style || parentDecoration.style || 'single'
+        };
+      } else {
+        // Use child decoration but preserve parent color if child doesn't specify one
+        result.textDecoration = {
+          ...childDecoration,
+          color: childDecoration.color || parentDecoration.color || override.color || base.color
+        };
+      }
+    } else if (override.textDecoration) {
+      result.textDecoration = { ...override.textDecoration };
+    }
+  } else if (
+    base.textDecoration &&
+    typeof base.textDecoration === 'object' &&
+    !base.textDecoration.disabled
+  ) {
+    // Inherit parent text decoration only if child has no explicit decoration
+    result.textDecoration = { ...base.textDecoration };
+  }
+
+
+  return result;
+};
+
 const setUpDirectionalBorderStroke = (borderStrike = 'nil') => ({
   top: borderStrike,
   bottom: borderStrike,
@@ -288,18 +341,27 @@ const buildTextDecoration = (value) => {
     return fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'strike')
       .att('@w', 'val', true)
+      .att('@w', 'color', value.color ? value.color : '000000')
       .up();
+  } else if (value.line === 'both') {
+    const bothFragment = fragment({ namespaceAlias: { w: namespaces.w } });
+    
+    // Add underline
+    bothFragment.ele('@w', 'u')
+      .att('@w', 'val', value.style ? value.style : 'single')
+      .att('@w', 'color', value.underlineColor || value.color || '000000')
+      .up();
+    
+    // Add strikethrough
+    bothFragment.ele('@w', 'strike')
+      .att('@w', 'val', true)
+      .att('@w', 'color', value.strikethroughColor || value.color || '000000')
+      .up();
+    
+    return bothFragment;
   }
 
-  // line has both 'underline' and 'line-through'
-  return fragment({ namespaceAlias: { w: namespaces.w } })
-    .ele('@w', 'u')
-    .att('@w', 'val', value.style ? value.style : 'single')
-    .att('@w', 'color', value.color ? value.color : '000000')
-    .up()
-    .ele('@w', 'strike')
-    .att('@w', 'val', true)
-    .up();
+  return null;
 };
 
 // maps html text-decoration-style attribute values to ooxml values
@@ -555,16 +617,24 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           modifiedAttributes.textAlign = vNodeStyleValue;
         }
       } else if (vNodeStyleKey === 'font-weight') {
-        // FIXME: remove bold check when other font weights are handled.
-        if (vNodeStyleValue === 'bold') {
-          modifiedAttributes.strong = vNodeStyleValue;
-        } else if (vNodeStyleValue === 'normal') {
-          // Remove any inherited bold formatting
+        if (
+          vNodeStyleValue === 'bold' ||
+          vNodeStyleValue === 'bolder' ||
+          parseInt(vNodeStyleValue) >= 600
+        ) {
+          modifiedAttributes.strong = true;
+        } else if (
+          vNodeStyleValue === 'normal' ||
+          vNodeStyleValue === 'lighter' ||
+          parseInt(vNodeStyleValue) < 600
+        ) {
           modifiedAttributes.strong = false;
         }
       } else if (vNodeStyleKey === 'font-style') {
-        if (vNodeStyleValue === 'italic') {
-          modifiedAttributes.italic = vNodeStyleValue;
+        if (vNodeStyleValue === 'italic' || vNodeStyleValue === 'oblique') {
+          modifiedAttributes.italic = true;
+        } else if (vNodeStyleValue === 'normal') {
+          modifiedAttributes.italic = false;
         }
       } else if (vNodeStyleKey === 'font-family') {
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
@@ -649,9 +719,8 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         const valueParts = vNodeStyleValue.split(' ').map((part) => part.toLowerCase());
         let value = {};
 
-        if (modifiedAttributes.textDecoration) {
-          value = modifiedAttributes.textDecoration;
-        }
+        // Start fresh for explicit text-decoration to avoid unwanted combinations
+        // Only inherit if no explicit decoration is set
 
         // eslint-disable-next-line no-loop-func
         // mapping each value to specific property of text-decoration
@@ -661,29 +730,54 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           } else if (isTextDecorationStyle(valuePart)) {
             value.style = fixupTextDecorationStyle(valuePart);
           } else if (isTextDecorationLine(valuePart)) {
-            const newValue = fixupTextDecorationLine(valuePart);
-            if (value && value.line && value.line !== newValue) {
-              value.line = 'both';
-            } else {
-              value.line = newValue;
-            }
+            value.line = fixupTextDecorationLine(valuePart);
           }
         });
 
         if (value.line !== 'none') {
+          // Always use element's own text color for decoration if available
+          if (modifiedAttributes.color) {
+            value.color = modifiedAttributes.color;
+          }
           modifiedAttributes.textDecoration = value;
+          modifiedAttributes._hasExplicitTextDecoration = true;
+        } else {
+          // text-decoration: none - don't add new decoration but allow inheritance
+          // Don't set _hasExplicitTextDecoration to allow parent decorations to be inherited
+          // modifiedAttributes.textDecoration = false;
+          // modifiedAttributes._hasExplicitTextDecoration = true;
         }
       } else if (vNodeStyleKey === 'text-decoration-line') {
         const value = fixupTextDecorationLine(vNodeStyleValue);
         if (value !== 'none') {
-          modifiedAttributes.textDecoration = { line: value };
+          const decorationObj = { line: value };
+          // Use element's own text color for decoration if no specific decoration color
+          if (vNodeStyle.color) {
+            decorationObj.color = fixupColorCode(vNodeStyle.color);
+          } else if (modifiedAttributes.color) {
+            decorationObj.color = modifiedAttributes.color;
+          }
+          modifiedAttributes.textDecoration = decorationObj;
+          modifiedAttributes._hasExplicitTextDecoration = true;
+        } else {
+          // text-decoration-line: none - don't add new decoration but allow inheritance
+          // Don't block inheritance from parent elements
+          // modifiedAttributes.textDecoration = false;
+          // modifiedAttributes._hasExplicitTextDecoration = true;
         }
       } else if (vNodeStyleKey === 'text-decoration-style') {
-        modifiedAttributes.textDecoration = { style: vNodeStyleValue, line: 'underline' };
+        const decorationObj = { style: vNodeStyleValue, line: 'underline' };
+        // Only inherit text color if defined on the same element
+        if (vNodeStyle.color) {
+          decorationObj.color = fixupColorCode(vNodeStyle.color);
+        }
+        modifiedAttributes.textDecoration = decorationObj;
       } else if (vNodeStyleKey === 'text-decoration-color') {
+        const existingDecoration = modifiedAttributes.textDecoration || {};
         modifiedAttributes.textDecoration = {
+          ...existingDecoration,
           color: fixupColorCode(vNodeStyleValue),
-          line: 'underline',
+          line: existingDecoration.line || 'underline',
         };
       } else if (vNodeStyleKey === 'text-shadow') {
         if (vNodeStyleValue.trim() !== '' && vNodeStyleValue !== 'none') {
@@ -721,14 +815,17 @@ const buildFormatting = (htmlTag, options) => {
       return buildItalics();
     case 'ins':
     case 'u':
-      return buildUnderline();
+    case 'underline':
+      return buildUnderline(options && options.style ? options.style : 'single');
     case 'strike':
     case 'del':
     case 's':
       return buildStrike();
     case 'sub':
+    case 'subscript':
       return buildVertAlign('subscript');
     case 'sup':
+    case 'superscript':
       return buildVertAlign('superscript');
     case 'mark':
       return buildHighlight();
@@ -764,7 +861,24 @@ const buildFormatting = (htmlTag, options) => {
 const buildRunProperties = (attributes) => {
   const runPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'rPr');
   if (attributes && attributes.constructor === Object) {
-    Object.keys(attributes).forEach((key) => {
+    // Ensure text decoration inherits text color if no decoration color is specified
+    if (attributes.textDecoration && attributes.color && !attributes.textDecoration.color) {
+      attributes.textDecoration = {
+        ...attributes.textDecoration,
+        color: attributes.color
+      };
+    }
+    
+    // Process textDecoration first to ensure decoration colors are not overridden by text color
+    const sortedKeys = Object.keys(attributes).sort((a, b) => {
+      if (a === 'textDecoration') return -1;
+      if (b === 'textDecoration') return 1;
+      if (a === 'color') return 1;
+      if (b === 'color') return -1;
+      return 0;
+    });
+    
+    sortedKeys.forEach((key) => {
       const options = {};
       if (key === 'color' || key === 'backgroundColor' || key === 'highlightColor') {
         options.color = attributes[key];
@@ -852,6 +966,48 @@ const buildRunProperties = (attributes) => {
         return;
       }
 
+      // CRITICAL FIX: Same logic needed for italic inheritance
+      if (key === 'italic' && attributes[key] === false) {
+        return;
+      }
+
+      // CRITICAL FIX: Same logic for other formatting attributes
+      if (key === 'underline' && attributes[key] === false) {
+        return;
+      }
+      
+      // Handle underline attribute specifically
+      if (key === 'underline' && attributes[key] === true) {
+        const formattingFragment = buildFormatting('underline', options);
+        if (formattingFragment) {
+          runPropertiesFragment.import(formattingFragment);
+        }
+        return;
+      }
+
+      // CRITICAL FIX: Same logic for text decoration
+      if (key === 'textDecoration') {
+        // If textDecoration is explicitly false, skip it completely
+        if (attributes[key] === false) {
+          return;
+        }
+        // If element has explicit text decoration flag but no decoration, skip inherited decoration
+        if (attributes._hasExplicitTextDecoration && !attributes[key]) {
+          return;
+        }
+      }
+      
+      // CRITICAL FIX: Handle strikethrough inheritance properly
+      if (key === 'strike' && attributes[key] === false) {
+        return;
+      }
+      if (key === 'subscript' && attributes[key] === false) {
+        return;
+      }
+      if (key === 'superscript' && attributes[key] === false) {
+        return;
+      }
+
       const formattingFragment = buildFormatting(key, options);
       if (formattingFragment) {
         runPropertiesFragment.import(formattingFragment);
@@ -916,7 +1072,10 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
         // and the attributes are applied to the runPropertiesFragment
         // if node is formatting node, then the attributes are stored in formattingFragmentAttributes
         // and are applied to the text node as required
-        const tempRunPropertiesFragment = buildRunProperties({ ...attributes, ...tempAttributes });
+        // CRITICAL FIX: Preserve false values for inheritance overrides
+        const mergedAttributes = mergeFormattingAttrs(attributes, tempAttributes);
+
+        const tempRunPropertiesFragment = buildRunProperties(mergedAttributes);
         tempRunFragment.import(tempRunPropertiesFragment);
         tempRunFragment.import(textFragment);
         runFragmentsArray.push(tempRunFragment);
@@ -950,16 +1109,16 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
               break;
             case 'em':
             case 'i':
-              tempAttributes.i = true;
+              tempAttributes.italic = true;
               break;
             case 'u':
-              tempAttributes.u = true;
+              tempAttributes.underline = true;
               break;
             case 'sub':
-              tempAttributes.sub = true;
+              tempAttributes.subscript = true;
               break;
             case 'sup':
-              tempAttributes.sup = true;
+              tempAttributes.superscript = true;
               break;
           }
           const formattingFragment = buildFormatting(tempVNode);
@@ -976,7 +1135,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
           const modifiedAttributes = modifiedStyleAttributesBuilder(
             docxDocumentInstance,
             tempVNode,
-            { ...attributes, ...tempAttributes }
+            mergeFormattingAttrs(attributes, tempAttributes)
           );
 
           // eslint-disable-next-line no-use-before-define
@@ -1020,7 +1179,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
           // Now we follow the same logic as the span node conversion
           const spanFragment = await buildRunOrRuns(
             coveringNode,
-            { ...attributes, ...tempAttributes },
+            mergeFormattingAttrs(attributes, tempAttributes),
             docxDocumentInstance
           );
 
@@ -1335,13 +1494,17 @@ const buildParagraphProperties = (attributes) => {
         case 'numbering':
           const { levelId, numberingId } = attributes[key];
           const numberingPropertiesFragment = buildNumberingProperties(levelId, numberingId);
-          paragraphPropertiesFragment.import(numberingPropertiesFragment);
+          if (numberingPropertiesFragment) {
+            paragraphPropertiesFragment.import(numberingPropertiesFragment);
+          }
           // eslint-disable-next-line no-param-reassign
           delete attributes.numbering;
           break;
         case 'textAlign':
           const horizontalAlignmentFragment = buildHorizontalAlignment(attributes[key]);
-          paragraphPropertiesFragment.import(horizontalAlignmentFragment);
+          if (horizontalAlignmentFragment) {
+            paragraphPropertiesFragment.import(horizontalAlignmentFragment);
+          }
           // eslint-disable-next-line no-param-reassign
           delete attributes.textAlign;
           break;
@@ -1350,28 +1513,39 @@ const buildParagraphProperties = (attributes) => {
           // Essentially if background color needs to be across the row
           if (attributes.display === 'block') {
             const shadingFragment = buildShading(attributes[key]);
-            paragraphPropertiesFragment.import(shadingFragment);
+            if (shadingFragment) {
+              paragraphPropertiesFragment.import(shadingFragment);
+            }
             // FIXME: Inner padding in case of shaded paragraphs.
             const paragraphBorderFragment = buildParagraphBorder();
-            paragraphPropertiesFragment.import(paragraphBorderFragment);
+            if (paragraphBorderFragment) {
+              paragraphPropertiesFragment.import(paragraphBorderFragment);
+            }
             // eslint-disable-next-line no-param-reassign
             delete attributes.backgroundColor;
           }
           break;
         case 'paragraphStyle':
           const pStyleFragment = buildPStyle(attributes.paragraphStyle);
-          paragraphPropertiesFragment.import(pStyleFragment);
+          if (pStyleFragment) {
+            paragraphPropertiesFragment.import(pStyleFragment);
+          }
           delete attributes.paragraphStyle;
           break;
         case 'indentation':
           const indentationFragment = buildIndentation(attributes[key]);
-          paragraphPropertiesFragment.import(indentationFragment);
+          if (indentationFragment) {
+            paragraphPropertiesFragment.import(indentationFragment);
+          }
           // eslint-disable-next-line no-param-reassign
           delete attributes.indentation;
           break;
         case 'textDecoration':
+          // Apply text decoration at paragraph level for all elements including list items
           const textDecorationFragment = buildTextDecoration(attributes[key]);
-          paragraphPropertiesFragment.import(textDecorationFragment);
+          if (textDecorationFragment) {
+            paragraphPropertiesFragment.import(textDecorationFragment);
+          }
           // we don't delete attributes.textDecoration so that it could be inherited by children nodes.
           break;
       }
@@ -1389,7 +1563,9 @@ const buildParagraphProperties = (attributes) => {
     // eslint-disable-next-line no-param-reassign
     delete attributes.afterSpacing;
 
-    paragraphPropertiesFragment.import(spacingFragment);
+    if (spacingFragment) {
+      paragraphPropertiesFragment.import(spacingFragment);
+    }
   }
   paragraphPropertiesFragment.up();
 
@@ -1538,9 +1714,51 @@ const computeImageDimensions = (vNode, attributes) => {
   attributes.height = modifiedHeight;
 };
 
+// Build complete inheritance chain from all ancestors
+const buildAncestorStyles = (docxDocumentInstance, vNode) => {
+  let ancestorStyles = {};
+
+  // Safety check
+  if (!vNode) {
+    return ancestorStyles;
+  }
+
+  let currentNode = vNode;
+  const ancestorChain = [];
+
+  // Walk up the DOM tree to collect all ancestors
+  while (currentNode && currentNode.parent) {
+    ancestorChain.unshift(currentNode.parent);
+    currentNode = currentNode.parent;
+  }
+
+  // Process ancestors from root to immediate parent
+  ancestorChain.forEach((ancestor) => {
+    if (ancestor && isVNode(ancestor) && ancestor.properties && ancestor.properties.style) {
+      const ancestorAttrs = modifiedStyleAttributesBuilder(docxDocumentInstance, ancestor, ancestorStyles, {});
+      ancestorStyles = mergeFormattingAttrs(ancestorStyles, ancestorAttrs);
+    }
+  });
+
+  return ancestorStyles;
+};
+
 const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
   const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'p');
-  const modifiedAttributes = modifiedStyleAttributesBuilder(
+
+  // Build complete inheritance chain if vNode has a parent
+  let inheritedStyles = {};
+  if (vNode && isVNode(vNode) && vNode.parent) {
+    try {
+      inheritedStyles = buildAncestorStyles(docxDocumentInstance, vNode);
+    } catch (error) {
+      console.warn('[DEBUG] buildAncestorStyles failed, using empty styles:', error.message);
+      inheritedStyles = {};
+    }
+  }
+
+  // Get element's own styles first
+  const elementAttributes = modifiedStyleAttributesBuilder(
     docxDocumentInstance,
     vNode,
     attributes,
@@ -1548,6 +1766,32 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       isParagraph: true,
     }
   );
+  
+  // Check if this is a list item
+  const isListItem = attributes.numbering && attributes.numbering.numberingId;
+  
+  let modifiedAttributes;
+  if (isListItem) {
+    // List items should inherit all styles including text decoration
+    const baseAttributes = mergeFormattingAttrs(inheritedStyles, attributes);
+    modifiedAttributes = mergeFormattingAttrs(baseAttributes, elementAttributes);
+  } else if (elementAttributes._hasExplicitTextDecoration || attributes._hasExplicitTextDecoration) {
+    // Element has explicit text decoration - don't inherit parent's decoration
+    modifiedAttributes = mergeFormattingAttrs({}, elementAttributes);
+    modifiedAttributes = mergeFormattingAttrs(modifiedAttributes, attributes);
+    // If textDecoration is explicitly false, ensure it stays false
+    if (elementAttributes.textDecoration === false || attributes.textDecoration === false) {
+      modifiedAttributes.textDecoration = false;
+    } else if (elementAttributes.textDecoration) {
+      modifiedAttributes.textDecoration = elementAttributes.textDecoration;
+    } else if (attributes.textDecoration) {
+      modifiedAttributes.textDecoration = attributes.textDecoration;
+    }
+  } else {
+    // Normal inheritance
+    const baseAttributes = mergeFormattingAttrs(inheritedStyles, attributes);
+    modifiedAttributes = mergeFormattingAttrs(baseAttributes, elementAttributes);
+  }
   // IMAGE SPACING FIX: Ensure proper spacing for paragraphs containing images
   // Images in paragraphs need specific spacing attributes to render correctly in DOCX
   if (isVNode(vNode) && vNode.children && vNode.children.some((child) => child.tagName === 'img')) {
@@ -3979,4 +4223,5 @@ export {
   buildDrawing,
   fixupLineHeight,
   modifiedStyleAttributesBuilder,
+  mergeFormattingAttrs,
 };
