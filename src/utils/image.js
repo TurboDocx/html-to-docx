@@ -13,7 +13,7 @@ export const guessMimeTypeFromBase64 = (base64String) => {
   const binaryStr = atob(base64String.substring(0, 50)); // Decode a portion to check magic numbers
 
   const byteArr = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) {
+  for (let i = 0; i < binaryStr.length; i += 1) {
     byteArr[i] = binaryStr.charCodeAt(i);
   }
 
