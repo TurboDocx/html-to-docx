@@ -123,6 +123,10 @@ const colorlessColors = ['transparent', 'auto'];
 const verticalAlignValues = ['top', 'middle', 'bottom'];
 const defaultPercentageMarginValue = 0;
 
+/**
+ * CSS absolute font-size keyword mappings to pixel values
+ * Based on CSS specification: https://developer.mozilla.org/en-US/docs/Web/CSS/font-size
+ */
 const absoluteFontSizes = {
   'xx-small': '9px',
   'x-small': '10px',
@@ -134,6 +138,11 @@ const absoluteFontSizes = {
   'xxx-large': '48px',
 };
 
+/**
+ * Scaling factors for relative font-size keywords
+ * - smaller: 5/6 of parent font size
+ * - larger: 1.2x of parent font size
+ */
 const relativeFontSizeFactors = {
   smaller: 5 / 6,
   larger: 1.2,
