@@ -294,10 +294,36 @@ class DocxDocument {
   }
 
   generateStylesXML() {
-    return generateXMLString(
-      generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang),
-      this.direction
+    // Handled the rtl issue
+    // return generateXMLString(
+    //   generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
+    // );
+    const stylesDoc = create(
+      { encoding: 'UTF-8', standalone: true },
+      generateStylesXML(this.font, this.fontSize, this.complexScriptFontSize, this.lang)
     );
+
+    if (this.direction === 'rtl') {
+      const rtlStyle = fragment({ namespaceAlias: { w: namespaces.w } })
+        .ele('@w', 'style')
+        .att('@w', 'type', 'paragraph')
+        .att('@w', 'styleId', 'RTLDefault')
+        .ele('@w', 'name')
+        .att('@w', 'val', 'RTL Default')
+        .up()
+        .ele('@w', 'pPr')
+        .ele('@w', 'jc')
+        .att('@w', 'val', 'right')
+        .up()
+        .ele('@w', 'bidi')
+        .up()
+        .up()
+        .up();
+
+      stylesDoc.root().import(rtlStyle);
+    }
+
+    return stylesDoc.toString({ prettyPrint: true });
   }
 
   generateFontTableXML() {
