@@ -108,3 +108,6 @@ dist/
 # Temporary folders
 tmp/
 temp/
+
+# macOS
+.DS_Store
