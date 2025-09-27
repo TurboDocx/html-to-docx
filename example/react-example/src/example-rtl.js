@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 const fs = require('fs');
 // const HTMLtoDOCX = require('html-to-docx');
-const HTMLtoDOCX = require('../../../dist/html-to-docx.umd');
+const HTMLtoDOCX = require('../dist/html-to-docx.umd');
 
 async function generateDoc() {
   const html = `
@@ -37,7 +37,7 @@ async function generateDoc() {
 
   // Save the buffer to file
   fs.writeFileSync('example-rtl.docx', docxBuffer);
-  console.log('✅ DOCX created: example-rtl.docx');
+  console.log('✅ DOCX created: test.docx');
 }
 
 generateDoc();
