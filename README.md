@@ -243,11 +243,7 @@ Also you could add attribute `data-start="n"` to start the numbering from the n-
 
 ## RTL (Right-to-Left) Language Support
 
-<<<<<<< HEAD
 The library also supports RTL languages like Arabic and Hebrew. Use the `direction` option to enable RTL text flow:
-=======
-The library now supports RTL languages like Arabic and Hebrew. Use the `direction` option to enable RTL text flow:
->>>>>>> 81306ab (feat: add React RTL example and update documentation)
 
 ```javascript
 const htmlString = `
