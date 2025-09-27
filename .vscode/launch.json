@@ -2,14 +2,15 @@
   "version": "0.2.0",
   "configurations": [
     {
-  "type": "node",
-  "request": "launch",
-  "name": "Run test:debug",
-  "runtimeExecutable": "npm",
-  "runtimeArgs": ["run", "test:debug"],
-  "console": "integratedTerminal",
-  "stopOnEntry": true,
-  "port": 9229
-}
+      "name": "Debug Color Inheritance",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/test-color-inheritance.js",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
   ]
 }

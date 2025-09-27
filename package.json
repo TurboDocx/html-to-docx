@@ -59,6 +59,7 @@
     "test:ts-rtl": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/rtl-example.ts",
     "test:all": "npm run test && npm run test:ts && npm run test:ts-rtl && npm run test:list-inheritance",
     "test:debug": "npm run build && node --inspect=9229 --enable-source-maps example/list-inheritance-test.js",
+    "test:debug-fix": "npm run build && node --inspect=9229 --enable-source-maps test-color-inheritance.js",
     "prerelease": "npm run build:prod",
     "release": "standard-version",
     "lint": "eslint --fix .",
