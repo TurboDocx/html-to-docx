@@ -275,6 +275,66 @@ const htmlString = `<!DOCTYPE html>
             </li>
         </ul>
 
+        <!-- Test cases for PR #15: Font size CSS keywords -->
+        <h3>Font Size CSS Keywords Test (PR #15)</h3>
+
+        <p>Testing absolute font-size keywords:</p>
+        <p style="font-size: xx-small;">This text is xx-small (9px equivalent)</p>
+        <p style="font-size: x-small;">This text is x-small (10px equivalent)</p>
+        <p style="font-size: small;">This text is small (13px equivalent)</p>
+        <p style="font-size: medium;">This text is medium (16px equivalent - default)</p>
+        <p style="font-size: large;">This text is large (18px equivalent)</p>
+        <p style="font-size: x-large;">This text is x-large (24px equivalent)</p>
+        <p style="font-size: xx-large;">This text is xx-large (32px equivalent)</p>
+        <p style="font-size: xxx-large;">This text is xxx-large (48px equivalent)</p>
+
+        <p>Testing relative font-size keywords:</p>
+        <div style="font-size: 16px;">
+            <p>Parent has 16px font size</p>
+            <p style="font-size: smaller;">This text is 'smaller' (5/6 of parent = ~13px)</p>
+            <p style="font-size: larger;">This text is 'larger' (1.2x of parent = ~19px)</p>
+        </div>
+
+        <p>Testing nested relative keywords:</p>
+        <div style="font-size: 20px;">
+            <span>Base: 20px</span>
+            <div style="font-size: larger;">
+                <span>First larger: ~24px</span>
+                <div style="font-size: smaller;">
+                    <span>Then smaller: ~20px</span>
+                </div>
+            </div>
+        </div>
+
+        <p>Testing mixed units and keywords:</p>
+        <ul>
+            <li style="font-size: small;">Small text in list item</li>
+            <li style="font-size: 14pt;">14pt text in list item</li>
+            <li style="font-size: large;">Large text in list item</li>
+            <li style="font-size: 150%;">150% text in list item</li>
+            <li style="font-size: xx-large;">XX-Large text in list item</li>
+        </ul>
+
+        <p>Testing keywords in complex nested structures:</p>
+        <table border="1">
+            <tr>
+                <td style="font-size: x-small;">X-Small in table cell</td>
+                <td style="font-size: medium;">Medium in table cell</td>
+                <td style="font-size: x-large;">X-Large in table cell</td>
+            </tr>
+            <tr>
+                <td style="font-size: smaller;">Smaller in table cell</td>
+                <td>Default size in table cell</td>
+                <td style="font-size: larger;">Larger in table cell</td>
+            </tr>
+        </table>
+
+        <p>Testing edge cases:</p>
+        <p style="font-size: invalid-keyword;">Invalid keyword should fallback to default</p>
+        <p style="font-size: ;">Empty font-size should use default</p>
+        <p style="font-size: 0;">Zero font-size edge case</p>
+        <span style="font-size: smaller;">Relative size without explicit parent</span>
+
         <p>Different borders</p>
         <table
             style="border-collapse: collapse; border-left:1px solid black; border-right: 2px solid brown; border-top: 2px solid yellow; border-bottom: 4px solid orange">
