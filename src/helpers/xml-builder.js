@@ -1190,11 +1190,18 @@ const buildParagraphBorder = () => {
   return paragraphBorderFragment;
 };
 
-const buildParagraphProperties = (attributes) => {
+const buildParagraphProperties = (attributes, docxDocumentInstance) => {
   const paragraphPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
     'pPr'
   );
+  
+  // Add RTL support when direction is rtl
+  if (docxDocumentInstance && docxDocumentInstance.direction === 'rtl') {
+    paragraphPropertiesFragment.ele('@w', 'bidi').up();
+    paragraphPropertiesFragment.ele('@w', 'rtl').att('@w', 'val', '1').up();
+  }
+  
   if (attributes && attributes.constructor === Object) {
     Object.keys(attributes).forEach((key) => {
       switch (key) {
@@ -1422,7 +1429,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     modifiedAttributes.afterSpacing = modifiedAttributes.afterSpacing || 0;
   }
   
-  const paragraphPropertiesFragment = buildParagraphProperties(modifiedAttributes);
+  const paragraphPropertiesFragment = buildParagraphProperties(modifiedAttributes, docxDocumentInstance);
   paragraphFragment.import(paragraphPropertiesFragment);
   if (isVNode(vNode) && vNodeHasChildren(vNode)) {
     if (
