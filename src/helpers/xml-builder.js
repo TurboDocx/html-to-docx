@@ -368,22 +368,13 @@ const fixupLineHeight = (lineHeight, fontSize) => {
 
 // eslint-disable-next-line consistent-return
 const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/font-size
-  
-  // Handle relative font size keywords first
-  if (fontSizeString === 'smaller') {
-    // for this case, font-size becomes 5/6 of the parent font size.
+
+  if (["smaller", "larger"].includes(fontSizeString)) {
     // since we dont have access to immediate parent size
     // we will use the default font size given to us
-    return Math.floor(relativeFontSizeFactors.smaller * docxDocumentInstance.fontSize);
-  } else if (fontSizeString === 'larger') {
-    // for this case, font-size increases by 20% of the parent font size.
-    // since we dont have access to immediate parent size
-    // we will use the default font size given to us
-    return Math.floor(docxDocumentInstance.fontSize * relativeFontSizeFactors.larger);
+    return Math.floor(relativeFontSizeFactors[fontSizeString] * docxDocumentInstance.fontSize);
   }
 
-  // Handle absolute font size keywords
   if (absoluteFontSizes[fontSizeString]) {
     fontSizeString = absoluteFontSizes[fontSizeString];
   }
@@ -1092,26 +1083,26 @@ const buildRunOrHyperLink = async (vNode, attributes, docxDocumentInstance) => {
 
     if (vNode.children) {
       for (let idx = 0; idx < vNode.children.length; idx++) {
-      const childVNode = vNode.children[idx];
-      const modifiedAttributes =
-        isVNode(childVNode) && childVNode.tagName === 'img'
-          ? { ...attributes, type: 'picture', description: childVNode.properties.alt } : { ...attributes };
-      modifiedAttributes.hyperlink = true;
+        const childVNode = vNode.children[idx];
+        const modifiedAttributes =
+          isVNode(childVNode) && childVNode.tagName === 'img'
+            ? { ...attributes, type: 'picture', description: childVNode.properties.alt } : { ...attributes };
+        modifiedAttributes.hyperlink = true;
 
-      const runFragments = await buildRunOrRuns(
-        childVNode,
-        modifiedAttributes,
-        docxDocumentInstance
-      );
-      if (Array.isArray(runFragments)) {
-        for (let index = 0; index < runFragments.length; index++) {
-          const runFragment = runFragments[index];
+        const runFragments = await buildRunOrRuns(
+          childVNode,
+          modifiedAttributes,
+          docxDocumentInstance
+        );
+        if (Array.isArray(runFragments)) {
+          for (let index = 0; index < runFragments.length; index++) {
+            const runFragment = runFragments[index];
 
-          hyperlinkFragment.import(runFragment);
+            hyperlinkFragment.import(runFragment);
+          }
+        } else {
+          hyperlinkFragment.import(runFragments);
         }
-      } else {
-        hyperlinkFragment.import(runFragments);
-      }
       }
     }
 
@@ -1338,7 +1329,7 @@ const computeImageDimensions = (vNode, attributes) => {
   const maximumWidthInEMU = TWIPToEMU(maximumWidth);
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
-  
+
   if (originalWidthInEMU > maximumWidthInEMU) {
     originalWidthInEMU = maximumWidthInEMU;
     originalHeightInEMU = Math.round(originalWidthInEMU / aspectRatio);
@@ -1408,7 +1399,7 @@ const computeImageDimensions = (vNode, attributes) => {
     } else if (modifiedHeight && !modifiedWidth) {
       modifiedWidth = Math.round(modifiedHeight * aspectRatio);
     }
-    
+
     // Fallback for images with non-dimensional CSS styles
     // HTML like <img style="font-family: Poppins;" src="..."> creates a style object
     // but contains no width/height properties. The function enters this if block but never
@@ -1430,7 +1421,7 @@ const computeImageDimensions = (vNode, attributes) => {
     modifiedWidth = originalWidthInEMU;
     modifiedHeight = originalHeightInEMU;
   }
-  
+
   // eslint-disable-next-line no-param-reassign
   attributes.width = modifiedWidth;
   // eslint-disable-next-line no-param-reassign
