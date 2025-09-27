@@ -123,6 +123,22 @@ const colorlessColors = ['transparent', 'auto'];
 const verticalAlignValues = ['top', 'middle', 'bottom'];
 const defaultPercentageMarginValue = 0;
 
+const absoluteFontSizes = {
+  'xx-small': '9px',
+  'x-small': '10px',
+  'small': '13px',
+  'medium': '16px',
+  'large': '18px',
+  'x-large': '24px',
+  'xx-large': '32px',
+  'xxx-large': '48px',
+};
+
+const relativeFontSizeFactors = {
+  smaller: 5 / 6,
+  larger: 1.2,
+};
+
 export {
   defaultDocumentOptions,
   defaultTableBorderOptions,
@@ -155,4 +171,6 @@ export {
   defaultDirection,
   defaultPercentageMarginValue,
   defaultTableBorderAttributeOptions,
+  absoluteFontSizes,
+  relativeFontSizeFactors,
 };
