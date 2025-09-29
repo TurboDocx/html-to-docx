@@ -1,16 +1,17 @@
 import { defaultFont, defaultFontSize, defaultLang, defaultHeadingOptions } from '../constants';
 import namespaces from '../namespaces';
+import { escapeXml } from '../utils/xml-escape';
 
 const generateHeadingStyleXML = (headingId, heading) => {
   const headingNumber = headingId.replace('Heading', '');
 
   const fontXml =
     heading.font && heading.font !== defaultFont
-      ? `<w:rFonts w:ascii="${heading.font}" w:eastAsiaTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi" />`
+      ? `<w:rFonts w:ascii="${escapeXml(heading.font)}" w:eastAsiaTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi" />`
       : '';
 
   const fontSizeXml =
-    heading.fontSize && heading.fontSize !== defaultFontSize
+    heading.fontSize !== undefined && heading.fontSize !== defaultFontSize && heading.fontSize > 0
       ? `<w:sz w:val="${heading.fontSize}" /><w:szCs w:val="${heading.fontSize}" />`
       : '';
 
@@ -23,7 +24,8 @@ const generateHeadingStyleXML = (headingId, heading) => {
     heading.spacing.after !== undefined ? `w:after="${heading.spacing.after}"` : '';
   const spacingXml = `<w:spacing w:before="${heading.spacing.before}" ${spacingAfterXml} />`;
 
-  const outlineXml = `<w:outlineLvl w:val="${heading.outlineLevel}" />`;
+  const validOutlineLevel = Math.max(0, Math.min(5, heading.outlineLevel || 0));
+  const outlineXml = `<w:outlineLvl w:val="${validOutlineLevel}" />`;
 
   const additionalPropsXml = headingNumber >= 3 ? '<w:semiHidden /><w:unhideWhenUsed />' : '';
   const unhideWhenUsedXml = headingNumber === 2 ? '<w:unhideWhenUsed />' : '';

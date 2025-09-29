@@ -42,8 +42,8 @@ declare namespace HTMLtoDOCX {
     }
 
     interface HeadingStyle {
-        font?: string | null;
-        fontSize?: number | null;
+        font?: string;
+        fontSize?: number;
         bold?: boolean;
         spacing?: HeadingSpacing;
         keepLines?: boolean;
