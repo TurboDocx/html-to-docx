@@ -3,7 +3,7 @@ import namespaces from '../namespaces';
 import { escapeXml } from '../utils/xml-escape';
 
 const generateHeadingStyleXML = (headingId, heading) => {
-  const headingNumber = headingId.replace('Heading', '');
+  const headingNumber = parseInt(headingId.replace('Heading', ''), 10);
 
   const fontXml =
     heading.font && heading.font !== defaultFont
@@ -25,8 +25,14 @@ const generateHeadingStyleXML = (headingId, heading) => {
   let spacingAfterXml = '';
   let spacingXml = '';
   if (heading.spacing) {
-    spacingAfterXml = heading.spacing.after ? `w:after="${heading.spacing.after}"` : '';
-    spacingXml = `<w:spacing w:before="${heading.spacing.before}" ${spacingAfterXml} />`;
+    const spacingBeforeXml =
+      heading.spacing.before !== undefined ? `w:before="${heading.spacing.before}"` : '';
+    spacingAfterXml =
+      heading.spacing.after !== undefined ? `w:after="${heading.spacing.after}"` : '';
+    spacingXml =
+      spacingBeforeXml || spacingAfterXml
+        ? `<w:spacing ${spacingBeforeXml} ${spacingAfterXml} />`
+        : '';
   }
 
   const validOutlineLevel = Math.max(0, Math.min(5, heading.outlineLevel || 0));
@@ -65,7 +71,12 @@ const generateStylesXML = (
   lang = defaultLang,
   headingConfig = defaultHeadingOptions
 ) => {
-  const config = { ...defaultHeadingOptions, ...headingConfig };
+  const config = Object.fromEntries(
+    Object.entries(defaultHeadingOptions).map(([key, defaultValue]) => [
+      key,
+      headingConfig?.[key] ? { ...defaultValue, ...headingConfig[key] } : defaultValue,
+    ])
+  );
 
   return `
   <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
