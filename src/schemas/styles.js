@@ -7,7 +7,9 @@ const generateHeadingStyleXML = (headingId, heading) => {
 
   const fontXml =
     heading.font && heading.font !== defaultFont
-      ? `<w:rFonts w:ascii="${escapeXml(heading.font)}" w:eastAsiaTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi" />`
+      ? `<w:rFonts w:ascii="${escapeXml(
+          heading.font
+        )}" w:eastAsiaTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi" />`
       : '';
 
   const fontSizeXml =
@@ -20,9 +22,12 @@ const generateHeadingStyleXML = (headingId, heading) => {
   const keepLinesXml = heading.keepLines ? '<w:keepLines />' : '';
   const keepNextXml = heading.keepNext ? '<w:keepNext />' : '';
 
-  const spacingAfterXml =
-    heading.spacing.after !== undefined ? `w:after="${heading.spacing.after}"` : '';
-  const spacingXml = `<w:spacing w:before="${heading.spacing.before}" ${spacingAfterXml} />`;
+  let spacingAfterXml = '';
+  let spacingXml = '';
+  if (heading.spacing) {
+    spacingAfterXml = heading.spacing.after ? `w:after="${heading.spacing.after}"` : '';
+    spacingXml = `<w:spacing w:before="${heading.spacing.before}" ${spacingAfterXml} />`;
+  }
 
   const validOutlineLevel = Math.max(0, Math.min(5, heading.outlineLevel || 0));
   const outlineXml = `<w:outlineLvl w:val="${validOutlineLevel}" />`;
