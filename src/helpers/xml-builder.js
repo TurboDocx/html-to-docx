@@ -798,6 +798,7 @@ const buildFormatting = (htmlTag, options) => {
       return buildBold();
     case 'em':
     case 'i':
+    case 'italic':
       return buildItalics();
     case 'ins':
     case 'u':
