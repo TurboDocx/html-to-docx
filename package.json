@@ -55,9 +55,11 @@
   "scripts": {
     "test": "npm run build && node example/example-node.js",
     "test:rtl": "npm run build && node example/example-rtl.js",
+    "test:list-inheritance": "npm run build && node example/list-inheritance-test.js",
     "test:ts": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/typescript-example.ts",
     "test:ts-rtl": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/rtl-example.ts",
-    "test:all": "npm run test && npm run test:ts && npm run test:ts-rtl",
+    "test:all": "npm run test && npm run test:ts && npm run test:ts-rtl && npm run test:list-inheritance",
+    "test:debug": "npm run build && node --inspect=9229 --enable-source-maps example/list-inheritance-test.js",
     "prerelease": "npm run build:prod",
     "release": "standard-version",
     "lint": "eslint --fix .",
@@ -99,8 +101,7 @@
     "robinminso",
     "shareefalis",
     "adymo",
-    "Srajan-Sanjay-Saxena",
-    "jcasner"
+    "Srajan-Sanjay-Saxena"
   ],
   "license": "MIT",
   "bugs": {
