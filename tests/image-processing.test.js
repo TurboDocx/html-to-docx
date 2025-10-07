@@ -247,6 +247,56 @@ describe('Image Processing', () => {
       // Should have width even with percentage (converted to pixels)
       expect(parsed.xml).toMatch(/cx=["'][0-9]+["']/);
     });
+
+    test('should fallback to original dimensions when width is 0', async () => {
+      const dataUrl = `data:image/png;base64,${PNG_1x1_BASE64}`;
+      const htmlString = `<img src="${dataUrl}" width="0" />`;
+
+      const docx = await HTMLtoDOCX(htmlString, {});
+      const parsed = await parseDOCX(docx);
+
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+
+      // 0 is not a valid dimension, should use original image dimensions (greater than 0)
+      const cxMatch = parsed.xml.match(/cx=["']([0-9]+)["']/);
+      const cyMatch = parsed.xml.match(/cy=["']([0-9]+)["']/);
+      expect(cxMatch).not.toBeNull();
+      expect(cyMatch).not.toBeNull();
+      expect(parseInt(cxMatch[1])).toBeGreaterThan(0);
+      expect(parseInt(cyMatch[1])).toBeGreaterThan(0);
+    });
+
+    test('should fallback to original dimensions when height is 0', async () => {
+      const dataUrl = `data:image/png;base64,${PNG_1x1_BASE64}`;
+      const htmlString = `<img src="${dataUrl}" height="0" />`;
+
+      const docx = await HTMLtoDOCX(htmlString, {});
+      const parsed = await parseDOCX(docx);
+
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+
+      // 0 is not a valid dimension, should use original image dimensions (greater than 0)
+      const cxMatch = parsed.xml.match(/cx=["']([0-9]+)["']/);
+      const cyMatch = parsed.xml.match(/cy=["']([0-9]+)["']/);
+      expect(cxMatch).not.toBeNull();
+      expect(cyMatch).not.toBeNull();
+      expect(parseInt(cxMatch[1])).toBeGreaterThan(0);
+      expect(parseInt(cyMatch[1])).toBeGreaterThan(0);
+    });
+
+    test('should fallback to original dimensions for non-dimensional CSS styles', async () => {
+      const dataUrl = `data:image/png;base64,${PNG_1x1_BASE64}`;
+      const htmlString = `<img src="${dataUrl}" style="font-family: Arial; color: red;" />`;
+
+      const docx = await HTMLtoDOCX(htmlString, {});
+      const parsed = await parseDOCX(docx);
+
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+
+      // Non-dimensional styles shouldn't affect dimensions, should use original
+      expect(parsed.xml).toMatch(/cx=["'][0-9]+["']/);
+      expect(parsed.xml).toMatch(/cy=["'][0-9]+["']/);
+    });
   });
 
   describe('Image caching and deduplication', () => {

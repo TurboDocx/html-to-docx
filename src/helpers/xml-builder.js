@@ -1493,20 +1493,20 @@ const computeImageDimensions = (vNode, attributes) => {
     // sets modifiedWidth/modifiedHeight. Check if dimensions are still undefined after
     // processing styles and use the scaled original dimensions as fallback.
     // BUT: Don't override dimensions that were already set from HTML attributes!
-    if (modifiedWidth === undefined || modifiedHeight === undefined) {
-      if (modifiedWidth === undefined) {
+    if (!modifiedWidth || !modifiedHeight) {
+      if (!modifiedWidth) {
         modifiedWidth = originalWidthInEMU;
       }
-      if (modifiedHeight === undefined) {
+      if (!modifiedHeight) {
         modifiedHeight = originalHeightInEMU;
       }
     }
   } else {
     // No CSS styles - only use original dimensions if HTML attributes didn't set them
-    if (modifiedWidth === undefined) {
+    if (!modifiedWidth) {
       modifiedWidth = originalWidthInEMU;
     }
-    if (modifiedHeight === undefined) {
+    if (!modifiedHeight) {
       modifiedHeight = originalHeightInEMU;
     }
   }
