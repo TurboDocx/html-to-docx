@@ -13,6 +13,32 @@ import { parseDOCX } from './docx-validator.js';
 // Re-export parseDOCX for convenience
 export { parseDOCX };
 
+// =============================================================================
+// INTERNAL HELPERS
+// =============================================================================
+
+/**
+ * Validate paragraph index and return the paragraph.
+ *
+ * @param {Object} parsed - Parsed DOCX object
+ * @param {number} paragraphIndex - Zero-based paragraph index
+ * @param {string} functionName - Name of calling function (for error messages)
+ * @returns {Object} The validated paragraph object
+ * @throws {Error} If index is out of range
+ */
+function validateParagraphIndex(parsed, paragraphIndex, functionName) {
+  if (paragraphIndex >= parsed.paragraphs.length) {
+    throw new Error(
+      `${functionName}: Paragraph index ${paragraphIndex} out of range. Document has ${parsed.paragraphs.length} paragraphs.`
+    );
+  }
+  return parsed.paragraphs[paragraphIndex];
+}
+
+// =============================================================================
+// PUBLIC ASSERTION FUNCTIONS
+// =============================================================================
+
 /**
  * Assert that a parsed DOCX has the expected number of paragraphs
  * @param {Object} parsed - Parsed DOCX object from parseDOCX()
@@ -29,14 +55,9 @@ export function assertParagraphCount(parsed, expectedCount) {
  * @param {string} expectedText - Expected text content
  */
 export function assertParagraphText(parsed, paragraphIndex, expectedText) {
-  if (paragraphIndex >= parsed.paragraphs.length) {
-    throw new Error(
-      `Paragraph index ${paragraphIndex} out of range. Document has ${parsed.paragraphs.length} paragraphs.`
-    );
-  }
-
-  const actualText = parsed.paragraphs[paragraphIndex].text;
-  expect(actualText).toBe(expectedText);
+  // Use shared validation helper instead of duplicating bounds check
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertParagraphText');
+  expect(para.text).toBe(expectedText);
 }
 
 /**
@@ -46,14 +67,8 @@ export function assertParagraphText(parsed, paragraphIndex, expectedText) {
  * @param {string} expectedAlignment - Expected alignment (left, center, right, both)
  */
 export function assertParagraphAlignment(parsed, paragraphIndex, expectedAlignment) {
-  if (paragraphIndex >= parsed.paragraphs.length) {
-    throw new Error(
-      `Paragraph index ${paragraphIndex} out of range. Document has ${parsed.paragraphs.length} paragraphs.`
-    );
-  }
-
-  const actualAlignment = parsed.paragraphs[paragraphIndex].properties.alignment;
-  expect(actualAlignment).toBe(expectedAlignment);
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertParagraphAlignment');
+  expect(para.properties.alignment).toBe(expectedAlignment);
 }
 
 /**
@@ -76,19 +91,13 @@ export function assertAllParagraphsHaveProperty(parsed, propertyName, expectedVa
  * @param {string} expectedColor - Expected color in hex (e.g., 'FF0000' for red)
  */
 export function assertRunColor(parsed, paragraphIndex, expectedColor) {
-  if (paragraphIndex >= parsed.paragraphs.length) {
-    throw new Error(
-      `Paragraph index ${paragraphIndex} out of range. Document has ${parsed.paragraphs.length} paragraphs.`
-    );
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertRunColor');
+
+  if (para.runs.length === 0) {
+    throw new Error(`assertRunColor: Paragraph ${paragraphIndex} has no text runs`);
   }
 
-  const runs = parsed.paragraphs[paragraphIndex].runs;
-  if (runs.length === 0) {
-    throw new Error(`Paragraph ${paragraphIndex} has no text runs`);
-  }
-
-  const actualColor = runs[0].color;
-  expect(actualColor).toBe(expectedColor);
+  expect(para.runs[0].color).toBe(expectedColor);
 }
 
 /**
@@ -98,19 +107,13 @@ export function assertRunColor(parsed, paragraphIndex, expectedColor) {
  * @param {string} expectedFont - Expected font name
  */
 export function assertRunFont(parsed, paragraphIndex, expectedFont) {
-  if (paragraphIndex >= parsed.paragraphs.length) {
-    throw new Error(
-      `Paragraph index ${paragraphIndex} out of range. Document has ${parsed.paragraphs.length} paragraphs.`
-    );
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertRunFont');
+
+  if (para.runs.length === 0) {
+    throw new Error(`assertRunFont: Paragraph ${paragraphIndex} has no text runs`);
   }
 
-  const runs = parsed.paragraphs[paragraphIndex].runs;
-  if (runs.length === 0) {
-    throw new Error(`Paragraph ${paragraphIndex} has no text runs`);
-  }
-
-  const actualFont = runs[0].font;
-  expect(actualFont).toBe(expectedFont);
+  expect(para.runs[0].font).toBe(expectedFont);
 }
 
 /**
@@ -121,12 +124,6 @@ export function assertRunFont(parsed, paragraphIndex, expectedFont) {
  * @param {any} expectedValue - Expected value
  */
 export function assertParagraphProperty(parsed, paragraphIndex, propertyName, expectedValue) {
-  if (paragraphIndex >= parsed.paragraphs.length) {
-    throw new Error(
-      `Paragraph index ${paragraphIndex} out of range. Document has ${parsed.paragraphs.length} paragraphs.`
-    );
-  }
-
-  const actualValue = parsed.paragraphs[paragraphIndex].properties[propertyName];
-  expect(actualValue).toBe(expectedValue);
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertParagraphProperty');
+  expect(para.properties[propertyName]).toBe(expectedValue);
 }
