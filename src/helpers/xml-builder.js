@@ -159,6 +159,50 @@ const transformText = (text, transformation) => {
   }
 }
 
+const mergeFormattingAttrs = (base = {}, override = {}) => {
+  const result = { ...base, ...override };
+  
+  // Handle text decoration inheritance
+  if (override.textDecoration && base.textDecoration) {
+    const parentDecoration = base.textDecoration;
+    const childDecoration = override.textDecoration;
+    
+    if (parentDecoration.line && childDecoration.line) {
+      if (parentDecoration.line && childDecoration.line && parentDecoration.line !== childDecoration.line) {
+        result.textDecoration = {
+          line: 'both',
+          underlineColor: childDecoration.line === 'underline' ? (childDecoration.color || override.color || parentDecoration.color || base.color) : (parentDecoration.line === 'underline' ? (parentDecoration.color || override.color || base.color) : undefined),
+          strikethroughColor: childDecoration.line === 'line-through' ? (childDecoration.color || override.color || parentDecoration.color || base.color) : (parentDecoration.line === 'line-through' ? (parentDecoration.color || override.color || base.color) : undefined),
+          style: childDecoration.style || parentDecoration.style || 'single'
+        };
+      } else {
+        // Same line type, merge properties
+        result.textDecoration = {
+          ...parentDecoration,
+          ...childDecoration,
+          color: childDecoration.color || parentDecoration.color || override.color || base.color
+        };
+      }
+    } else {
+      result.textDecoration = { ...parentDecoration, ...childDecoration };
+    }
+  } else if (
+    base.textDecoration &&
+    !override.textDecoration &&
+    !base.textDecoration.disabled
+  ) {
+    // Inherit parent text decoration only if child has no explicit decoration
+    // CRITICAL FIX: Preserve the original decoration color from parent, don't override with child's text color
+    result.textDecoration = { 
+      ...base.textDecoration,
+      // Keep the parent's decoration color unless child explicitly overrides it
+      color: base.textDecoration.color || override.color || base.color
+    };
+  }
+
+  return result;
+};
+
 const buildRunFontFragment = (fontName = defaultFont) =>
   fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'rFonts')
@@ -282,13 +326,28 @@ const buildTextDecoration = (value) => {
     return fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'u')
       .att('@w', 'val', value.style ? value.style : 'single')
-      .att('@w', 'color', value.color ? value.color : '000000')
+      .att('@w', 'color', value.color || '000000')
       .up();
   } else if (value.line === 'line-through') {
     return fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'strike')
       .att('@w', 'val', true)
       .up();
+  } else if (value.line === 'both') {
+    const bothFragment = fragment({ namespaceAlias: { w: namespaces.w } });
+    
+    // Add underline
+    bothFragment.ele('@w', 'u')
+      .att('@w', 'val', value.style || 'single')
+      .att('@w', 'color', value.underlineColor || value.color || '000000')
+      .up();
+    
+    // Add strikethrough
+    bothFragment.ele('@w', 'strike')
+      .att('@w', 'val', true)
+      .up();
+    
+    return bothFragment;
   }
 
   // line has both 'underline' and 'line-through'
@@ -1497,8 +1556,13 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
               break;
             }
           } else {
-            // eslint-disable-next-line no-useless-escape, prefer-destructuring
-            base64String = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)[2];
+            const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (match && match[2]) {
+              base64String = match[2];
+            } else {
+              console.warn('[DEBUG] Invalid image data URI format, skipping image');
+              break;
+            }
           }
           const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
           const imageProperties = sizeOf(imageBuffer);
@@ -1552,8 +1616,14 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           return paragraphFragment;
         }
       } else {
-        // eslint-disable-next-line no-useless-escape, prefer-destructuring
-        base64String = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)[2];
+        const match = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (match && match[2]) {
+          base64String = match[2];
+        } else {
+          console.warn('[DEBUG] Invalid image data URI format, skipping image');
+          paragraphFragment.up();
+          return paragraphFragment;
+        }
       }
 
       const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
