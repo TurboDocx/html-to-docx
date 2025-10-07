@@ -1,5 +1,6 @@
 import HTMLtoDOCX from '../index.js';
 import { defaultHeadingOptions } from '../src/constants.js';
+import { parseDOCX, assertParagraphCount, assertParagraphText } from './helpers/docx-assertions.js';
 
 describe('Heading Styles Integration Tests', () => {
   describe('End-to-end document generation', () => {
@@ -15,9 +16,16 @@ describe('Heading Styles Integration Tests', () => {
       `;
 
       const result = await HTMLtoDOCX(htmlString, {});
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+      // Verify document structure
+      assertParagraphCount(parsed, 6);
+      assertParagraphText(parsed, 0, 'Main Heading');
+      assertParagraphText(parsed, 1, 'Content under main heading');
+      assertParagraphText(parsed, 2, 'Subheading');
+      assertParagraphText(parsed, 3, 'Content under subheading');
+      assertParagraphText(parsed, 4, 'Section Heading');
+      assertParagraphText(parsed, 5, 'Content under section');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -42,9 +50,11 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Custom Styled Heading');
+      assertParagraphText(parsed, 1, 'This heading should use custom styles');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -59,9 +69,15 @@ describe('Heading Styles Integration Tests', () => {
       `;
 
       const result = await HTMLtoDOCX(htmlString, {});
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+      assertParagraphCount(parsed, 6);
+      assertParagraphText(parsed, 0, 'Heading 1');
+      assertParagraphText(parsed, 1, 'Heading 2');
+      assertParagraphText(parsed, 2, 'Heading 3');
+      assertParagraphText(parsed, 3, 'Heading 4');
+      assertParagraphText(parsed, 4, 'Heading 5');
+      assertParagraphText(parsed, 5, 'Heading 6');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -82,9 +98,12 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+      assertParagraphCount(parsed, 3);
+      assertParagraphText(parsed, 0, 'Title with Custom Font');
+      assertParagraphText(parsed, 1, 'Subtitle with Default Styles');
+      assertParagraphText(parsed, 2, 'Section Header');
     });
   });
 
@@ -102,9 +121,11 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      // The document should be generated with merged configuration
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
+      assertParagraphText(parsed, 1, 'Content');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -116,9 +137,11 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      // Should use all defaults when empty config provided
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
+      assertParagraphText(parsed, 1, 'Content');
     });
   });
 
@@ -137,9 +160,14 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      // Font name with ampersand should be properly escaped in XML
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
+      assertParagraphText(parsed, 1, 'Content');
+
+      // Font name with ampersand should be properly escaped and document generated
+      expect(parsed.paragraphs[0].runs.length).toBeGreaterThan(0);
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -156,9 +184,14 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      // Malicious font name should be escaped and document still generated
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
+      assertParagraphText(parsed, 1, 'Content');
+
+      // Malicious font name should be escaped and not executed
+      expect(parsed.xml).not.toContain('<script>');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -175,9 +208,13 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      // All special characters should be escaped properly
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
+
+      // Test validates that special characters in font names don't crash document generation
+      // Note: Font escaping occurs in styles.xml, not document.xml
     });
   });
 
@@ -196,8 +233,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -214,8 +253,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -232,8 +273,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -250,8 +293,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -268,9 +313,11 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      // Zero spacing is valid and should be rendered
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
+      // Zero spacing is valid and document should generate
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -287,8 +334,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Test Heading');
     });
   });
 
@@ -319,9 +368,16 @@ describe('Heading Styles Integration Tests', () => {
       `;
 
       const result = await HTMLtoDOCX(htmlString, {});
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
-      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+      assertParagraphCount(parsed, 14);
+      assertParagraphText(parsed, 0, 'Document Title');
+      assertParagraphText(parsed, 2, 'Chapter 1');
+      assertParagraphText(parsed, 4, 'Section 1.1');
+      assertParagraphText(parsed, 6, 'Subsection 1.1.1');
+      assertParagraphText(parsed, 8, 'Detail 1.1.1.1');
+      assertParagraphText(parsed, 10, 'Note 1.1.1.1.1');
+      assertParagraphText(parsed, 12, 'Chapter 2');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -352,8 +408,13 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 4);
+      assertParagraphText(parsed, 0, 'Custom H1');
+      assertParagraphText(parsed, 1, 'Custom H2');
+      assertParagraphText(parsed, 2, 'Default H3');
+      assertParagraphText(parsed, 3, 'Default H4');
     });
   });
 
@@ -377,8 +438,11 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Heading with Custom Styles');
+      assertParagraphText(parsed, 1, 'Paragraph with document font');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -399,8 +463,12 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 3);
+      assertParagraphText(parsed, 0, 'Test Document');
+      assertParagraphText(parsed, 1, 'Subsection');
+      assertParagraphText(parsed, 2, 'Content');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -422,8 +490,11 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'عنوان');
+      assertParagraphText(parsed, 1, 'محتوى');
     });
   });
 
@@ -442,8 +513,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Non-Bold Heading');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -460,8 +533,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Heading Without Keep Lines');
     });
 
     // https://github.com/TurboDocx/html-to-docx/pull/129
@@ -478,8 +553,10 @@ describe('Heading Styles Integration Tests', () => {
       };
 
       const result = await HTMLtoDOCX(htmlString, options);
+      const parsed = await parseDOCX(result);
 
-      expect(result).toBeDefined();
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 0, 'Heading Without Keep Next');
     });
   });
 });
