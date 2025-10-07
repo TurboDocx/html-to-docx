@@ -5,6 +5,17 @@
 
 import JSZip from 'jszip';
 import { create } from 'xmlbuilder2';
+import {
+  PARAGRAPH_REGEX,
+  TEXT_REGEX,
+  RUN_REGEX,
+  ALIGNMENT_REGEX,
+  SPACING_BEFORE_REGEX,
+  SPACING_AFTER_REGEX,
+  FONT_REGEX,
+  COLOR_REGEX,
+  FONT_SIZE_REGEX,
+} from './constants.js';
 
 /**
  * Unzip a DOCX file buffer and return the JSZip instance
@@ -45,9 +56,9 @@ export function parseXML(xmlString) {
  * @returns {Array} Array of paragraph elements
  */
 export function findParagraphs(xmlString) {
-  // Match all <w:p> elements (paragraphs)
-  const paragraphRegex = /<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
-  const matches = xmlString.match(paragraphRegex);
+  // Use pre-compiled regex constant from constants.js
+  // Avoids recompiling regex on every function call
+  const matches = xmlString.match(PARAGRAPH_REGEX);
   return matches || [];
 }
 
@@ -57,12 +68,13 @@ export function findParagraphs(xmlString) {
  * @returns {string} Concatenated text content from all text runs
  */
 export function extractText(paragraphXml) {
-  // Match all <w:t> elements (text runs)
-  const textRegex = /<w:t[^>]*>(.*?)<\/w:t>/g;
   const texts = [];
   let match;
 
-  while ((match = textRegex.exec(paragraphXml)) !== null) {
+  // Use pre-compiled regex constant from constants.js
+  // IMPORTANT: Reset lastIndex for global regexes when reusing
+  TEXT_REGEX.lastIndex = 0;
+  while ((match = TEXT_REGEX.exec(paragraphXml)) !== null) {
     texts.push(match[1]);
   }
 
@@ -77,20 +89,23 @@ export function extractText(paragraphXml) {
 export function extractParagraphProperties(paragraphXml) {
   const properties = {};
 
+  // Use pre-compiled regex constants from constants.js for all property extractions
+  // Each regex is compiled once at module load instead of on every function call
+
   // Extract alignment (justification)
-  const alignmentMatch = paragraphXml.match(/<w:jc w:val="([^"]+)"/);
+  const alignmentMatch = paragraphXml.match(ALIGNMENT_REGEX);
   if (alignmentMatch) {
     properties.alignment = alignmentMatch[1];
   }
 
   // Extract spacing before
-  const spacingBeforeMatch = paragraphXml.match(/<w:spacing[^>]*w:before="([^"]+)"/);
+  const spacingBeforeMatch = paragraphXml.match(SPACING_BEFORE_REGEX);
   if (spacingBeforeMatch) {
     properties.spacingBefore = parseInt(spacingBeforeMatch[1], 10);
   }
 
   // Extract spacing after
-  const spacingAfterMatch = paragraphXml.match(/<w:spacing[^>]*w:after="([^"]+)"/);
+  const spacingAfterMatch = paragraphXml.match(SPACING_AFTER_REGEX);
   if (spacingAfterMatch) {
     properties.spacingAfter = parseInt(spacingAfterMatch[1], 10);
   }
@@ -105,28 +120,31 @@ export function extractParagraphProperties(paragraphXml) {
  */
 export function extractRunProperties(paragraphXml) {
   const runs = [];
-
-  // Match all <w:r> elements (text runs)
-  const runRegex = /<w:r\b[^>]*>([\s\S]*?)<\/w:r>/g;
   let match;
 
-  while ((match = runRegex.exec(paragraphXml)) !== null) {
+  // Use pre-compiled regex constant from constants.js
+  // IMPORTANT: Reset lastIndex for global regexes when reusing
+  RUN_REGEX.lastIndex = 0;
+  while ((match = RUN_REGEX.exec(paragraphXml)) !== null) {
     const runXml = match[1];
     const runProps = {};
 
+    // Use pre-compiled regex constants for all run property extractions
+
     // Extract font family
-    const fontMatch = runXml.match(/<w:rFonts[^>]*w:ascii="([^"]+)"/);
+    const fontMatch = runXml.match(FONT_REGEX);
     if (fontMatch) {
       runProps.font = fontMatch[1];
     }
 
     // Extract color
-    const colorMatch = runXml.match(/<w:color w:val="([^"]+)"/);
+    const colorMatch = runXml.match(COLOR_REGEX);
     if (colorMatch) {
       runProps.color = colorMatch[1];
     }
 
     // Extract bold
+    // Note: Using string includes for simple existence checks (faster than regex)
     if (runXml.includes('<w:b />') || runXml.includes('<w:b/>')) {
       runProps.bold = true;
     }
@@ -137,13 +155,13 @@ export function extractRunProperties(paragraphXml) {
     }
 
     // Extract font size
-    const sizeMatch = runXml.match(/<w:sz w:val="([^"]+)"/);
+    const sizeMatch = runXml.match(FONT_SIZE_REGEX);
     if (sizeMatch) {
       runProps.fontSize = parseInt(sizeMatch[1], 10);
     }
 
     // Extract text content
-    const textMatch = runXml.match(/<w:t[^>]*>(.*?)<\/w:t>/);
+    const textMatch = runXml.match(TEXT_REGEX);
     if (textMatch) {
       runProps.text = textMatch[1];
     }
