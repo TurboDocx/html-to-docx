@@ -10,7 +10,7 @@ import isVText from 'virtual-dom/vnode/is-vtext';
 import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
 import sizeOf from 'image-size';
-import { getMimeType, downloadImageToBase64 } from '../utils/image';
+import { getMimeType, downloadImageToBase64, parseDataUrl } from '../utils/image';
 
 import namespaces from '../namespaces';
 import {
@@ -1603,12 +1603,12 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           // Check if this is already a data URL (from cache or previous processing)
           if (imageSource.startsWith('data:')) {
             // Already processed, extract base64 part
-            const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (!match || !match[2]) {
+            const parsed = parseDataUrl(imageSource);
+            if (!parsed) {
               console.warn(`[BUILDPARAGRAPH] Invalid data URL format: ${imageSource}`);
               continue;
             }
-            base64String = match[2];
+            base64String = parsed.base64;
           } else if (isValidUrl(imageSource)) {
             base64String = await downloadImageToBase64(imageSource, 5000).catch((error) => {
               // eslint-disable-next-line no-console
@@ -1697,13 +1697,13 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       // Check if this is already a data URL (from cache or previous processing)
       if (imageSource.startsWith('data:')) {
         // Already processed, extract base64 part
-        const match = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (!match || !match[2]) {
+        const parsed = parseDataUrl(imageSource);
+        if (!parsed) {
           console.warn(`[BUILDPARAGRAPH-VNODE] Invalid data URL format: ${imageSource}`);
           paragraphFragment.up();
           return paragraphFragment;
         }
-        base64String = match[2];
+        base64String = parsed.base64;
       } else if (isValidUrl(imageSource)) {
         base64String = await downloadImageToBase64(imageSource, 5000).catch((error) => {
           // eslint-disable-next-line no-console

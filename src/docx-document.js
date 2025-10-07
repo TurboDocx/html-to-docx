@@ -1,5 +1,6 @@
 import { create, fragment } from 'xmlbuilder2';
 import { nanoid } from 'nanoid';
+import { parseDataUrl } from './utils/image';
 
 import {
   generateCoreXML,
@@ -506,15 +507,14 @@ class DocxDocument {
   }
 
   createMediaFile(base64String) {
-    // eslint-disable-next-line no-useless-escape
-    const matches = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches.length !== 3) {
+    const parsed = parseDataUrl(base64String);
+    if (!parsed) {
       throw new Error('Invalid base64 string');
     }
 
-    const base64FileContent = matches[2];
-    // matches array contains file type in base64 format - image/jpeg and base64 stringified data
-    const mimeTypePart = matches[1].match(/\/(.*?)$/);
+    const base64FileContent = parsed.base64;
+    // Extract file extension from MIME type (e.g., image/jpeg -> jpeg)
+    const mimeTypePart = parsed.mimeType.match(/\/(.*?)$/);
     const fileExtension =
       !mimeTypePart || mimeTypePart[1] === 'octet-stream' ? 'png' : mimeTypePart[1];
 

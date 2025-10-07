@@ -61,6 +61,23 @@ export const getMimeType = (source, base64) => {
 };
 
 /**
+ * Parses a data URL and extracts the MIME type and base64 content.
+ *
+ * @param {string} dataUrl - The data URL to parse (e.g., "data:image/png;base64,iVBORw0...")
+ * @returns {Object|null} Object with {mimeType: string, base64: string} or null if invalid
+ */
+export function parseDataUrl(dataUrl) {
+  const match = dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+  if (!match || match.length !== 3) {
+    return null;
+  }
+  return {
+    mimeType: match[1],
+    base64: match[2],
+  };
+}
+
+/**
  * Downloads an image from a URL and converts it to base64.
  *
  * @param {string} url - The URL of the image to download
@@ -85,7 +102,7 @@ export async function downloadImageToBase64(url, timeout = 5000, maxSize = 10 * 
     }
 
     // Convert arraybuffer to base64
-    const base64 = Buffer.from(response.data, 'binary').toString('base64');
+    const base64 = Buffer.from(response.data).toString('base64');
 
     // Ensure we got valid base64 data
     if (!base64 || base64.length === 0) {

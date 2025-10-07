@@ -3,8 +3,17 @@
 
 import HTMLtoDOCX from '../index.js';
 import { parseDOCX, assertParagraphCount } from './helpers/docx-assertions.js';
-import { getMimeType, guessMimeTypeFromBase64 } from '../src/utils/image.js';
-import { PNG_1x1_BASE64, JPEG_1x1_BASE64, GIF_1x1_BASE64 } from './fixtures/index.js';
+import {
+  getMimeType,
+  guessMimeTypeFromBase64,
+  downloadImageToBase64,
+  parseDataUrl,
+} from '../src/utils/image.js';
+import { PNG_1x1_BASE64, JPEG_1x1_BASE64, GIF_1x1_BASE64, PNG_FIXTURE } from './fixtures/index.js';
+import axios from 'axios';
+
+// Mock axios for downloadImageToBase64 tests
+jest.mock('axios');
 
 describe('Image Processing', () => {
   // Base64 images loaded from fixture files
@@ -95,6 +104,36 @@ describe('Image Processing', () => {
     test('should fallback to base64 detection when extension lookup fails', () => {
       const mimeType = getMimeType('unknown', PNG_1x1_BASE64);
       expect(mimeType).toBe('image/png');
+    });
+  });
+
+  describe('parseDataUrl utility', () => {
+    test('should parse valid PNG data URL', () => {
+      const dataUrl = `data:image/png;base64,${PNG_1x1_BASE64}`;
+      const result = parseDataUrl(dataUrl);
+
+      expect(result).not.toBeNull();
+      expect(result.mimeType).toBe('image/png');
+      expect(result.base64).toBe(PNG_1x1_BASE64);
+    });
+
+    test('should parse valid JPEG data URL', () => {
+      const dataUrl = `data:image/jpeg;base64,${JPEG_1x1_BASE64}`;
+      const result = parseDataUrl(dataUrl);
+
+      expect(result).not.toBeNull();
+      expect(result.mimeType).toBe('image/jpeg');
+      expect(result.base64).toBe(JPEG_1x1_BASE64);
+    });
+
+    test('should return null for invalid data URL format', () => {
+      expect(parseDataUrl('not-a-data-url')).toBeNull();
+      expect(parseDataUrl('data:invalid-format')).toBeNull();
+      expect(parseDataUrl('data:image/png,notbase64')).toBeNull();
+    });
+
+    test('should return null for empty string', () => {
+      expect(parseDataUrl('')).toBeNull();
     });
   });
 
@@ -437,6 +476,97 @@ describe('Image Processing', () => {
       const parsed = await parseDOCX(docx);
 
       expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('downloadImageToBase64 utility', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('should download image and convert to base64', async () => {
+      // Mock successful axios response with arraybuffer
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE, // Use actual PNG buffer from fixtures
+        status: 200,
+      });
+
+      const base64 = await downloadImageToBase64('https://example.com/image.png');
+
+      // Verify axios was called with correct config
+      expect(axios.get).toHaveBeenCalledWith('https://example.com/image.png', {
+        responseType: 'arraybuffer',
+        timeout: 5000,
+        maxContentLength: 10 * 1024 * 1024,
+        maxBodyLength: 10 * 1024 * 1024,
+        validateStatus: expect.any(Function),
+      });
+
+      // Verify returned base64 matches our fixture
+      expect(base64).toBe(PNG_1x1_BASE64);
+    });
+
+    test('should handle custom timeout and maxSize', async () => {
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE,
+        status: 200,
+      });
+
+      await downloadImageToBase64('https://example.com/image.png', 3000, 5 * 1024 * 1024);
+
+      expect(axios.get).toHaveBeenCalledWith('https://example.com/image.png', {
+        responseType: 'arraybuffer',
+        timeout: 3000,
+        maxContentLength: 5 * 1024 * 1024,
+        maxBodyLength: 5 * 1024 * 1024,
+        validateStatus: expect.any(Function),
+      });
+    });
+
+    test('should throw error on timeout', async () => {
+      axios.get.mockRejectedValue({
+        code: 'ECONNABORTED',
+        message: 'timeout',
+      });
+
+      await expect(downloadImageToBase64('https://example.com/image.png')).rejects.toThrow(
+        'Request timeout after 5000ms'
+      );
+    });
+
+    test('should throw error on HTTP error status', async () => {
+      axios.get.mockRejectedValue({
+        response: {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      });
+
+      await expect(downloadImageToBase64('https://example.com/image.png')).rejects.toThrow(
+        'HTTP 404: Not Found'
+      );
+    });
+
+    test('should throw error on network error', async () => {
+      axios.get.mockRejectedValue({
+        request: {},
+        message: 'Network error',
+      });
+
+      await expect(downloadImageToBase64('https://example.com/image.png')).rejects.toThrow(
+        'Network error: Network error'
+      );
+    });
+
+    test('should throw error on empty response', async () => {
+      axios.get.mockResolvedValue({
+        data: Buffer.from([]),
+        status: 200,
+      });
+
+      await expect(downloadImageToBase64('https://example.com/image.png')).rejects.toThrow(
+        'Empty response data received'
+      );
     });
   });
 
