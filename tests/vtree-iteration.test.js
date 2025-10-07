@@ -4,7 +4,7 @@
 // This PR fixes the vTree iteration to handle both array and single object cases.
 // Tests validate actual DOCX XML output rather than just checking if generation succeeds.
 
-import HTMLtoDOCX from '../dist/html-to-docx.esm.js';
+import HTMLtoDOCX from '../index.js';
 import {
   parseDOCX,
   assertParagraphCount,
