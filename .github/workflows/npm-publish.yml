@@ -39,7 +39,7 @@ jobs:
       # Install dependencies
       - run: npm ci
 
-      # Build the production bundle (compiles TypeScript, minifies, etc.)
+      # Build the production bundle (bundles modules, minifies code with terser)
       - run: npm run build:prod
 
       # Publish to npm with public access (scoped packages are private by default)
