@@ -1,0 +1,33 @@
+# This workflow runs comprehensive tests on pull requests and pushes to main/develop branches
+# Ensures code quality and prevents regressions before merging
+
+name: Test Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main      # Run tests on PRs targeting main branch
+      - develop   # Run tests on PRs targeting develop branch
+  push:
+    branches:
+      - main      # Run tests on direct pushes to main
+      - develop   # Run tests on direct pushes to develop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci  # Clean install to ensure reproducible builds
+
+      - name: Run all tests
+        # Runs: unit tests (Jest), integration tests, heading styles examples, and TypeScript tests
+        run: npm run test:all
