@@ -1,12 +1,84 @@
-import { defaultFont, defaultFontSize, defaultLang } from '../constants';
+import { defaultFont, defaultFontSize, defaultLang, defaultHeadingOptions } from '../constants';
 import namespaces from '../namespaces';
+import { escapeXml } from '../utils/xml-escape';
+
+const generateHeadingStyleXML = (headingId, heading) => {
+  const headingNumber = parseInt(headingId.replace('Heading', ''), 10);
+
+  const fontXml =
+    heading.font && heading.font !== defaultFont
+      ? `<w:rFonts w:ascii="${escapeXml(
+          heading.font
+        )}" w:eastAsiaTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi" />`
+      : '';
+
+  const fontSizeXml =
+    heading.fontSize !== undefined && heading.fontSize !== defaultFontSize && heading.fontSize > 0
+      ? `<w:sz w:val="${heading.fontSize}" /><w:szCs w:val="${heading.fontSize}" />`
+      : '';
+
+  const boldXml = heading.bold ? '<w:b />' : '';
+
+  const keepLinesXml = heading.keepLines ? '<w:keepLines />' : '';
+  const keepNextXml = heading.keepNext ? '<w:keepNext />' : '';
+
+  let spacingAfterXml = '';
+  let spacingXml = '';
+  if (heading.spacing) {
+    const spacingBeforeXml =
+      heading.spacing.before !== undefined ? `w:before="${heading.spacing.before}"` : '';
+    spacingAfterXml =
+      heading.spacing.after !== undefined ? `w:after="${heading.spacing.after}"` : '';
+    spacingXml =
+      spacingBeforeXml || spacingAfterXml
+        ? `<w:spacing ${spacingBeforeXml} ${spacingAfterXml} />`
+        : '';
+  }
+
+  const validOutlineLevel = Math.max(0, Math.min(5, heading.outlineLevel || 0));
+  const outlineXml = `<w:outlineLvl w:val="${validOutlineLevel}" />`;
+
+  const additionalPropsXml = headingNumber >= 3 ? '<w:semiHidden /><w:unhideWhenUsed />' : '';
+  const unhideWhenUsedXml = headingNumber === 2 ? '<w:unhideWhenUsed />' : '';
+
+  return `
+	<w:style w:type="paragraph" w:styleId="${headingId}">
+	  <w:name w:val="heading ${headingNumber}" />
+	  <w:basedOn w:val="Normal" />
+	  <w:next w:val="Normal" />
+	  <w:uiPriority w:val="9" />
+	  ${unhideWhenUsedXml}
+	  ${additionalPropsXml}
+	  <w:qFormat />
+	  <w:pPr>
+		${keepNextXml}
+		${keepLinesXml}
+		${spacingXml}
+		${outlineXml}
+	  </w:pPr>
+	  <w:rPr>
+		${fontXml}
+		${boldXml}
+		${fontSizeXml}
+	  </w:rPr>
+	</w:style>`;
+};
 
 const generateStylesXML = (
   font = defaultFont,
   fontSize = defaultFontSize,
   complexScriptFontSize = defaultFontSize,
-  lang = defaultLang
-) => `
+  lang = defaultLang,
+  headingConfig = defaultHeadingOptions
+) => {
+  const config = Object.fromEntries(
+    Object.entries(defaultHeadingOptions).map(([key, defaultValue]) => [
+      key,
+      headingConfig?.[key] ? { ...defaultValue, ...headingConfig[key] } : defaultValue,
+    ])
+  );
+
+  return `
   <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
   <w:styles xmlns:w="${namespaces.w}" xmlns:r="${namespaces.r}">
@@ -35,122 +107,15 @@ const generateStylesXML = (
 		<w:u w:val="single" />
 	  </w:rPr>
 	</w:style>
-	<w:style w:type="paragraph" w:styleId="Heading1">
-	  <w:name w:val="heading 1" />
-	  <w:basedOn w:val="Normal" />
-	  <w:next w:val="Normal" />
-	  <w:uiPriority w:val="9" />
-	  <w:qFormat />
-	  <w:pPr>
-		<w:keepNext />
-		<w:keepLines />
-		<w:spacing w:before="480" />
-		<w:outlineLvl w:val="0" />
-	  </w:pPr>
-	  <w:rPr>
-		<w:b />
-		<w:sz w:val="48" />
-		<w:szCs w:val="48" />
-	  </w:rPr>
-	</w:style>
-	<w:style w:type="paragraph" w:styleId="Heading2">
-	  <w:name w:val="heading 2" />
-	  <w:basedOn w:val="Normal" />
-	  <w:next w:val="Normal" />
-	  <w:uiPriority w:val="9" />
-	  <w:unhideWhenUsed />
-	  <w:qFormat />
-	  <w:pPr>
-		<w:keepNext />
-		<w:keepLines />
-		<w:spacing w:before="360" w:after="80" />
-		<w:outlineLvl w:val="1" />
-	  </w:pPr>
-	  <w:rPr>
-		<w:b />
-		<w:sz w:val="36" />
-		<w:szCs w:val="36" />
-	  </w:rPr>
-	</w:style>
-	<w:style w:type="paragraph" w:styleId="Heading3">
-	  <w:name w:val="heading 3" />
-	  <w:basedOn w:val="Normal" />
-	  <w:next w:val="Normal" />
-	  <w:uiPriority w:val="9" />
-	  <w:semiHidden />
-	  <w:unhideWhenUsed />
-	  <w:qFormat />
-	  <w:pPr>
-		<w:keepNext />
-		<w:keepLines />
-		<w:spacing w:before="280" w:after="80" />
-		<w:outlineLvl w:val="2" />
-	  </w:pPr>
-	  <w:rPr>
-		<w:b />
-		<w:sz w:val="28" />
-		<w:szCs w:val="28" />
-	  </w:rPr>
-	</w:style>
-	<w:style w:type="paragraph" w:styleId="Heading4">
-	  <w:name w:val="heading 4" />
-	  <w:basedOn w:val="Normal" />
-	  <w:next w:val="Normal" />
-	  <w:uiPriority w:val="9" />
-	  <w:semiHidden />
-	  <w:unhideWhenUsed />
-	  <w:qFormat />
-	  <w:pPr>
-		<w:keepNext />
-		<w:keepLines />
-		<w:spacing w:before="240" w:after="40" />
-		<w:outlineLvl w:val="3" />
-	  </w:pPr>
-	  <w:rPr>
-		<w:b />
-		<w:sz w:val="24" />
-		<w:szCs w:val="24" />
-	  </w:rPr>
-	</w:style>
-	<w:style w:type="paragraph" w:styleId="Heading5">
-	  <w:name w:val="heading 5" />
-	  <w:basedOn w:val="Normal" />
-	  <w:next w:val="Normal" />
-	  <w:uiPriority w:val="9" />
-	  <w:semiHidden />
-	  <w:unhideWhenUsed />
-	  <w:qFormat />
-	  <w:pPr>
-		<w:keepNext />
-		<w:keepLines />
-		<w:spacing w:before="220" w:after="40" />
-		<w:outlineLvl w:val="4" />
-	  </w:pPr>
-	  <w:rPr>
-		<w:b />
-	  </w:rPr>
-	</w:style>
-	<w:style w:type="paragraph" w:styleId="Heading6">
-	  <w:name w:val="heading 6" />
-	  <w:basedOn w:val="Normal" />
-	  <w:next w:val="Normal" />
-	  <w:uiPriority w:val="9" />
-	  <w:semiHidden />
-	  <w:unhideWhenUsed />
-	  <w:qFormat />
-	  <w:pPr>
-		<w:keepNext />
-		<w:keepLines />
-		<w:spacing w:before="200" w:after="40" />
-		<w:outlineLvl w:val="5" />
-	  </w:pPr>
-	  <w:rPr>
-		<w:b />
-		<w:sz w:val="20" />
-		<w:szCs w:val="20" />
-	  </w:rPr>
-	</w:style>
+	${Object.entries(config)
+    .filter(([key]) => key.startsWith('heading'))
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) =>
+      generateHeadingStyleXML(key.charAt(0).toUpperCase() + key.slice(1), value)
+    )
+    .join('')}
   </w:styles>
   `;
+};
 
 export default generateStylesXML;

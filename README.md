@@ -203,6 +203,17 @@ full fledged examples can be found under `example/`
     - `restart` <"continuous"|"newPage"|"newSection"> numbering restart strategy. Defaults to `continuous`.
   - `numbering` <?[Object]>
     - `defaultOrderedListStyleType` <?[String]> default ordered list style type. Defaults to `decimal`.
+  - `heading` <?[Object]> custom heading styles configuration
+  - `heading1`-`heading6` <?[Object]> heading style configuration
+    - `font` <?[String]> font family
+    - `fontSize` <?[Number]> font size in half-points
+    - `bold` <?[Boolean]> whether text is bold. Defaults to `true`
+    - `spacing` <?[Object]> paragraph spacing configuration
+      - `before` <?[Number]> spacing before heading in twips
+      - `after` <?[Number]> spacing after heading in twips
+    - `keepLines` <?[Boolean]> keep lines together. Defaults to `true`
+    - `keepNext` <?[Boolean]> keep with next paragraph. Defaults to `true`
+    - `outlineLevel` <?[Number]> outline level (0-5)
   - `decodeUnicode` <?[Boolean]> flag to enable unicode decoding of header, body and footer. Defaults to `false`.
   - `lang` <?[String]> language localization code for spell checker to work properly. Defaults to `en-US`.
   - `direction` <?[String]> text direction for RTL (right-to-left) languages. Set to `'rtl'` for Arabic, Hebrew, etc. Defaults to `'ltr'`.
