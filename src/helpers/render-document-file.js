@@ -406,13 +406,13 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
       }
     }
   } else {
+    // Handle single VTree node (not an array)
     if (properties && typeof properties === "object" && vTree.properties) {
       if (!vTree.properties.style) {
-        vTree.properties.style = {}
+        vTree.properties.style = {};
       }
       vTree.properties.style = { ...properties, ...vTree.properties.style };
     }
-    vTree.properties.style = { ...properties, ...vTree.properties.style };
   }
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
