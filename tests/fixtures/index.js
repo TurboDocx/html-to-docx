@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
-// Use process.cwd() to get the project root, then navigate to fixtures
-// This works in both Jest and regular Node.js environments
+// Cross-platform directory resolution (works on Windows, macOS, Linux)
+// process.cwd() returns current working directory and is supported in all Node.js environments
+// path.join() handles path separators correctly (/ on Unix, \ on Windows)
 const fixturesDir = path.join(process.cwd(), 'tests', 'fixtures');
 
-// Load raw fixture files as buffers
+// Load raw fixture files as buffers (path.join handles separators correctly on Windows/Unix)
 export const PNG_FIXTURE = fs.readFileSync(path.join(fixturesDir, 'test-1x1.png'));
 export const JPEG_FIXTURE = fs.readFileSync(path.join(fixturesDir, 'test-1x1.jpg'));
 export const GIF_FIXTURE = fs.readFileSync(path.join(fixturesDir, 'test-1x1.gif'));
