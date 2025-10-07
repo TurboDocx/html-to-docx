@@ -604,7 +604,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST', 5000);
 
       expect(result).not.toBeNull();
       expect(result.base64String).toBe(PNG_1x1_BASE64);
@@ -641,7 +641,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST', 5000);
 
       expect(result).toBeNull();
     });

@@ -11,6 +11,7 @@ import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
 import sizeOf from 'image-size';
 import { getMimeType, downloadImageToBase64, parseDataUrl } from '../utils/image';
+import { defaultDocumentOptions } from '../constants';
 
 import namespaces from '../namespaces';
 import {
@@ -982,7 +983,10 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 
     if (isValidUrl(imageSource)) {
       requiresConversion = true;
-      const base64String = await downloadImageToBase64(imageSource, 5000).catch((error) => {
+      const timeout =
+        docxDocumentInstance.imageProcessing?.downloadTimeout ||
+        defaultDocumentOptions.imageProcessing.downloadTimeout;
+      const base64String = await downloadImageToBase64(imageSource, timeout).catch((error) => {
         // eslint-disable-next-line no-console
         console.warn(`[BUILDRUN] Skipping image download for ${imageSource}: ${error.message}`);
         return null;
@@ -1532,9 +1536,10 @@ const computeImageDimensions = (vNode, attributes) => {
  * @param {Object} vNode - Virtual node containing image
  * @param {string} imageSource - Image source URL or data URL
  * @param {string} logContext - Context string for logging (e.g., 'BUILDPARAGRAPH')
+ * @param {number} [timeout=5000] - Download timeout in milliseconds
  * @returns {Promise<Object|null>} Object with {base64String, imageProperties} or null if invalid
  */
-const processImageSource = async (vNode, imageSource, logContext) => {
+const processImageSource = async (vNode, imageSource, logContext, timeout = 5000) => {
   let base64String;
 
   // Check if this is already a data URL (from cache or previous processing)
@@ -1547,7 +1552,7 @@ const processImageSource = async (vNode, imageSource, logContext) => {
     }
     base64String = parsed.base64;
   } else if (isValidUrl(imageSource)) {
-    base64String = await downloadImageToBase64(imageSource, 5000).catch((error) => {
+    base64String = await downloadImageToBase64(imageSource, timeout).catch((error) => {
       // eslint-disable-next-line no-console
       console.warn(`[${logContext}] Skipping image download for ${imageSource}: ${error.message}`);
       return null;
@@ -1667,7 +1672,15 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         const childVNode = vNode.children[index];
         if (childVNode.tagName === 'img') {
           const imageSource = childVNode.properties.src;
-          const result = await processImageSource(childVNode, imageSource, 'BUILDPARAGRAPH');
+          const timeout =
+            docxDocumentInstance.imageProcessing?.downloadTimeout ||
+            defaultDocumentOptions.imageProcessing.downloadTimeout;
+          const result = await processImageSource(
+            childVNode,
+            imageSource,
+            'BUILDPARAGRAPH',
+            timeout
+          );
 
           if (!result) {
             continue;
@@ -1708,7 +1721,10 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     // Or in case the vNode is something like img
     if (isVNode(vNode) && vNode.tagName === 'img') {
       const imageSource = vNode.properties.src;
-      const result = await processImageSource(vNode, imageSource, 'BUILDPARAGRAPH-VNODE');
+      const timeout =
+        docxDocumentInstance.imageProcessing?.downloadTimeout ||
+        defaultDocumentOptions.imageProcessing.downloadTimeout;
+      const result = await processImageSource(vNode, imageSource, 'BUILDPARAGRAPH-VNODE', timeout);
 
       if (!result) {
         paragraphFragment.up();
