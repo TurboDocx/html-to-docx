@@ -248,18 +248,13 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
             });
           }
         } else {
-          // Handle non-list children
-          const lastAccumulator =
-            accumulator.length > 0 ? accumulator[accumulator.length - 1] : null;
+          // eslint-disable-next-line no-lonely-if
           if (
-            lastAccumulator &&
-            lastAccumulator.node &&
-            isVNode(lastAccumulator.node) &&
-            lastAccumulator.node.tagName &&
-            lastAccumulator.node.tagName.toLowerCase() === 'p' &&
-            lastAccumulator.node.children
+            accumulator.length > 0 &&
+            isVNode(accumulator[accumulator.length - 1].node) &&
+            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p'
           ) {
-            lastAccumulator.node.children.push(childVNode);
+            accumulator[accumulator.length - 1].node.children.push(childVNode);
           } else {
             const properties = {
               attributes: {
@@ -278,44 +273,38 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
 
             const paragraphVNode = new VNode(
               'p',
-              properties,
-              isChildVText
+              properties, // copy properties for styling purposes
+              // eslint-disable-next-line no-nested-ternary
+              isVText(childVNode)
                 ? [childVNode]
-                : isChildVNode
-                ? childVNode.tagName.toLowerCase() === 'li'
-                  ? [...childVNode.children]
-                  : [childVNode]
-                : []
+                : // eslint-disable-next-line no-nested-ternary
+                isVNode(childVNode)
+                  ? childVNode.tagName.toLowerCase() === 'li'
+                    ? [...childVNode.children]
+                    : [childVNode]
+                  : []
             );
 
-            if (isChildVNode) {
-              childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
-            }
+            childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
 
-            const generatedNode = isChildVNode
-              ? childVNode.tagName.toLowerCase() === 'li'
+            const generatedNode = isVNode(childVNode)
+              ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
+              childVNode.tagName.toLowerCase() === 'li'
                 ? childVNode
                 : childVNode.tagName.toLowerCase() !== 'p'
-                ? paragraphVNode
-                : childVNode
-              : paragraphVNode;
+                  ? paragraphVNode
+                  : childVNode
+              : // eslint-disable-next-line prettier/prettier
+              paragraphVNode;
 
-            if (
-              generatedNode &&
-              tempVNodeObject &&
-              tempVNodeObject.level !== undefined &&
-              tempVNodeObject.type &&
-              tempVNodeObject.numberingId &&
-              tempVNodeObject.containerStyles
-            ) {
-              accumulator.push({
-                node: generatedNode,
-                level: tempVNodeObject.level,
-                type: tempVNodeObject.type,
-                numberingId: tempVNodeObject.numberingId,
-                containerStyles: tempVNodeObject.containerStyles,
-              });
-            }
+            accumulator.push({
+              // eslint-disable-next-line prettier/prettier, no-nested-ternary
+              node: generatedNode,
+              level: tempVNodeObject.level,
+              type: tempVNodeObject.type,
+              numberingId: tempVNodeObject.numberingId,
+              containerStyles: tempVNodeObject.containerStyles,
+            });
           }
         }
 
