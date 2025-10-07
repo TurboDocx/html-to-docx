@@ -51,8 +51,8 @@ const generateHeadingStyleXML = (headingId, heading) => {
 	  ${additionalPropsXml}
 	  <w:qFormat />
 	  <w:pPr>
-		${keepLinesXml}
 		${keepNextXml}
+		${keepLinesXml}
 		${spacingXml}
 		${outlineXml}
 	  </w:pPr>
