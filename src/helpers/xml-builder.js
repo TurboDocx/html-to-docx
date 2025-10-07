@@ -4003,6 +4003,7 @@ export {
   buildBold,
   buildItalics,
   buildUnderline,
+  processImageSource,
   buildDrawing,
   fixupLineHeight,
 };

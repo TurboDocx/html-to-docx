@@ -9,6 +9,7 @@ import {
   downloadImageToBase64,
   parseDataUrl,
 } from '../src/utils/image.js';
+import { processImageSource } from '../src/helpers/xml-builder.js';
 import { PNG_1x1_BASE64, JPEG_1x1_BASE64, GIF_1x1_BASE64, PNG_FIXTURE } from './fixtures/index.js';
 import axios from 'axios';
 
@@ -567,6 +568,122 @@ describe('Image Processing', () => {
       await expect(downloadImageToBase64('https://example.com/image.png')).rejects.toThrow(
         'Empty response data received'
       );
+    });
+  });
+
+  describe('processImageSource helper', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('should process data URL and return image properties', async () => {
+      const vNode = {
+        properties: {
+          src: `data:image/png;base64,${PNG_1x1_BASE64}`,
+        },
+      };
+
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+
+      expect(result).not.toBeNull();
+      expect(result.base64String).toBe(PNG_1x1_BASE64);
+      expect(result.imageProperties).toBeDefined();
+      expect(result.imageProperties.width).toBeGreaterThan(0);
+      expect(result.imageProperties.height).toBeGreaterThan(0);
+    });
+
+    test('should download URL image and return properties', async () => {
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE,
+        status: 200,
+      });
+
+      const vNode = {
+        properties: {
+          src: 'https://example.com/image.png',
+        },
+      };
+
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+
+      expect(result).not.toBeNull();
+      expect(result.base64String).toBe(PNG_1x1_BASE64);
+      expect(result.imageProperties).toBeDefined();
+      expect(result.imageProperties.width).toBeGreaterThan(0);
+      expect(result.imageProperties.height).toBeGreaterThan(0);
+      // Should update vNode with data URL
+      expect(vNode.properties.src).toMatch(/^data:image\/png;base64,/);
+    });
+
+    test('should return null for invalid data URL', async () => {
+      const vNode = {
+        properties: {
+          src: 'data:invalid-format',
+        },
+      };
+
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+
+      expect(result).toBeNull();
+    });
+
+    test('should return null when download fails', async () => {
+      axios.get.mockRejectedValue({
+        response: {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      });
+
+      const vNode = {
+        properties: {
+          src: 'https://example.com/not-found.png',
+        },
+      };
+
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+
+      expect(result).toBeNull();
+    });
+
+    test('should return null for invalid base64', async () => {
+      const vNode = {
+        properties: {
+          src: 'data:image/png;base64,invalid!!!base64',
+        },
+      };
+
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+
+      expect(result).toBeNull();
+    });
+
+    test('should handle JPEG images', async () => {
+      const vNode = {
+        properties: {
+          src: `data:image/jpeg;base64,${JPEG_1x1_BASE64}`,
+        },
+      };
+
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+
+      expect(result).not.toBeNull();
+      expect(result.base64String).toBe(JPEG_1x1_BASE64);
+      expect(result.imageProperties.type).toBe('jpg');
+    });
+
+    test('should handle GIF images', async () => {
+      const vNode = {
+        properties: {
+          src: `data:image/gif;base64,${GIF_1x1_BASE64}`,
+        },
+      };
+
+      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+
+      expect(result).not.toBeNull();
+      expect(result.base64String).toBe(GIF_1x1_BASE64);
+      expect(result.imageProperties.type).toBe('gif');
     });
   });
 
