@@ -4,12 +4,72 @@
 import HTMLtoDOCX from '../index.js';
 import { parseDOCX, assertParagraphCount } from './helpers/docx-assertions.js';
 import { getMimeType, guessMimeTypeFromBase64 } from '../src/utils/image.js';
+import { PNG_1x1_BASE64, JPEG_1x1_BASE64, GIF_1x1_BASE64 } from './fixtures/index.js';
 
 describe('Image Processing', () => {
-  // Sample base64 images for testing
-  const PNG_1x1_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-  const JPEG_1x1_BASE64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/B';
-  const GIF_1x1_BASE64 = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  // Base64 images loaded from fixture files
+  // These maintain full fidelity with actual image files for magic byte testing
+
+  describe('Fixture integrity verification', () => {
+    test('PNG fixture should have correct magic bytes (89 50 4E 47)', () => {
+      // Decode base64 to check binary magic numbers
+      const buffer = Buffer.from(PNG_1x1_BASE64, 'base64');
+
+      // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+      expect(buffer[0]).toBe(0x89);
+      expect(buffer[1]).toBe(0x50); // 'P'
+      expect(buffer[2]).toBe(0x4e); // 'N'
+      expect(buffer[3]).toBe(0x47); // 'G'
+    });
+
+    test('PNG fixture base64 should start with correct prefix (iVBORw)', () => {
+      // PNG magic bytes (89 50 4E 47) encode to "iVBORw" in base64
+      // This verifies the base64 string itself starts correctly
+      expect(PNG_1x1_BASE64).toMatch(/^iVBORw/);
+    });
+
+    test('JPEG fixture should have correct magic bytes (FF D8 FF)', () => {
+      const buffer = Buffer.from(JPEG_1x1_BASE64, 'base64');
+
+      // JPEG magic bytes: FF D8 FF
+      expect(buffer[0]).toBe(0xff);
+      expect(buffer[1]).toBe(0xd8);
+      expect(buffer[2]).toBe(0xff);
+    });
+
+    test('JPEG fixture base64 should start with correct prefix (/9j/)', () => {
+      // JPEG magic bytes (FF D8 FF) encode to "/9j/" in base64
+      // This verifies the base64 string itself starts correctly
+      expect(JPEG_1x1_BASE64).toMatch(/^\/9j\//);
+    });
+
+    test('GIF fixture should have correct magic bytes (47 49 46)', () => {
+      const buffer = Buffer.from(GIF_1x1_BASE64, 'base64');
+
+      // GIF magic bytes: 47 49 46 ('GIF')
+      expect(buffer[0]).toBe(0x47); // 'G'
+      expect(buffer[1]).toBe(0x49); // 'I'
+      expect(buffer[2]).toBe(0x46); // 'F'
+    });
+
+    test('GIF fixture base64 should start with correct prefix (R0lGOD)', () => {
+      // GIF magic bytes (47 49 46 38) encode to "R0lGOD" in base64
+      // This verifies the base64 string itself starts correctly
+      expect(GIF_1x1_BASE64).toMatch(/^R0lGOD/);
+    });
+
+    test('All fixtures should be valid base64 strings', () => {
+      // Verify all fixtures can be decoded without errors
+      expect(() => Buffer.from(PNG_1x1_BASE64, 'base64')).not.toThrow();
+      expect(() => Buffer.from(JPEG_1x1_BASE64, 'base64')).not.toThrow();
+      expect(() => Buffer.from(GIF_1x1_BASE64, 'base64')).not.toThrow();
+
+      // Verify they produce non-empty buffers
+      expect(Buffer.from(PNG_1x1_BASE64, 'base64').length).toBeGreaterThan(0);
+      expect(Buffer.from(JPEG_1x1_BASE64, 'base64').length).toBeGreaterThan(0);
+      expect(Buffer.from(GIF_1x1_BASE64, 'base64').length).toBeGreaterThan(0);
+    });
+  });
 
   describe('getMimeType utility', () => {
     test('should detect JPEG mime type from extension', () => {
