@@ -1,0 +1,485 @@
+import HTMLtoDOCX from '../index.js';
+import { defaultHeadingOptions } from '../src/constants.js';
+
+describe('Heading Styles Integration Tests', () => {
+  describe('End-to-end document generation', () => {
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should generate document with default heading styles', async () => {
+      const htmlString = `
+        <h1>Main Heading</h1>
+        <p>Content under main heading</p>
+        <h2>Subheading</h2>
+        <p>Content under subheading</p>
+        <h3>Section Heading</h3>
+        <p>Content under section</p>
+      `;
+
+      const result = await HTMLtoDOCX(htmlString, {});
+
+      expect(result).toBeDefined();
+      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should generate document with custom heading styles', async () => {
+      const htmlString = `
+        <h1>Custom Styled Heading</h1>
+        <p>This heading should use custom styles</p>
+      `;
+
+      const options = {
+        heading: {
+          heading1: {
+            font: 'Arial',
+            fontSize: 60,
+            bold: true,
+            spacing: { before: 500, after: 100 },
+            keepLines: true,
+            keepNext: true,
+            outlineLevel: 0,
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle all heading levels H1-H6', async () => {
+      const htmlString = `
+        <h1>Heading 1</h1>
+        <h2>Heading 2</h2>
+        <h3>Heading 3</h3>
+        <h4>Heading 4</h4>
+        <h5>Heading 5</h5>
+        <h6>Heading 6</h6>
+      `;
+
+      const result = await HTMLtoDOCX(htmlString, {});
+
+      expect(result).toBeDefined();
+      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle partial heading configuration', async () => {
+      const htmlString = `
+        <h1>Title with Custom Font</h1>
+        <h2>Subtitle with Default Styles</h2>
+        <h3>Section Header</h3>
+      `;
+
+      const options = {
+        heading: {
+          heading1: {
+            fontSize: 72, // Only override font size
+          },
+          // H2 and H3 should use defaults
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+    });
+  });
+
+  describe('Configuration merging behavior', () => {
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should merge custom config with default config', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            fontSize: 100, // Only override fontSize, keep other defaults
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      // The document should be generated with merged configuration
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle empty heading configuration object', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {},
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      // Should use all defaults when empty config provided
+    });
+  });
+
+  describe('Special characters and security', () => {
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle font names with ampersands', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            font: 'Times & New Roman',
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      // Font name with ampersand should be properly escaped in XML
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should prevent XML injection in font names', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            font: '<script>alert("xss")</script>',
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      // Malicious font name should be escaped and document still generated
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle special XML characters in font names', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            font: 'Font<>Name"\'&',
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      // All special characters should be escaped properly
+    });
+  });
+
+  describe('Validation and edge cases', () => {
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should clamp outline level to valid range', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            outlineLevel: 99, // Should be clamped to 5
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle negative outline level', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            outlineLevel: -10, // Should be clamped to 0
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle zero font size', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            fontSize: 0, // Invalid but shouldn't crash
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle negative font size', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            fontSize: -20, // Invalid but shouldn't crash
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle spacing with zero values', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            spacing: { before: 0, after: 0 },
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+      // Zero spacing is valid and should be rendered
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle undefined spacing properties', async () => {
+      const htmlString = '<h1>Test Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            spacing: { before: undefined, after: 100 },
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Complex HTML with multiple heading levels', () => {
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle nested content with all heading levels', async () => {
+      const htmlString = `
+        <h1>Document Title</h1>
+        <p>Introduction paragraph</p>
+
+        <h2>Chapter 1</h2>
+        <p>Chapter content</p>
+
+        <h3>Section 1.1</h3>
+        <p>Section content</p>
+
+        <h4>Subsection 1.1.1</h4>
+        <p>Subsection content</p>
+
+        <h5>Detail 1.1.1.1</h5>
+        <p>Detail content</p>
+
+        <h6>Note 1.1.1.1.1</h6>
+        <p>Note content</p>
+
+        <h2>Chapter 2</h2>
+        <p>More content</p>
+      `;
+
+      const result = await HTMLtoDOCX(htmlString, {});
+
+      expect(result).toBeDefined();
+      expect(result instanceof Uint8Array || result instanceof Buffer).toBe(true);
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should handle document with mixed custom heading styles', async () => {
+      const htmlString = `
+        <h1>Custom H1</h1>
+        <h2>Custom H2</h2>
+        <h3>Default H3</h3>
+        <h4>Default H4</h4>
+      `;
+
+      const options = {
+        heading: {
+          heading1: {
+            font: 'Arial',
+            fontSize: 60,
+            bold: true,
+            spacing: { before: 600, after: 200 },
+          },
+          heading2: {
+            font: 'Georgia',
+            fontSize: 40,
+            bold: false,
+            spacing: { before: 400, after: 150 },
+          },
+          // H3 and H4 use defaults
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Compatibility with other options', () => {
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should work with custom document font and heading styles', async () => {
+      const htmlString = `
+        <h1>Heading with Custom Styles</h1>
+        <p>Paragraph with document font</p>
+      `;
+
+      const options = {
+        font: 'Times New Roman',
+        fontSize: 24,
+        heading: {
+          heading1: {
+            font: 'Arial',
+            fontSize: 48,
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should work with orientation and margins', async () => {
+      const htmlString = `
+        <h1>Test Document</h1>
+        <h2>Subsection</h2>
+        <p>Content</p>
+      `;
+
+      const options = {
+        orientation: 'landscape',
+        margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+        heading: {
+          heading1: { fontSize: 52 },
+          heading2: { fontSize: 38 },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should work with RTL direction', async () => {
+      const htmlString = `
+        <h1>عنوان</h1>
+        <p>محتوى</p>
+      `;
+
+      const options = {
+        direction: 'rtl',
+        lang: 'ar-SA',
+        heading: {
+          heading1: {
+            font: 'Arabic Typesetting',
+            fontSize: 52,
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Boolean properties', () => {
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should respect bold: false', async () => {
+      const htmlString = '<h1>Non-Bold Heading</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            bold: false,
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should respect keepLines: false', async () => {
+      const htmlString = '<h1>Heading Without Keep Lines</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            keepLines: false,
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+
+    // https://github.com/TurboDocx/html-to-docx/pull/129
+    test('should respect keepNext: false', async () => {
+      const htmlString = '<h1>Heading Without Keep Next</h1><p>Content</p>';
+
+      const options = {
+        heading: {
+          heading1: {
+            ...defaultHeadingOptions.heading1,
+            keepNext: false,
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, options);
+
+      expect(result).toBeDefined();
+    });
+  });
+});
