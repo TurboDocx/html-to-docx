@@ -17,22 +17,32 @@ export const guessMimeTypeFromBase64 = (base64String) => {
     byteArr[i] = binaryStr.charCodeAt(i);
   }
 
-  // Common image format magic numbers
+  // Common image format magic numbers (file signatures in hexadecimal)
+  // Magic numbers are industry-standard byte sequences at the start of files
+  // that identify file types. Hex values are used because they directly represent
+  // the binary bytes as specified in format standards (e.g., PNG spec, JPEG spec).
+
+  // JPEG: FF D8 FF (JPEG Start of Image marker)
   if (byteArr[0] === 0xff && byteArr[1] === 0xd8 && byteArr[2] === 0xff) {
     return 'image/jpeg';
   }
+  // PNG: 89 50 4E 47 (PNG signature: \x89PNG)
   if (byteArr[0] === 0x89 && byteArr[1] === 0x50 && byteArr[2] === 0x4e && byteArr[3] === 0x47) {
     return 'image/png';
   }
+  // GIF: 47 49 46 (ASCII "GIF")
   if (byteArr[0] === 0x47 && byteArr[1] === 0x49 && byteArr[2] === 0x46) {
     return 'image/gif';
   }
+  // BMP: 42 4D (ASCII "BM" for bitmap)
   if (byteArr[0] === 0x42 && byteArr[1] === 0x4d) {
     return 'image/bmp';
   }
+  // TIFF: 49 49 2A 00 (little-endian TIFF)
   if (byteArr[0] === 0x49 && byteArr[1] === 0x49 && byteArr[2] === 0x2a && byteArr[3] === 0x00) {
     return 'image/tiff';
   }
+  // TIFF: 4D 4D 00 2A (big-endian TIFF)
   if (byteArr[0] === 0x4d && byteArr[1] === 0x4d && byteArr[2] === 0x00 && byteArr[3] === 0x2a) {
     return 'image/tiff';
   }

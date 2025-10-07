@@ -98,7 +98,7 @@ export const buildImage = async (
     // Check cache first for external URLs
     if (isValidUrl(imageSource) && imageCache.has(imageSource)) {
       const cachedData = imageCache.get(imageSource);
-      if (cachedData === null) {
+      if (!cachedData) {
         // Previously failed to download in this document generation, skip this image
         logVerbose(
           verboseLogging,
