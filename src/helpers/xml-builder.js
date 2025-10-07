@@ -1525,6 +1525,75 @@ const computeImageDimensions = (vNode, attributes) => {
   attributes.height = modifiedHeight;
 };
 
+/**
+ * Process an image source and return validated image properties
+ * Handles data URLs, URL downloads, and buffer validation
+ *
+ * @param {Object} vNode - Virtual node containing image
+ * @param {string} imageSource - Image source URL or data URL
+ * @param {string} logContext - Context string for logging (e.g., 'BUILDPARAGRAPH')
+ * @returns {Promise<Object|null>} Object with {base64String, imageProperties} or null if invalid
+ */
+const processImageSource = async (vNode, imageSource, logContext) => {
+  let base64String;
+
+  // Check if this is already a data URL (from cache or previous processing)
+  if (imageSource.startsWith('data:')) {
+    // Already processed, extract base64 part
+    const parsed = parseDataUrl(imageSource);
+    if (!parsed) {
+      console.warn(`[${logContext}] Invalid data URL format: ${imageSource}`);
+      return null;
+    }
+    base64String = parsed.base64;
+  } else if (isValidUrl(imageSource)) {
+    base64String = await downloadImageToBase64(imageSource, 5000).catch((error) => {
+      // eslint-disable-next-line no-console
+      console.warn(`[${logContext}] Skipping image download for ${imageSource}: ${error.message}`);
+      return null;
+    });
+
+    if (base64String && getMimeType(imageSource, base64String)) {
+      vNode.properties.src = `data:${getMimeType(
+        imageSource,
+        base64String
+      )};base64, ${base64String}`;
+    } else {
+      // Skip this image if download failed
+      console.warn(`[${logContext}] Skipping image due to download failure: ${imageSource}`);
+      return null;
+    }
+  }
+
+  // Validate base64String before creating buffer
+  if (!base64String) {
+    console.warn(`[${logContext}] No valid base64 string for image: ${imageSource}`);
+    return null;
+  }
+
+  const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
+
+  // Validate buffer before calling sizeOf
+  if (!imageBuffer || imageBuffer.length === 0) {
+    console.warn(`[${logContext}] Empty image buffer for: ${imageSource}`);
+    return null;
+  }
+
+  let imageProperties;
+  try {
+    imageProperties = sizeOf(imageBuffer);
+    if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+      console.warn(`[${logContext}] Invalid image properties for: ${imageSource}`);
+      return null;
+    }
+  } catch (error) {
+    console.warn(`[${logContext}] Failed to get image size for ${imageSource}: ${error.message}`);
+    return null;
+  }
+
+  return { base64String, imageProperties };
+};
+
 const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
   const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'p');
   const modifiedAttributes = modifiedStyleAttributesBuilder(
@@ -1597,67 +1666,14 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       for (let index = 0; index < vNode.children.length; index++) {
         const childVNode = vNode.children[index];
         if (childVNode.tagName === 'img') {
-          let base64String;
           const imageSource = childVNode.properties.src;
+          const result = await processImageSource(childVNode, imageSource, 'BUILDPARAGRAPH');
 
-          // Check if this is already a data URL (from cache or previous processing)
-          if (imageSource.startsWith('data:')) {
-            // Already processed, extract base64 part
-            const parsed = parseDataUrl(imageSource);
-            if (!parsed) {
-              console.warn(`[BUILDPARAGRAPH] Invalid data URL format: ${imageSource}`);
-              continue;
-            }
-            base64String = parsed.base64;
-          } else if (isValidUrl(imageSource)) {
-            base64String = await downloadImageToBase64(imageSource, 5000).catch((error) => {
-              // eslint-disable-next-line no-console
-              console.warn(`[BUILDPARAGRAPH] Skipping image download for ${imageSource}: ${error.message}`);
-              return null;
-            });
-
-            if (base64String && getMimeType(imageSource, base64String)) {
-              childVNode.properties.src = `data:${getMimeType(
-                imageSource,
-                base64String
-              )};base64, ${base64String}`;
-            } else {
-              // Skip this image if download failed
-              console.warn(
-                `[BUILDPARAGRAPH] Skipping image due to download failure: ${imageSource}`
-              );
-              continue;
-            }
-          }
-
-          // Validate base64String before creating buffer
-          if (!base64String) {
-            console.warn(`[BUILDPARAGRAPH] No valid base64 string for image: ${imageSource}`);
+          if (!result) {
             continue;
           }
 
-          const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
-
-          // Validate buffer before calling sizeOf
-          if (!imageBuffer || imageBuffer.length === 0) {
-            console.warn(`[BUILDPARAGRAPH] Empty image buffer for: ${imageSource}`);
-            continue;
-          }
-
-          let imageProperties;
-          try {
-            imageProperties = sizeOf(imageBuffer);
-            if (!imageProperties || !imageProperties.width || !imageProperties.height) {
-              console.warn(`[BUILDPARAGRAPH] Invalid image properties for: ${imageSource}`);
-              continue;
-            }
-          } catch (error) {
-            console.warn(
-              `[BUILDPARAGRAPH] Failed to get image size for ${imageSource}: ${error.message}`
-            );
-            continue;
-          }
-
+          const { imageProperties } = result;
           modifiedAttributes.maximumWidth =
             modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
           modifiedAttributes.originalWidth = imageProperties.width;
@@ -1692,72 +1708,14 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     // Or in case the vNode is something like img
     if (isVNode(vNode) && vNode.tagName === 'img') {
       const imageSource = vNode.properties.src;
-      let base64String = imageSource;
+      const result = await processImageSource(vNode, imageSource, 'BUILDPARAGRAPH-VNODE');
 
-      // Check if this is already a data URL (from cache or previous processing)
-      if (imageSource.startsWith('data:')) {
-        // Already processed, extract base64 part
-        const parsed = parseDataUrl(imageSource);
-        if (!parsed) {
-          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid data URL format: ${imageSource}`);
-          paragraphFragment.up();
-          return paragraphFragment;
-        }
-        base64String = parsed.base64;
-      } else if (isValidUrl(imageSource)) {
-        base64String = await downloadImageToBase64(imageSource, 5000).catch((error) => {
-          // eslint-disable-next-line no-console
-          console.warn(`[BUILDPARAGRAPH] Skipping image download for ${imageSource}: ${error.message}`);
-          return null;
-        });
-
-        if (base64String && getMimeType(imageSource, base64String)) {
-          vNode.properties.src = `data:${getMimeType(
-            imageSource,
-            base64String
-          )};base64, ${base64String}`;
-        } else {
-          // Skip this image if download failed
-          console.warn(
-            `[BUILDPARAGRAPH-VNODE] Skipping image due to download failure: ${imageSource}`
-          );
-          paragraphFragment.up();
-          return paragraphFragment;
-        }
-      }
-
-      // Validate base64String before creating buffer
-      if (!base64String) {
-        console.warn(`[BUILDPARAGRAPH-VNODE] No valid base64 string for image: ${imageSource}`);
+      if (!result) {
         paragraphFragment.up();
         return paragraphFragment;
       }
 
-      const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
-
-      // Validate buffer before calling sizeOf
-      if (!imageBuffer || imageBuffer.length === 0) {
-        console.warn(`[BUILDPARAGRAPH-VNODE] Empty image buffer for: ${imageSource}`);
-        paragraphFragment.up();
-        return paragraphFragment;
-      }
-
-      let imageProperties;
-      try {
-        imageProperties = sizeOf(imageBuffer);
-        if (!imageProperties || !imageProperties.width || !imageProperties.height) {
-          console.warn(`[BUILDPARAGRAPH-VNODE] Invalid image properties for: ${imageSource}`);
-          paragraphFragment.up();
-          return paragraphFragment;
-        }
-      } catch (error) {
-        console.warn(
-          `[BUILDPARAGRAPH-VNODE] Failed to get image size for ${imageSource}: ${error.message}`
-        );
-        paragraphFragment.up();
-        return paragraphFragment;
-      }
-
+      const { imageProperties } = result;
       modifiedAttributes.maximumWidth =
         modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
       modifiedAttributes.originalWidth = imageProperties.width;
