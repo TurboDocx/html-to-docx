@@ -114,15 +114,42 @@ async function generateSectionXML(vTree, type = 'header') {
 
   const XMLFragment = fragment();
   await convertVTreeToXML(this, vTree, XMLFragment);
-  if (type === 'footer' && XMLFragment.first().node.tagName === 'p' && this.pageNumber) {
-    XMLFragment.first().import(
-      fragment({ namespaceAlias: { w: namespaces.w } })
+  // Safely inject page number field in footer
+  if (type === 'footer' && this.pageNumber) {
+    try {
+      const firstChild = XMLFragment.first();
+      const pageFieldFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+        .ele('@w', 'fldSimple')
+        .att('@w', 'instr', 'PAGE')
+        .ele('@w', 'r')
+        .up()
+        .up();
+
+      if (firstChild && firstChild.node && firstChild.node.tagName === 'p') {
+        // Append the field to the existing first paragraph
+        firstChild.import(pageFieldFragment);
+      } else {
+        // Create a new paragraph to host the page number field
+        const paragraphWrapper = fragment({ namespaceAlias: { w: namespaces.w } })
+          .ele('@w', 'p')
+          .import(pageFieldFragment)
+          .up();
+        // Prepend (import simply since XMLFragment is empty or first is not a paragraph)
+        XMLFragment.import(paragraphWrapper);
+      }
+    } catch (error) {
+      console.warn('[DEBUG] Footer page number injection failed:', error.message);
+      // Just create a basic paragraph with page number
+      const basicPageParagraph = fragment({ namespaceAlias: { w: namespaces.w } })
+        .ele('@w', 'p')
         .ele('@w', 'fldSimple')
         .att('@w', 'instr', 'PAGE')
         .ele('@w', 'r')
         .up()
         .up()
-    );
+        .up();
+      XMLFragment.import(basicPageParagraph);
+    }
   }
   sectionXML.root().import(XMLFragment);
 
