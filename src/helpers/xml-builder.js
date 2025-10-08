@@ -48,6 +48,7 @@ import {
 import { buildImage, buildList } from './render-document-file';
 import {
   defaultFont,
+  defaultFontSize,
   hyperlinkType,
   paragraphBordersObject,
   colorlessColors,
@@ -55,7 +56,9 @@ import {
   imageType,
   internalRelationship,
   defaultTableBorderOptions,
-  defaultTableBorderAttributeOptions
+  defaultTableBorderAttributeOptions,
+  absoluteFontSizes,
+  relativeFontSizeFactors
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
@@ -365,6 +368,18 @@ const fixupLineHeight = (lineHeight, fontSize) => {
 
 // eslint-disable-next-line consistent-return
 const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
+
+  if (["smaller", "larger"].includes(fontSizeString)) {
+    // since we dont have access to immediate parent size
+    // we will use the default font size given to us
+    return Math.floor(relativeFontSizeFactors[fontSizeString] * docxDocumentInstance.fontSize);
+  }
+
+  if (absoluteFontSizes[fontSizeString]) {
+    fontSizeString = absoluteFontSizes[fontSizeString];
+  }
+
+  // Handle unit-based font sizes
   if (pointRegex.test(fontSizeString)) {
     const matchedParts = fontSizeString.match(pointRegex);
     // convert point to half point
@@ -380,10 +395,12 @@ const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
     const matchedParts = fontSizeString.match(inchRegex);
     return inchToHIP(matchedParts[1]);
   } else if (percentageRegex.test(fontSizeString)) {
-    // need fontsize here default
     const matchedParts = fontSizeString.match(percentageRegex);
     return (matchedParts[1] * docxDocumentInstance.fontSize) / 100;
   }
+
+  // Fallback to default font size if no valid format is found
+  return defaultFontSize;
 };
 
 // eslint-disable-next-line consistent-return
@@ -1066,26 +1083,26 @@ const buildRunOrHyperLink = async (vNode, attributes, docxDocumentInstance) => {
 
     if (vNode.children) {
       for (let idx = 0; idx < vNode.children.length; idx++) {
-      const childVNode = vNode.children[idx];
-      const modifiedAttributes =
-        isVNode(childVNode) && childVNode.tagName === 'img'
-          ? { ...attributes, type: 'picture', description: childVNode.properties.alt } : { ...attributes };
-      modifiedAttributes.hyperlink = true;
+        const childVNode = vNode.children[idx];
+        const modifiedAttributes =
+          isVNode(childVNode) && childVNode.tagName === 'img'
+            ? { ...attributes, type: 'picture', description: childVNode.properties.alt } : { ...attributes };
+        modifiedAttributes.hyperlink = true;
 
-      const runFragments = await buildRunOrRuns(
-        childVNode,
-        modifiedAttributes,
-        docxDocumentInstance
-      );
-      if (Array.isArray(runFragments)) {
-        for (let index = 0; index < runFragments.length; index++) {
-          const runFragment = runFragments[index];
+        const runFragments = await buildRunOrRuns(
+          childVNode,
+          modifiedAttributes,
+          docxDocumentInstance
+        );
+        if (Array.isArray(runFragments)) {
+          for (let index = 0; index < runFragments.length; index++) {
+            const runFragment = runFragments[index];
 
-          hyperlinkFragment.import(runFragment);
+            hyperlinkFragment.import(runFragment);
+          }
+        } else {
+          hyperlinkFragment.import(runFragments);
         }
-      } else {
-        hyperlinkFragment.import(runFragments);
-      }
       }
     }
 
@@ -1312,7 +1329,7 @@ const computeImageDimensions = (vNode, attributes) => {
   const maximumWidthInEMU = TWIPToEMU(maximumWidth);
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
-  
+
   if (originalWidthInEMU > maximumWidthInEMU) {
     originalWidthInEMU = maximumWidthInEMU;
     originalHeightInEMU = Math.round(originalWidthInEMU / aspectRatio);
@@ -1382,7 +1399,7 @@ const computeImageDimensions = (vNode, attributes) => {
     } else if (modifiedHeight && !modifiedWidth) {
       modifiedWidth = Math.round(modifiedHeight * aspectRatio);
     }
-    
+
     // Fallback for images with non-dimensional CSS styles
     // HTML like <img style="font-family: Poppins;" src="..."> creates a style object
     // but contains no width/height properties. The function enters this if block but never
@@ -1404,7 +1421,7 @@ const computeImageDimensions = (vNode, attributes) => {
     modifiedWidth = originalWidthInEMU;
     modifiedHeight = originalHeightInEMU;
   }
-  
+
   // eslint-disable-next-line no-param-reassign
   attributes.width = modifiedWidth;
   // eslint-disable-next-line no-param-reassign
