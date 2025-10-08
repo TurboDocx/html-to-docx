@@ -95,7 +95,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const report = `${{ steps.report.outputs.report }}`;
+            const fs = require('fs');
+            const report = fs.readFileSync('diff-report.md', 'utf8');
 
             // Find existing comment
             const comments = await github.rest.issues.listComments({
