@@ -8,6 +8,7 @@ import isVText from 'virtual-dom/vnode/is-vtext';
 // eslint-disable-next-line import/no-named-default
 import { default as HTMLToVDOM } from 'html-to-vdom';
 import sizeOf from 'image-size';
+import { LRUCache } from 'lru-cache';
 
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
@@ -613,10 +614,25 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
   const imageOptions =
     docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
 
-  // Initialize per-document image cache and retry stats for isolation
-  // This ensures each document generation has its own isolated cache and statistics
+  // Initialize per-document LRU image cache and retry stats for isolation
+  // LRU cache prevents OOM by limiting total memory usage and evicting least recently used items
   if (!docxDocumentInstance._imageCache) {
-    docxDocumentInstance._imageCache = new Map();
+    const maxCacheSize =
+      imageOptions.maxCacheSize || defaultDocumentOptions.imageProcessing.maxCacheSize;
+    const maxCacheEntries =
+      imageOptions.maxCacheEntries || defaultDocumentOptions.imageProcessing.maxCacheEntries;
+
+    docxDocumentInstance._imageCache = new LRUCache({
+      max: maxCacheEntries, // Max number of unique images
+      maxSize: maxCacheSize, // Max total size in bytes
+      sizeCalculation: (value) => {
+        if (!value) return 0;
+        // Calculate approximate byte size of base64 string
+        // Base64 encoding is ~4/3 of original size, so decoded size is ~3/4
+        return Math.ceil((value.length * 3) / 4);
+      },
+    });
+
     docxDocumentInstance._retryStats = {
       totalAttempts: 0,
       successAfterRetry: 0,
@@ -625,7 +641,9 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
 
     if (imageOptions.verboseLogging) {
       // eslint-disable-next-line no-console
-      console.log('[CACHE] Initialized new image cache for document generation');
+      console.log(
+        `[CACHE] Initialized LRU cache: ${maxCacheEntries} entries, ${Math.round(maxCacheSize / 1024 / 1024)}MB max`
+      );
     }
   }
 

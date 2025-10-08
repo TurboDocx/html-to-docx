@@ -149,6 +149,8 @@ const defaultDocumentOptions = {
     minTimeout: 1000, // Minimum timeout in ms (1 second)
     maxTimeout: 30000, // Maximum timeout in ms (30 seconds)
     minImageSize: 1024, // Minimum image size in bytes (1KB)
+    maxCacheSize: 20 * 1024 * 1024, // 20MB max total cache size (prevents OOM)
+    maxCacheEntries: 100, // Max 100 unique images in cache (LRU eviction)
   },
 };
 const defaultHTMLString = '<p></p>';

@@ -244,6 +244,8 @@ full fledged examples can be found under `example/`
     - `minTimeout` <?[Number]> minimum timeout in milliseconds. Defaults to `1000` (1 second).
     - `maxTimeout` <?[Number]> maximum timeout in milliseconds. Defaults to `30000` (30 seconds).
     - `minImageSize` <?[Number]> minimum image size in bytes. Defaults to `1024` (1KB).
+    - `maxCacheSize` <?[Number]> maximum total cache size in bytes (LRU cache limit to prevent OOM). Defaults to `20971520` (20MB).
+    - `maxCacheEntries` <?[Number]> maximum number of unique images in cache (LRU eviction). Defaults to `100`.
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns
