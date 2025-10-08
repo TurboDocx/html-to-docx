@@ -11,7 +11,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 export default {
   input: 'index.js',
-  external: ['color-name', 'html-to-vdom', 'jszip', 'virtual-dom', 'xmlbuilder2', 'html-entities'],
+  external: ['color-name', 'htmlparser2', 'jszip', 'xmlbuilder2', 'html-entities'],
   plugins: [
     resolve(),
     json(),
