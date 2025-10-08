@@ -215,7 +215,8 @@ async function main() {
 function generateReport(report) {
   const lines = [];
 
-  lines.push('# DOCX Diff Report\n');
+  lines.push('# TurboDocx DOCX Diff Report\n');
+  lines.push('> **Automated HTML to DOCX regression testing** | Powered by [TurboDocx](https://turbodocx.com)\n');
 
   // Summary
   lines.push('## Summary\n');
