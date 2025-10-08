@@ -10,6 +10,7 @@ import {
   parseDataUrl,
 } from '../src/utils/image.js';
 import { processImageSource } from '../src/helpers/xml-builder.js';
+import { clearImageCache, getImageCacheStats } from '../src/helpers/render-document-file.js';
 import { PNG_1x1_BASE64, JPEG_1x1_BASE64, GIF_1x1_BASE64, PNG_FIXTURE } from './fixtures/index.js';
 import axios from 'axios';
 
@@ -717,6 +718,138 @@ describe('Image Processing', () => {
       const parsed = await parseDOCX(docx);
 
       expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Image cache isolation', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('should isolate cache between different document generations', async () => {
+      // Mock axios to return PNG fixture
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE,
+        status: 200,
+      });
+
+      const imageUrl = 'https://example.com/test-image.png';
+      const htmlString1 = `<img src="${imageUrl}" />`;
+      const htmlString2 = `<img src="${imageUrl}" />`;
+
+      // Generate first document
+      const docx1 = await HTMLtoDOCX(htmlString1, {
+        imageProcessing: { verboseLogging: false },
+      });
+      const parsed1 = await parseDOCX(docx1);
+      expect(parsed1.paragraphs.length).toBeGreaterThanOrEqual(1);
+
+      // Generate second document - should download again (not use cache from doc1)
+      const docx2 = await HTMLtoDOCX(htmlString2, {
+        imageProcessing: { verboseLogging: false },
+      });
+      const parsed2 = await parseDOCX(docx2);
+      expect(parsed2.paragraphs.length).toBeGreaterThanOrEqual(1);
+
+      // Verify axios was called twice (once per document, no cross-document caching)
+      expect(axios.get).toHaveBeenCalledTimes(2);
+    });
+
+    test('should maintain cache within same document generation', async () => {
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE,
+        status: 200,
+      });
+
+      const imageUrl = 'https://example.com/repeated-image.png';
+      // Same image used 3 times in one document
+      const htmlString = `
+        <img src="${imageUrl}" />
+        <img src="${imageUrl}" />
+        <img src="${imageUrl}" />
+      `;
+
+      const docx = await HTMLtoDOCX(htmlString, {
+        imageProcessing: { verboseLogging: false },
+      });
+      const parsed = await parseDOCX(docx);
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(3);
+
+      // Should only download once due to within-document caching
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    });
+
+    test('clearImageCache should work with docxDocumentInstance', () => {
+      const mockInstance = {
+        _imageCache: new Map([
+          ['url1', 'data1'],
+          ['url2', 'data2'],
+        ]),
+        _retryStats: {
+          totalAttempts: 5,
+          successAfterRetry: 2,
+          finalFailures: 1,
+        },
+      };
+
+      const clearedCount = clearImageCache(mockInstance);
+
+      expect(clearedCount).toBe(2);
+      expect(mockInstance._imageCache.size).toBe(0);
+      expect(mockInstance._retryStats).toEqual({
+        totalAttempts: 0,
+        successAfterRetry: 0,
+        finalFailures: 0,
+      });
+    });
+
+    test('getImageCacheStats should return correct stats', () => {
+      const mockInstance = {
+        _imageCache: new Map([
+          ['url1', 'data:image/png;base64,abc'],
+          ['url2', null], // failed download
+          ['url3', 'data:image/jpeg;base64,def'],
+        ]),
+        _retryStats: {
+          totalAttempts: 5,
+          successAfterRetry: 2,
+          finalFailures: 1,
+        },
+      };
+
+      const stats = getImageCacheStats(mockInstance);
+
+      expect(stats.size).toBe(3);
+      expect(stats.urls).toEqual(['url1', 'url2', 'url3']);
+      expect(stats.successCount).toBe(2);
+      expect(stats.failureCount).toBe(1);
+      expect(stats.retryStats).toEqual({
+        totalAttempts: 5,
+        successAfterRetry: 2,
+        finalFailures: 1,
+      });
+    });
+
+    test('getImageCacheStats should handle missing cache gracefully', () => {
+      const mockInstance = {};
+
+      const stats = getImageCacheStats(mockInstance);
+
+      expect(stats).toEqual({
+        size: 0,
+        urls: [],
+        successCount: 0,
+        failureCount: 0,
+        retryStats: { totalAttempts: 0, successAfterRetry: 0, finalFailures: 0 },
+      });
+    });
+
+    test('clearImageCache should handle missing cache gracefully', () => {
+      const mockInstance = {};
+
+      const clearedCount = clearImageCache(mockInstance);
+
+      expect(clearedCount).toBe(0);
     });
   });
 });
