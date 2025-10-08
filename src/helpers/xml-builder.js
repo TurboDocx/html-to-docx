@@ -90,13 +90,12 @@ const setBorderIndexEquivalent = (index, length) => {
   return 'middle';
 };
 
-const isThickness = (value) =>
-  ['auto', 'from-text'].includes(value) ||
-  pointRegex.test(value) ||
+const hasDimensionUnits = (value) =>
   pixelRegex.test(value) ||
+  percentageRegex.test(value) ||
+  pointRegex.test(value) ||
   cmRegex.test(value) ||
-  inchRegex.test(value) ||
-  percentageRegex.test(value);
+  inchRegex.test(value);
 
 const isTextDecorationLine = (line) =>
   ['overline', 'underline', 'line-through', 'blink', 'none'].includes(line);
@@ -1401,24 +1400,12 @@ const computeImageDimensions = (vNode, attributes) => {
 
     if (htmlWidth) {
       // HTML attributes without units default to pixels
-      const hasUnits =
-        pixelRegex.test(htmlWidth) ||
-        percentageRegex.test(htmlWidth) ||
-        pointRegex.test(htmlWidth) ||
-        cmRegex.test(htmlWidth) ||
-        inchRegex.test(htmlWidth);
-      const widthWithUnits = hasUnits ? htmlWidth : `${htmlWidth}px`;
+      const widthWithUnits = hasDimensionUnits(htmlWidth) ? htmlWidth : `${htmlWidth}px`;
       modifiedWidth = calculateAbsoluteValues(widthWithUnits, originalWidthInEMU);
     }
     if (htmlHeight) {
       // HTML attributes without units default to pixels
-      const hasUnits =
-        pixelRegex.test(htmlHeight) ||
-        percentageRegex.test(htmlHeight) ||
-        pointRegex.test(htmlHeight) ||
-        cmRegex.test(htmlHeight) ||
-        inchRegex.test(htmlHeight);
-      const heightWithUnits = hasUnits ? htmlHeight : `${htmlHeight}px`;
+      const heightWithUnits = hasDimensionUnits(htmlHeight) ? htmlHeight : `${htmlHeight}px`;
       modifiedHeight = calculateAbsoluteValues(heightWithUnits, originalHeightInEMU);
     }
 

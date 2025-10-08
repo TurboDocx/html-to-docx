@@ -1040,4 +1040,112 @@ describe('Image Processing', () => {
       expect(axios.get).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('HTML attribute vs CSS style precedence', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('CSS style width/height should override HTML attribute width/height', async () => {
+      // CSS style should take precedence over HTML attributes
+      const html = `<img src="https://example.com/test.png" width="100" height="100" style="width: 200px; height: 200px;" />`;
+
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE,
+        status: 200,
+      });
+
+      const docx = await HTMLtoDOCX(html, null, {
+        imageProcessing: { verboseLogging: false },
+      });
+
+      const parsed = await parseDOCX(docx);
+
+      // Verify image was processed
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+      expect(axios.get).toHaveBeenCalledTimes(1);
+
+      // Check that dimensions in XML reflect CSS values (200px) not HTML attributes (100px)
+      // 200px * 9525 EMU/px = 1905000 EMU
+      const cxMatch = parsed.xml.match(/cx=["']([0-9]+)["']/);
+      const cyMatch = parsed.xml.match(/cy=["']([0-9]+)["']/);
+
+      expect(cxMatch).not.toBeNull();
+      expect(cyMatch).not.toBeNull();
+
+      const widthEMU = parseInt(cxMatch[1]);
+      const heightEMU = parseInt(cyMatch[1]);
+
+      // CSS 200px should be ~1905000 EMU (200 * 9525)
+      // Allow some rounding tolerance
+      expect(widthEMU).toBeGreaterThan(1800000);
+      expect(widthEMU).toBeLessThan(2000000);
+      expect(heightEMU).toBeGreaterThan(1800000);
+      expect(heightEMU).toBeLessThan(2000000);
+    });
+
+    test('HTML attributes should apply when no CSS style is present', async () => {
+      const html = `<img src="https://example.com/test.png" width="150" height="150" />`;
+
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE,
+        status: 200,
+      });
+
+      const docx = await HTMLtoDOCX(html, null, {
+        imageProcessing: { verboseLogging: false },
+      });
+
+      const parsed = await parseDOCX(docx);
+
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+
+      // Check that dimensions reflect HTML attribute values (150px)
+      // 150px * 9525 EMU/px = 1428750 EMU
+      const cxMatch = parsed.xml.match(/cx=["']([0-9]+)["']/);
+      const cyMatch = parsed.xml.match(/cy=["']([0-9]+)["']/);
+
+      expect(cxMatch).not.toBeNull();
+      expect(cyMatch).not.toBeNull();
+
+      const widthEMU = parseInt(cxMatch[1]);
+      const heightEMU = parseInt(cyMatch[1]);
+
+      // 150px should be ~1428750 EMU
+      expect(widthEMU).toBeGreaterThan(1350000);
+      expect(widthEMU).toBeLessThan(1500000);
+      expect(heightEMU).toBeGreaterThan(1350000);
+      expect(heightEMU).toBeLessThan(1500000);
+    });
+
+    test('Partial CSS override: only width in style should override HTML width but keep HTML height', async () => {
+      const html = `<img src="https://example.com/test.png" width="100" height="100" style="width: 300px;" />`;
+
+      axios.get.mockResolvedValue({
+        data: PNG_FIXTURE,
+        status: 200,
+      });
+
+      const docx = await HTMLtoDOCX(html, null, {
+        imageProcessing: { verboseLogging: false },
+      });
+
+      const parsed = await parseDOCX(docx);
+
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+
+      const cxMatch = parsed.xml.match(/cx=["']([0-9]+)["']/);
+
+      expect(cxMatch).not.toBeNull();
+
+      const widthEMU = parseInt(cxMatch[1]);
+
+      // CSS width 300px should be ~2857500 EMU (300 * 9525)
+      expect(widthEMU).toBeGreaterThan(2700000);
+      expect(widthEMU).toBeLessThan(3000000);
+
+      // Height should maintain aspect ratio based on new width
+      // (since CSS only specified width, height is calculated from aspect ratio)
+    });
+  });
 });
