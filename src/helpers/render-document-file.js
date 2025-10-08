@@ -161,8 +161,8 @@ export const buildImage = async (
           }
         } catch (error) {
           lastError = error;
-          // eslint-disable-next-line no-console
-          console.warn(
+          logVerbose(
+            verboseLogging,
             `[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`
           );
 
