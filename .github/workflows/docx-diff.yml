@@ -42,9 +42,10 @@ jobs:
 
       - name: Generate baseline DOCX
         working-directory: baseline
+        env:
+          DETERMINISTIC_IDS: 'true'
         run: |
-          npm run build
-          node example/example-deterministic.js
+          npm test
           mv example-node.docx ../baseline.docx
 
       - name: Checkout PR branch
@@ -65,9 +66,10 @@ jobs:
 
       - name: Generate current DOCX
         working-directory: current
+        env:
+          DETERMINISTIC_IDS: 'true'
         run: |
-          npm run build
-          node example/example-deterministic.js
+          npm test
           mv example-node.docx ../current.docx
 
       - name: Run DOCX diff

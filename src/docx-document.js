@@ -1,5 +1,5 @@
 import { create, fragment } from 'xmlbuilder2';
-import { generateMediaId } from './utils/id-generator';
+import { nanoid } from 'nanoid';
 
 import {
   generateCoreXML,
@@ -518,7 +518,7 @@ class DocxDocument {
       matches[1].match(/\/(.*?)$/)[1] === 'octet-stream' ? 'png' : matches[1].match(/\/(.*?)$/)[1];
 
     // Use deterministic IDs when deterministicIds option is enabled (for CI diff testing)
-    const imageId = this.deterministicIds ? this.lastMediaId.toString() : generateMediaId();
+    const imageId = this.deterministicIds ? this.lastMediaId.toString() : nanoid();
     const fileNameWithExtension = `image-${imageId}.${fileExtension}`;
 
     this.lastMediaId += 1;
