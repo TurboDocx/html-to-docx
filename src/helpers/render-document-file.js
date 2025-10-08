@@ -125,9 +125,18 @@ export const buildImage = async (
           );
 
           // Use configurable timeout, default 5 seconds, with exponential backoff for retries
-          const baseTimeout = Math.max(1000, Math.min(options.downloadTimeout || 5000, 30000)); // 1s-30s range
+          const baseTimeout = Math.max(
+            defaultDocumentOptions.imageProcessing.minTimeout,
+            Math.min(
+              options.downloadTimeout || defaultDocumentOptions.imageProcessing.downloadTimeout,
+              defaultDocumentOptions.imageProcessing.maxTimeout
+            )
+          );
           const timeoutMs = baseTimeout * attempt;
-          const maxSizeBytes = Math.max(1024, options.maxImageSize || 10 * 1024 * 1024); // min 1KB
+          const maxSizeBytes = Math.max(
+            defaultDocumentOptions.imageProcessing.minImageSize,
+            options.maxImageSize || defaultDocumentOptions.imageProcessing.maxImageSize
+          );
 
           base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
           if (base64String) {
@@ -149,7 +158,7 @@ export const buildImage = async (
 
           // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
           if (attempt < maxRetries) {
-            const delay = 500 * attempt;
+            const delay = defaultDocumentOptions.imageProcessing.retryDelayBase * attempt;
             logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
             await new Promise((resolve) => setTimeout(resolve, delay));
           }

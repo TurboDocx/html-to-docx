@@ -240,6 +240,10 @@ full fledged examples can be found under `example/`
     - `verboseLogging` <?[Boolean]> flag to enable detailed logging of image processing operations. Defaults to `false`.
     - `downloadTimeout` <?[Number]> timeout in milliseconds for each image download attempt. Defaults to `5000` (5 seconds).
     - `maxImageSize` <?[Number]> maximum allowed image size in bytes. Defaults to `10485760` (10MB).
+    - `retryDelayBase` <?[Number]> base delay in milliseconds for exponential backoff between retries. Defaults to `500` (500ms).
+    - `minTimeout` <?[Number]> minimum timeout in milliseconds. Defaults to `1000` (1 second).
+    - `maxTimeout` <?[Number]> maximum timeout in milliseconds. Defaults to `30000` (30 seconds).
+    - `minImageSize` <?[Number]> minimum image size in bytes. Defaults to `1024` (1KB).
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns
