@@ -1,160 +1,385 @@
-/* eslint-disable no-restricted-syntax, no-continue, import/extensions */
+/* eslint-disable no-restricted-syntax, no-continue, import/extensions, prefer-destructuring */
 /**
- * HTML to Virtual DOM Parser - Drop-in replacement for html-to-vdom package
+ * HTML to Virtual DOM Parser - EXACT implementation matching html-to-vdom
  *
- * Converts HTML strings to virtual DOM trees using htmlparser2 for parsing.
- * Maintains full API compatibility with the unmaintained html-to-vdom package.
+ * This is a faithful reproduction of html-to-vdom's conversion logic
+ * to eliminate security vulnerabilities while maintaining 100% compatibility.
  *
- * This eliminates the security vulnerability (CVE-2025-57352) while providing
- * better HTML5 support and active maintenance via htmlparser2.
+ * Based on: https://github.com/TimBeyer/html-to-vdom
  */
 
-import { parseDocument } from 'htmlparser2';
+import * as htmlparser2 from 'htmlparser2';
+import { decode } from 'html-entities';
 import { VNode, VText } from '../vdom/index.js';
 
-/**
- * Parse CSS style string into object
- * @param {string} styleStr - CSS style string (e.g., "color: red; font-size: 12px")
- * @returns {object} Style object
- */
-function parseStyle(styleStr) {
-  if (!styleStr || typeof styleStr !== 'string') {
-    return {};
-  }
+// ============================================================================
+// Property Info System - Exact copy from html-to-vdom
+// ============================================================================
 
-  const style = {};
-  const declarations = styleStr.split(';').filter((s) => s.trim());
+// Property masks from html-to-vdom
+/* eslint-disable no-bitwise */
+const MUST_USE_ATTRIBUTE = 0x1;
+const MUST_USE_PROPERTY = 0x2;
+const HAS_BOOLEAN_VALUE = 0x4;
+const HAS_NUMERIC_VALUE = 0x8;
+const HAS_POSITIVE_NUMERIC_VALUE = 0x10 | 0x8;
+const HAS_OVERLOADED_BOOLEAN_VALUE = 0x20;
+/* eslint-enable no-bitwise */
 
-  for (const declaration of declarations) {
-    const colonIndex = declaration.indexOf(':');
-    if (colonIndex === -1) continue;
+// Properties configuration - complete copy from html-to-vdom
+/* eslint-disable no-bitwise */
+const Properties = {
+  accept: null,
+  acceptCharset: null,
+  accessKey: null,
+  action: null,
+  allowFullScreen: MUST_USE_ATTRIBUTE | HAS_BOOLEAN_VALUE,
+  allowTransparency: MUST_USE_ATTRIBUTE,
+  alt: null,
+  async: HAS_BOOLEAN_VALUE,
+  autoComplete: null,
+  autoFocus: HAS_BOOLEAN_VALUE,
+  autoPlay: HAS_BOOLEAN_VALUE,
+  capture: MUST_USE_ATTRIBUTE | HAS_BOOLEAN_VALUE,
+  cellPadding: null,
+  cellSpacing: null,
+  charSet: MUST_USE_ATTRIBUTE,
+  challenge: MUST_USE_ATTRIBUTE,
+  checked: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+  classID: MUST_USE_ATTRIBUTE,
+  className: MUST_USE_ATTRIBUTE,
+  cols: MUST_USE_ATTRIBUTE | HAS_POSITIVE_NUMERIC_VALUE,
+  colSpan: null,
+  content: null,
+  contentEditable: null,
+  contextMenu: MUST_USE_ATTRIBUTE,
+  controls: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+  coords: null,
+  crossOrigin: null,
+  data: null,
+  dateTime: MUST_USE_ATTRIBUTE,
+  defer: HAS_BOOLEAN_VALUE,
+  dir: null,
+  disabled: MUST_USE_ATTRIBUTE | HAS_BOOLEAN_VALUE,
+  download: HAS_OVERLOADED_BOOLEAN_VALUE,
+  draggable: null,
+  encType: null,
+  form: MUST_USE_ATTRIBUTE,
+  formAction: MUST_USE_ATTRIBUTE,
+  formEncType: MUST_USE_ATTRIBUTE,
+  formMethod: MUST_USE_ATTRIBUTE,
+  formNoValidate: HAS_BOOLEAN_VALUE,
+  formTarget: MUST_USE_ATTRIBUTE,
+  frameBorder: MUST_USE_ATTRIBUTE,
+  headers: null,
+  height: MUST_USE_ATTRIBUTE,
+  hidden: MUST_USE_ATTRIBUTE | HAS_BOOLEAN_VALUE,
+  high: null,
+  href: null,
+  hrefLang: null,
+  htmlFor: null,
+  httpEquiv: null,
+  icon: null,
+  id: MUST_USE_PROPERTY,
+  is: MUST_USE_ATTRIBUTE,
+  keyParams: MUST_USE_ATTRIBUTE,
+  keyType: MUST_USE_ATTRIBUTE,
+  label: null,
+  lang: null,
+  list: MUST_USE_ATTRIBUTE,
+  loop: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+  low: null,
+  manifest: MUST_USE_ATTRIBUTE,
+  marginHeight: null,
+  marginWidth: null,
+  max: null,
+  maxLength: MUST_USE_ATTRIBUTE,
+  media: MUST_USE_ATTRIBUTE,
+  mediaGroup: null,
+  method: null,
+  min: null,
+  minLength: MUST_USE_ATTRIBUTE,
+  multiple: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+  muted: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+  name: null,
+  noValidate: HAS_BOOLEAN_VALUE,
+  open: HAS_BOOLEAN_VALUE,
+  optimum: null,
+  pattern: null,
+  placeholder: null,
+  poster: null,
+  preload: null,
+  radioGroup: null,
+  readOnly: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+  rel: null,
+  required: HAS_BOOLEAN_VALUE,
+  role: MUST_USE_ATTRIBUTE,
+  rows: MUST_USE_ATTRIBUTE | HAS_POSITIVE_NUMERIC_VALUE,
+  rowSpan: null,
+  sandbox: null,
+  scope: null,
+  scoped: HAS_BOOLEAN_VALUE,
+  scrolling: null,
+  seamless: MUST_USE_ATTRIBUTE | HAS_BOOLEAN_VALUE,
+  selected: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+  shape: null,
+  size: MUST_USE_ATTRIBUTE | HAS_POSITIVE_NUMERIC_VALUE,
+  sizes: MUST_USE_ATTRIBUTE,
+  span: HAS_POSITIVE_NUMERIC_VALUE,
+  spellCheck: null,
+  src: null,
+  srcDoc: MUST_USE_PROPERTY,
+  srcSet: MUST_USE_ATTRIBUTE,
+  start: HAS_NUMERIC_VALUE,
+  step: null,
+  style: null,
+  tabIndex: null,
+  target: null,
+  title: null,
+  type: null,
+  useMap: null,
+  value: MUST_USE_PROPERTY,
+  width: MUST_USE_ATTRIBUTE,
+  wmode: MUST_USE_ATTRIBUTE,
+  autoCapitalize: null,
+  autoCorrect: null,
+  itemProp: MUST_USE_ATTRIBUTE,
+  itemScope: MUST_USE_ATTRIBUTE | HAS_BOOLEAN_VALUE,
+  itemType: MUST_USE_ATTRIBUTE,
+  itemID: MUST_USE_ATTRIBUTE,
+  itemRef: MUST_USE_ATTRIBUTE,
+  property: null,
+  unselectable: MUST_USE_ATTRIBUTE,
+};
+/* eslint-enable no-bitwise */
 
-    const property = declaration.substring(0, colonIndex).trim();
-    const value = declaration.substring(colonIndex + 1).trim();
+const PropertyToAttributeMapping = {
+  className: 'class',
+  htmlFor: 'for',
+  httpEquiv: 'http-equiv',
+  acceptCharset: 'accept-charset',
+};
 
-    if (property && value) {
-      style[property] = value;
-    }
-  }
-
-  return style;
+function checkMask(value, bitmask) {
+  // eslint-disable-next-line no-bitwise
+  return (value & bitmask) === bitmask;
 }
 
-/**
- * Convert DOM element attributes to VNode properties
- * @param {object} element - DOM element from htmlparser2
- * @returns {object} VNode properties object
- */
-function getProperties(element) {
-  const properties = {
-    attributes: {},
-    style: {},
+// Build property info lookup - EXACT copy from html-to-vdom
+const propInfoByAttributeName = {};
+Object.keys(Properties).forEach((propName) => {
+  const propConfig = Properties[propName];
+  const attributeName = PropertyToAttributeMapping[propName] || propName.toLowerCase();
+
+  const propertyInfo = {
+    attributeName,
+    propertyName: propName,
+    mustUseAttribute: checkMask(propConfig, MUST_USE_ATTRIBUTE),
+    mustUseProperty: checkMask(propConfig, MUST_USE_PROPERTY),
+    hasBooleanValue: checkMask(propConfig, HAS_BOOLEAN_VALUE),
+    hasNumericValue: checkMask(propConfig, HAS_NUMERIC_VALUE),
+    hasPositiveNumericValue: checkMask(propConfig, HAS_POSITIVE_NUMERIC_VALUE),
+    hasOverloadedBooleanValue: checkMask(propConfig, HAS_OVERLOADED_BOOLEAN_VALUE),
   };
 
-  const attribs = element.attribs || {};
+  propInfoByAttributeName[attributeName] = propertyInfo;
+});
 
-  // Process all attributes
-  for (const [key, value] of Object.entries(attribs)) {
-    if (key === 'style') {
-      properties.style = parseStyle(value);
-    } else if (key === 'class') {
-      properties.attributes.class = value;
-      properties.className = value;
-    } else {
-      properties.attributes[key] = value;
-      properties[key] = value;
-    }
+function getPropertyInfo(attributeName) {
+  const lowerCased = attributeName.toLowerCase();
+
+  if (Object.prototype.hasOwnProperty.call(propInfoByAttributeName, lowerCased)) {
+    return propInfoByAttributeName[lowerCased];
   }
 
-  return properties;
+  // Custom attribute
+  return {
+    attributeName,
+    mustUseAttribute: true,
+    isCustomAttribute: true,
+  };
+}
+
+// ============================================================================
+// Property Setters - Exact copy from html-to-vdom
+// ============================================================================
+
+/**
+ * Parse CSS style string - EXACT copy from html-to-vdom
+ */
+function parseStyles(input) {
+  const attributes = input.split(';');
+  const styles = attributes.reduce((object, attribute) => {
+    const entry = attribute.split(/:(.*)/);
+    if (entry[0] && entry[1]) {
+      object[entry[0].trim()] = entry[1].trim();
+    }
+    return object;
+  }, {});
+  return styles;
+}
+
+const propertyValueConversions = {
+  style: parseStyles,
+  placeholder: decode,
+  title: decode,
+  alt: decode,
+};
+
+function propertyIsTrue(propInfo, value) {
+  if (propInfo.hasBooleanValue) {
+    return value === '' || value.toLowerCase() === propInfo.attributeName;
+  }
+  if (propInfo.hasOverloadedBooleanValue) {
+    return value === '';
+  }
+  return false;
+}
+
+function getPropertyValue(propInfo, value) {
+  const isTrue = propertyIsTrue(propInfo, value);
+  if (propInfo.hasBooleanValue) {
+    return !!isTrue;
+  }
+  if (propInfo.hasOverloadedBooleanValue) {
+    return isTrue ? true : value;
+  }
+  if (propInfo.hasNumericValue || propInfo.hasPositiveNumericValue) {
+    return Number(value);
+  }
+  return value;
+}
+
+function setVNodeProperty(properties, propInfo, value) {
+  const propName = propInfo.propertyName;
+  let valueConverter;
+
+  if (propName && Object.prototype.hasOwnProperty.call(propertyValueConversions, propName)) {
+    valueConverter = propertyValueConversions[propInfo.propertyName];
+    value = valueConverter(value);
+  }
+
+  properties[propInfo.propertyName] = getPropertyValue(propInfo, value);
+}
+
+function getAttributeValue(propInfo, value) {
+  if (propInfo.hasBooleanValue) {
+    return '';
+  }
+  return value;
+}
+
+function setVNodeAttribute(properties, propInfo, value) {
+  properties.attributes[propInfo.attributeName] = getAttributeValue(propInfo, value);
+}
+
+function getPropertySetter(propInfo) {
+  if (propInfo.mustUseAttribute) {
+    return { set: setVNodeAttribute };
+  }
+  return { set: setVNodeProperty };
 }
 
 /**
- * Convert htmlparser2 node tree to VNode tree
- * @param {object} node - htmlparser2 DOM node
- * @returns {VNode|VText|null} Virtual DOM node
+ * Convert tag attributes - EXACT copy from html-to-vdom
  */
-function convertNode(node) {
-  // Text node
-  if (node.type === 'text') {
-    const text = node.data || '';
-    // Skip empty text nodes (only whitespace)
-    if (text.trim() === '' && text.length > 0) {
-      // Preserve single space
-      return new VText(' ');
-    }
-    return text.trim() === '' ? null : new VText(text);
-  }
+function convertTagAttributes(tag) {
+  const attributes = tag.attribs;
+  const vNodeProperties = {
+    attributes: {},
+  };
 
-  // Comment node - skip
-  if (node.type === 'comment') {
-    return null;
-  }
-
-  // Element node (tag)
-  if (node.type === 'tag') {
-    const tagName = node.name;
-    const properties = getProperties(node);
-    const children = [];
-
-    // Process child nodes
-    if (node.children && node.children.length > 0) {
-      for (const child of node.children) {
-        const vChild = convertNode(child);
-        if (vChild !== null) {
-          children.push(vChild);
-        }
-      }
-    }
-
-    return new VNode(tagName, properties, children);
-  }
-
-  // Root node - process children
-  if (node.type === 'root') {
-    const children = [];
-    if (node.children && node.children.length > 0) {
-      for (const child of node.children) {
-        const vChild = convertNode(child);
-        if (vChild !== null) {
-          children.push(vChild);
-        }
-      }
-    }
-    return children.length === 1 ? children[0] : children;
-  }
-
-  return null;
-}
-
-/**
- * Convert HTML string to virtual DOM tree
- * @param {string} html - HTML string
- * @returns {VNode|VText|Array} Virtual DOM tree
- */
-export function convertHTML(html) {
-  if (!html || typeof html !== 'string') {
-    return null;
-  }
-
-  // Parse HTML with htmlparser2
-  // decodeEntities: false preserves HTML entities as-is
-  // lowerCaseTags/lowerCaseAttributeNames: true for consistency
-  const document = parseDocument(html, {
-    decodeEntities: false,
-    lowerCaseTags: true,
-    lowerCaseAttributeNames: true,
+  Object.keys(attributes).forEach((attributeName) => {
+    const value = attributes[attributeName];
+    const propInfo = getPropertyInfo(attributeName);
+    const propertySetter = getPropertySetter(propInfo);
+    propertySetter.set(vNodeProperties, propInfo, value);
   });
 
-  // Convert from htmlparser2 DOM to VNode tree
-  return convertNode(document);
+  return vNodeProperties;
+}
+
+// ============================================================================
+// HTML Parser to VDOM Converter - EXACT copy from html-to-vdom
+// ============================================================================
+
+function createConverter(VNodeClass, VTextClass) {
+  const converter = {
+    convert(node, getVNodeKey) {
+      if (node.type === 'tag' || node.type === 'script' || node.type === 'style') {
+        return converter.convertTag(node, getVNodeKey);
+      }
+      if (node.type === 'text') {
+        return new VTextClass(decode(node.data));
+      }
+      // Converting an unsupported node, return an empty text node instead
+      return new VTextClass('');
+    },
+
+    convertTag(tag, getVNodeKey) {
+      const attributes = convertTagAttributes(tag);
+      let key;
+
+      if (getVNodeKey) {
+        key = getVNodeKey(attributes);
+      }
+
+      const children = Array.prototype.map.call(tag.children || [], (node) =>
+        converter.convert(node, getVNodeKey)
+      );
+
+      return new VNodeClass(tag.name, attributes, children, key);
+    },
+  };
+  return converter;
 }
 
 /**
- * Factory function for creating HTML to VDOM converter
- * Maintains API compatibility with html-to-vdom package
- * @returns {function} Converter function
+ * Parse HTML - EXACT copy from html-to-vdom
+ *
+ * NOTE: htmlparser2 v10.0.0 auto-decodes entities by default.
+ * We set decodeEntities: false to match v3.9.0 behavior,
+ * then manually decode using html-entities (same as html-to-vdom used 'ent')
  */
-export default function createConverter() {
+function parseHTML(html) {
+  const handler = new htmlparser2.DomHandler();
+  const parser = new htmlparser2.Parser(handler, {
+    lowerCaseAttributeNames: false,
+    decodeEntities: false, // Required for htmlparser2 v10.0.0 compatibility
+  });
+  parser.parseComplete(html);
+  return handler.dom;
+}
+
+/**
+ * Main converter function - EXACT copy from html-to-vdom
+ */
+export function convertHTML(options, html) {
+  // Support both (options, html) and (html) signatures
+  let opts = options;
+  let htmlString = html;
+
+  if (typeof options === 'string') {
+    htmlString = options;
+    opts = {};
+  }
+
+  const converter = createConverter(VNode, VText);
+  const tags = parseHTML(htmlString);
+
+  let convertedHTML;
+  if (tags.length > 1) {
+    convertedHTML = tags.map((tag) => converter.convert(tag, opts.getVNodeKey));
+  } else {
+    convertedHTML = converter.convert(tags[0], opts.getVNodeKey);
+  }
+
+  return convertedHTML;
+}
+
+/**
+ * Factory function - EXACT copy from html-to-vdom API
+ */
+export default function createHTMLtoVDOM() {
   return convertHTML;
 }
