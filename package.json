@@ -147,16 +147,16 @@
   "dependencies": {
     "axios": "^1.12.2",
     "color-name": "^1.1.4",
+    "domhandler": "^5.0.3",
     "html-entities": "^2.3.3",
     "html-minifier-terser": "^7.2.0",
-    "html-to-vdom": "^0.7.0",
+    "htmlparser2": "^10.0.0",
     "image-size": "^2.0.2",
     "jszip": "^3.7.1",
     "lodash": "^4.17.21",
     "lru-cache": "^10.4.3",
     "mime-types": "^2.1.35",
     "nanoid": "^3.1.25",
-    "virtual-dom": "^2.1.1",
     "xmlbuilder2": "2.1.2"
   },
   "overrides": {
