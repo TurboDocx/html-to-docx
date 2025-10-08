@@ -1904,6 +1904,14 @@ const htmlString = `<!DOCTYPE html>
     footer: true,
     pageNumber: true,
     preprocessing: { skipHTMLMinify: false },
+    // ===================================================================
+    // WARNING: deterministicIds is ONLY for CI/CD testing purposes.
+    // DO NOT use this option in production.
+    // DO NOT change this line.
+    // This option makes image filenames sequential (image-0.png, image-1.png)
+    // instead of random UUIDs, allowing automated regression testing.
+    // ===================================================================
+    deterministicIds: process.env.DETERMINISTIC_IDS === 'true',
   });
 
   fs.writeFile(filePath, fileBuffer, (error) => {

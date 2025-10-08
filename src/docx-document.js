@@ -138,6 +138,7 @@ class DocxDocument {
     this.htmlString = properties.htmlString;
     this.orientation = properties.orientation;
     this.pageSize = properties.pageSize || defaultDocumentOptions.pageSize;
+    this.deterministicIds = properties.deterministicIds || false;
 
     const isPortraitOrientation = this.orientation === defaultOrientation;
     const height = this.pageSize.height ? this.pageSize.height : landscapeHeight;
@@ -516,7 +517,9 @@ class DocxDocument {
     const fileExtension =
       matches[1].match(/\/(.*?)$/)[1] === 'octet-stream' ? 'png' : matches[1].match(/\/(.*?)$/)[1];
 
-    const fileNameWithExtension = `image-${nanoid()}.${fileExtension}`;
+    // Use deterministic IDs when deterministicIds option is enabled (for CI diff testing)
+    const imageId = this.deterministicIds ? this.lastMediaId.toString() : nanoid();
+    const fileNameWithExtension = `image-${imageId}.${fileExtension}`;
 
     this.lastMediaId += 1;
 
