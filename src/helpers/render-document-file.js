@@ -32,22 +32,16 @@ const addLineRuleToImageFragment = (imageFragment) => {
     .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
 };
 
-// Image cache to prevent duplicate downloads during the same document generation
-const imageCache = new Map();
-
-// Track retry statistics
-let retryStats = {
-  totalAttempts: 0,
-  successAfterRetry: 0,
-  finalFailures: 0,
-};
-
 // Function to clear the image cache (useful for testing or memory management)
-export const clearImageCache = () => {
-  const cacheSize = imageCache.size;
-  imageCache.clear();
+// Now requires docxDocumentInstance parameter for per-document isolation
+export const clearImageCache = (docxDocumentInstance) => {
+  if (!docxDocumentInstance || !docxDocumentInstance._imageCache) {
+    return 0;
+  }
+  const cacheSize = docxDocumentInstance._imageCache.size;
+  docxDocumentInstance._imageCache.clear();
   // Reset retry stats
-  retryStats = {
+  docxDocumentInstance._retryStats = {
     totalAttempts: 0,
     successAfterRetry: 0,
     finalFailures: 0,
@@ -56,13 +50,28 @@ export const clearImageCache = () => {
 };
 
 // Function to get cache statistics
-export const getImageCacheStats = () => ({
-  size: imageCache.size,
-  urls: Array.from(imageCache.keys()),
-  successCount: Array.from(imageCache.values()).filter((v) => v !== null).length,
-  failureCount: Array.from(imageCache.values()).filter((v) => v === null).length,
-  retryStats,
-});
+// Now requires docxDocumentInstance parameter for per-document isolation
+export const getImageCacheStats = (docxDocumentInstance) => {
+  if (!docxDocumentInstance || !docxDocumentInstance._imageCache) {
+    return {
+      size: 0,
+      urls: [],
+      successCount: 0,
+      failureCount: 0,
+      retryStats: { totalAttempts: 0, successAfterRetry: 0, finalFailures: 0 },
+    };
+  }
+
+  return {
+    size: docxDocumentInstance._imageCache.size,
+    urls: Array.from(docxDocumentInstance._imageCache.keys()),
+    successCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v !== null)
+      .length,
+    failureCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v === null)
+      .length,
+    retryStats: docxDocumentInstance._retryStats,
+  };
+};
 
 // Helper function for conditional verbose logging
 const logVerbose = (verboseLogging, message, ...args) => {
@@ -96,8 +105,8 @@ export const buildImage = async (
     const imageSource = vNode.properties.src;
 
     // Check cache first for external URLs
-    if (isValidUrl(imageSource) && imageCache.has(imageSource)) {
-      const cachedData = imageCache.get(imageSource);
+    if (isValidUrl(imageSource) && docxDocumentInstance._imageCache.has(imageSource)) {
+      const cachedData = docxDocumentInstance._imageCache.get(imageSource);
       if (!cachedData) {
         // Previously failed to download in this document generation, skip this image
         logVerbose(
@@ -116,7 +125,7 @@ export const buildImage = async (
       let lastError = null;
 
       for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
-        retryStats.totalAttempts += 1;
+        docxDocumentInstance._retryStats.totalAttempts += 1;
 
         try {
           logVerbose(
@@ -141,7 +150,7 @@ export const buildImage = async (
           base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
           if (base64String) {
             if (attempt > 1) {
-              retryStats.successAfterRetry += 1;
+              docxDocumentInstance._retryStats.successAfterRetry += 1;
               logVerbose(
                 verboseLogging,
                 `[RETRY] Success on attempt ${attempt} for: ${imageSource}`
@@ -166,21 +175,21 @@ export const buildImage = async (
       }
 
       if (!base64String) {
-        retryStats.finalFailures += 1;
+        docxDocumentInstance._retryStats.finalFailures += 1;
       }
 
       if (base64String) {
         const mimeType = getMimeType(imageSource, base64String);
         base64Uri = `data:${mimeType};base64, ${base64String}`;
         // Cache the successful result
-        imageCache.set(imageSource, base64Uri);
+        docxDocumentInstance._imageCache.set(imageSource, base64Uri);
         logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
         // Update vNode to reflect the new data URL for subsequent processing
         vNode.properties.src = base64Uri;
       } else {
         // Cache the failure for THIS document generation only after all retries failed
-        // Note: Cache is cleared between document generations, so failures can be retried in future runs
-        imageCache.set(imageSource, null);
+        // Each document generation has isolated cache, so failures can be retried in new documents
+        docxDocumentInstance._imageCache.set(imageSource, null);
         // eslint-disable-next-line no-console
         console.error(
           `[ERROR] buildImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${
@@ -603,13 +612,21 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
   // Get image processing options from document instance with centralized defaults
   const imageOptions =
     docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
-  // Clear image cache at the start of each document generation to allow retrying failed URLs in new documents
-  const previousCacheSize = clearImageCache();
-  if (previousCacheSize > 0 && imageOptions.verboseLogging) {
-    // eslint-disable-next-line no-console
-    console.log(
-      `[CACHE] Cleared previous cache (${previousCacheSize} images) for new document generation`
-    );
+
+  // Initialize per-document image cache and retry stats for isolation
+  // This ensures each document generation has its own isolated cache and statistics
+  if (!docxDocumentInstance._imageCache) {
+    docxDocumentInstance._imageCache = new Map();
+    docxDocumentInstance._retryStats = {
+      totalAttempts: 0,
+      successAfterRetry: 0,
+      finalFailures: 0,
+    };
+
+    if (imageOptions.verboseLogging) {
+      // eslint-disable-next-line no-console
+      console.log('[CACHE] Initialized new image cache for document generation');
+    }
   }
 
   const vTree = convertHTML(docxDocumentInstance.htmlString);
@@ -653,7 +670,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
   );
 
   // Log cache statistics at the end of document generation
-  const cacheStats = getImageCacheStats();
+  const cacheStats = getImageCacheStats(docxDocumentInstance);
   if (
     (cacheStats.size > 0 || cacheStats.retryStats.totalAttempts > 0) &&
     imageOptions.verboseLogging
