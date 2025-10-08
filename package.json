@@ -70,6 +70,7 @@
     "build": "rollup -c",
     "build:dev": "NODE_ENV=development rollup -c",
     "build:prod": "NODE_ENV=production rollup -c",
+    "diff:docx": "node scripts/diff-docx.js",
     "prepare": "husky install",
     "postinstall": "node scripts/postinstall.js",
     "test:ts-example": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/typescript-example.ts"
@@ -122,6 +123,7 @@
     "@rollup/plugin-node-resolve": "^13.1.1",
     "babel-jest": "^30.2.0",
     "cross-env": "^7.0.3",
+    "diff": "^5.2.0",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-prettier": "^8.3.0",
