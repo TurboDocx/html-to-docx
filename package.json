@@ -47,7 +47,8 @@
   "types": "index.d.ts",
   "files": [
     "dist",
-    "scripts",
+    "scripts/postinstall.js",
+    "scripts/messages.json",
     "index.d.ts",
     "README.md",
     "LICENSE"
