@@ -354,7 +354,7 @@ function parseHTML(html) {
 /**
  * Main converter function - EXACT copy from html-to-vdom
  */
-export function convertHTML(options, html) {
+function convertHTML(options, html) {
   // Support both (options, html) and (html) signatures
   let opts = options;
   let htmlString = html;
