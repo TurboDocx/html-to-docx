@@ -3,6 +3,7 @@
 @turbodocx/html-to-docx
 ====================
 [![NPM Version][npm-image]][npm-url]
+[![CodeQL](https://github.com/TurboDocx/html-to-docx/workflows/CodeQL/badge.svg)](https://github.com/TurboDocx/html-to-docx/actions/workflows/codeql.yml)
 [![GitHub Stars](https://img.shields.io/github/stars/turbodocx/html-to-docx?style=social)](https://github.com/turbodocx/html-to-docx)
 [![Type Script](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
