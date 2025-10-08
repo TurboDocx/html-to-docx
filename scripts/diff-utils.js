@@ -57,6 +57,52 @@ function normalizeXML(xmlContent) {
 }
 
 /**
+ * Prettifies XML content for better readability in diffs
+ * @param {string} xmlContent - XML content to prettify
+ * @returns {string} Prettified XML with proper indentation
+ */
+function prettifyXML(xmlContent) {
+  let formatted = '';
+  let indent = 0;
+  const tab = '  '; // 2 spaces
+
+  // Split by tags
+  const parts = xmlContent.split(/(<[^>]+>)/g).filter((part) => part.trim());
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i].trim();
+    if (!part) continue;
+
+    // Check if it's a tag
+    if (part.startsWith('<')) {
+      // Closing tag
+      if (part.startsWith('</')) {
+        indent = Math.max(0, indent - 1);
+        formatted += tab.repeat(indent) + part + '\n';
+      }
+      // Self-closing tag or opening tag
+      else if (part.endsWith('/>') || part.startsWith('<?')) {
+        formatted += tab.repeat(indent) + part + '\n';
+      }
+      // Opening tag
+      else {
+        formatted += tab.repeat(indent) + part + '\n';
+        indent++;
+      }
+    }
+    // Text content
+    else {
+      // Only add non-empty text
+      if (part.trim()) {
+        formatted += tab.repeat(indent) + part + '\n';
+      }
+    }
+  }
+
+  return formatted.trim();
+}
+
+/**
  * Gets all files in a directory recursively
  * @param {string} dir - Directory to scan
  * @param {string} basePath - Base path for relative paths
@@ -179,6 +225,7 @@ function isXMLFile(filePath) {
 module.exports = {
   extractDocx,
   normalizeXML,
+  prettifyXML,
   getAllFiles,
   shouldIgnoreFile,
   categorizeDifference,

@@ -6,6 +6,7 @@ const { diffLines } = require('diff');
 const {
   extractDocx,
   normalizeXML,
+  prettifyXML,
   getAllFiles,
   shouldIgnoreFile,
   categorizeDifference,
@@ -113,10 +114,13 @@ async function main() {
 
     if (isXMLFile(file)) {
       // For XML files, normalize and diff
-      const baselineContent = normalizeXML(fs.readFileSync(baselineFile, 'utf8'));
-      const currentContent = normalizeXML(fs.readFileSync(currentFile, 'utf8'));
+      const baselineRaw = fs.readFileSync(baselineFile, 'utf8');
+      const currentRaw = fs.readFileSync(currentFile, 'utf8');
+      const baselineContent = normalizeXML(baselineRaw);
+      const currentContent = normalizeXML(currentRaw);
 
       if (baselineContent !== currentContent) {
+        // Diff normalized content for detection
         diff = diffLines(baselineContent, currentContent);
         const diffText = diff
           .filter((part) => part.added || part.removed)
@@ -124,6 +128,11 @@ async function main() {
           .join('\n');
 
         category = categorizeDifference(file, diffText);
+
+        // For display, diff prettified XML for readability
+        const baselinePretty = prettifyXML(baselineRaw);
+        const currentPretty = prettifyXML(currentRaw);
+        diff.prettyDiff = diffLines(baselinePretty, currentPretty);
       }
     } else {
       // For binary files, just note they're different
@@ -258,6 +267,73 @@ function generateReport(report) {
         lines.push(`- **Description**: ${change.category.description}`);
       }
       lines.push('');
+    }
+  }
+
+  // OOXML Content Diff section - show actual changes
+  const xmlChanges = report.changes.filter((c) => c.diff && c.file.endsWith('.xml') || c.file.endsWith('.rels'));
+  if (xmlChanges.length > 0) {
+    lines.push('## 🔍 OOXML Content Diff\n');
+    lines.push('> Expand each section to see the actual OOXML changes\n');
+
+    for (const change of xmlChanges) {
+      // Use prettified diff if available, otherwise use normalized diff
+      const diffToUse = change.diff.prettyDiff || change.diff;
+
+      // Format diff lines with context (show unchanged lines around changes)
+      const diffOutput = [];
+      const contextLines = 3; // Number of unchanged lines to show before/after changes
+
+      for (let i = 0; i < diffToUse.length; i++) {
+        const part = diffToUse[i];
+
+        if (part.added) {
+          part.value.split('\n').filter(l => l.trim()).forEach(line => {
+            diffOutput.push(`+ ${line}`);
+          });
+        } else if (part.removed) {
+          part.value.split('\n').filter(l => l.trim()).forEach(line => {
+            diffOutput.push(`- ${line}`);
+          });
+        } else {
+          // Unchanged content - add context lines
+          const lines = part.value.split('\n').filter(l => l.trim());
+
+          // Check if previous or next part is a change
+          const prevIsChange = i > 0 && (diffToUse[i - 1].added || diffToUse[i - 1].removed);
+          const nextIsChange = i < diffToUse.length - 1 && (diffToUse[i + 1].added || diffToUse[i + 1].removed);
+
+          if (prevIsChange || nextIsChange) {
+            // Show context lines
+            const start = prevIsChange ? Math.max(0, lines.length - contextLines) : 0;
+            const end = nextIsChange ? Math.min(lines.length, contextLines) : lines.length;
+
+            for (let j = start; j < end; j++) {
+              diffOutput.push(`  ${lines[j]}`);
+            }
+
+            // Add separator if there's more content
+            if (nextIsChange && end < lines.length) {
+              diffOutput.push('  ...');
+            }
+          }
+        }
+      }
+
+      // Limit to first 50 lines to avoid huge comments
+      const truncated = diffOutput.length > 50;
+      const displayLines = diffOutput.slice(0, 50);
+
+      lines.push('<details>');
+      lines.push(`<summary><b>${change.file}</b> - ${change.category.description}</summary>\n`);
+      lines.push('```diff');
+      lines.push(displayLines.join('\n'));
+      if (truncated) {
+        lines.push('');
+        lines.push('... [Diff truncated - download artifact for full diff]');
+      }
+      lines.push('```\n');
+      lines.push('</details>\n');
     }
   }
 
