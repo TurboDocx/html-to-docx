@@ -1,11 +1,12 @@
 /* eslint-disable no-restricted-syntax, no-continue, import/extensions, prefer-destructuring */
 /**
- * HTML to Virtual DOM Parser - EXACT implementation matching html-to-vdom
+ * HTML to Virtual DOM Parser
  *
- * This is a faithful reproduction of html-to-vdom's conversion logic
- * to eliminate security vulnerabilities while maintaining 100% compatibility.
+ * Converts HTML strings to virtual DOM trees using htmlparser2 for parsing.
+ * This implementation replaces the unmaintained html-to-v package while
+ * maintaining full API compatibility.
  *
- * Based on: https://github.com/TimBeyer/html-to-vdom
+ * Based on React's HTML DOM property configuration and HTML parser libraries.
  */
 
 import * as htmlparser2 from 'htmlparser2';
@@ -13,10 +14,12 @@ import { decode } from 'html-entities';
 import { VNode, VText } from '../vdom/index.js';
 
 // ============================================================================
-// Property Info System - Exact copy from html-to-vdom
+// Property Info System
+// Configuration from the old virtual DOM library (originally from React's HTMLDOMPropertyConfig)
+// This distinguishes HTML properties from attributes for correct VNode generation
 // ============================================================================
 
-// Property masks from html-to-vdom
+// Property masks for attribute/property classification
 /* eslint-disable no-bitwise */
 const MUST_USE_ATTRIBUTE = 0x1;
 const MUST_USE_PROPERTY = 0x2;
@@ -26,7 +29,7 @@ const HAS_POSITIVE_NUMERIC_VALUE = 0x10 | 0x8;
 const HAS_OVERLOADED_BOOLEAN_VALUE = 0x20;
 /* eslint-enable no-bitwise */
 
-// Properties configuration - complete copy from html-to-vdom
+// HTML DOM properties configuration
 /* eslint-disable no-bitwise */
 const Properties = {
   accept: null,
@@ -165,7 +168,7 @@ function checkMask(value, bitmask) {
   return (value & bitmask) === bitmask;
 }
 
-// Build property info lookup - EXACT copy from html-to-vdom
+// Build property info lookup table
 const propInfoByAttributeName = {};
 Object.keys(Properties).forEach((propName) => {
   const propConfig = Properties[propName];
@@ -201,11 +204,11 @@ function getPropertyInfo(attributeName) {
 }
 
 // ============================================================================
-// Property Setters - Exact copy from html-to-vdom
+// Property Setters
 // ============================================================================
 
 /**
- * Parse CSS style string - EXACT copy from html-to-vdom
+ * Parse CSS style string into object
  */
 function parseStyles(input) {
   const attributes = input.split(';');
@@ -281,7 +284,7 @@ function getPropertySetter(propInfo) {
 }
 
 /**
- * Convert tag attributes - EXACT copy from html-to-vdom
+ * Convert tag attributes to VNode properties
  */
 function convertTagAttributes(tag) {
   const attributes = tag.attribs;
@@ -300,7 +303,7 @@ function convertTagAttributes(tag) {
 }
 
 // ============================================================================
-// HTML Parser to VDOM Converter - EXACT copy from html-to-vdom
+// HTML Parser to VDOM Converter
 // ============================================================================
 
 function createConverter(VNodeClass, VTextClass) {
@@ -335,11 +338,11 @@ function createConverter(VNodeClass, VTextClass) {
 }
 
 /**
- * Parse HTML - EXACT copy from html-to-vdom
+ * Parse HTML string into DOM nodes
  *
  * NOTE: htmlparser2 v10.0.0 auto-decodes entities by default.
  * We set decodeEntities: false to match v3.9.0 behavior,
- * then manually decode using html-entities (same as html-to-vdom used 'ent')
+ * then manually decode using html-entities.
  */
 function parseHTML(html) {
   const handler = new htmlparser2.DomHandler();
@@ -352,7 +355,7 @@ function parseHTML(html) {
 }
 
 /**
- * Main converter function - EXACT copy from html-to-vdom
+ * Main converter function
  */
 function convertHTML(options, html) {
   // Support both (options, html) and (html) signatures
@@ -368,7 +371,10 @@ function convertHTML(options, html) {
   const tags = parseHTML(htmlString);
 
   let convertedHTML;
-  if (tags.length > 1) {
+  if (tags.length === 0) {
+    // Empty HTML
+    convertedHTML = new VText('');
+  } else if (tags.length > 1) {
     convertedHTML = tags.map((tag) => converter.convert(tag, opts.getVNodeKey));
   } else {
     convertedHTML = converter.convert(tags[0], opts.getVNodeKey);
@@ -378,7 +384,7 @@ function convertHTML(options, html) {
 }
 
 /**
- * Factory function - EXACT copy from html-to-vdom API
+ * Factory function for HTML to VNode conversion
  */
 export default function createHTMLtoVDOM() {
   return convertHTML;
