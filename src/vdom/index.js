@@ -142,6 +142,3 @@ export function isVNode(vnode) {
 export function isVText(vtext) {
   return vtext && vtext.type === 'VirtualText';
 }
-
-// Default exports for compatibility with virtual-dom imports
-export default VNode;
