@@ -38,6 +38,12 @@ export default {
       format: 'umd',
       name: 'HTMLToDOCX',
       sourcemap: !isProduction,
+      globals: {
+        htmlparser2: 'htmlparser2',
+        jszip: 'JSZip',
+        xmlbuilder2: 'xmlbuilder2',
+        'html-entities': 'htmlEntities',
+      },
       banner: `// ${meta.homepage} v${meta.version} Copyright ${new Date().getFullYear()} ${
         meta.author
       }`,
