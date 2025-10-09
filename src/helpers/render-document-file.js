@@ -8,7 +8,8 @@ import isVText from 'virtual-dom/vnode/is-vtext';
 // eslint-disable-next-line import/no-named-default
 import { default as HTMLToVDOM } from 'html-to-vdom';
 import sizeOf from 'image-size';
-import { LRUCache } from 'lru-cache';
+import * as lruCache from 'lru-cache';
+const LRUCache = lruCache.default || lruCache; // Support both ESM and CommonJS imports
 
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
