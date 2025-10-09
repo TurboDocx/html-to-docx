@@ -140,6 +140,18 @@ const defaultDocumentOptions = {
   preprocessing: {
     skipHTMLMinify: false,
   },
+  imageProcessing: {
+    maxRetries: 2,
+    verboseLogging: false,
+    downloadTimeout: 5000, // 5 seconds per download attempt
+    maxImageSize: 10485760, // 10MB max per image
+    retryDelayBase: 500, // Base delay in ms for exponential backoff (500ms, 1000ms, 1500ms...)
+    minTimeout: 1000, // Minimum timeout in ms (1 second)
+    maxTimeout: 30000, // Maximum timeout in ms (30 seconds)
+    minImageSize: 1024, // Minimum image size in bytes (1KB)
+    maxCacheSize: 20 * 1024 * 1024, // 20MB max total cache size (prevents OOM)
+    maxCacheEntries: 100, // Max 100 unique images in cache (LRU eviction)
+  },
 };
 const defaultHTMLString = '<p></p>';
 const relsFolderName = '_rels';
