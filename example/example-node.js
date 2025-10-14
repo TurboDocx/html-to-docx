@@ -54,6 +54,42 @@ const htmlString = `<!DOCTYPE html>
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with border and margin"
             />
+
+            <!-- SVG Image Tests (New Feature) -->
+            <h3>SVG Image Support</h3>
+            <p>Testing SVG images (automatically converted to PNG for maximum compatibility):</p>
+
+            <p>Simple SVG circle:</p>
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNmMGYwZjAiLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzM0OThkYiIgc3Ryb2tlPSIjMmMzZTUwIiBzdHJva2Utd2lkdGg9IjIiLz4KPC9zdmc+"
+                alt="Blue circle SVG"
+                width="100"
+                height="100"
+            />
+
+            <p>SVG with different sizes:</p>
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj4KICA8cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiMyN2FlNjAiIHJ4PSI1Ii8+CiAgPHBhdGggZD0iTSAxNSAyNSBMIDIyIDMyIEwgMzUgMTgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg=="
+                alt="Checkmark icon"
+                width="30"
+                height="30"
+            />
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj4KICA8cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiMyN2FlNjAiIHJ4PSI1Ii8+CiAgPHBhdGggZD0iTSAxNSAyNSBMIDIyIDMyIEwgMzUgMTgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg=="
+                alt="Checkmark icon"
+                width="50"
+                height="50"
+            />
+
+            <p>Inline SVG icon: <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj4KICA8cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiMyN2FlNjAiIHJ4PSI1Ii8+CiAgPHBhdGggZD0iTSAxNSAyNSBMIDIyIDMyIEwgMzUgMTgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==" alt="Success" width="20" height="20" style="vertical-align: middle;" /> SVG works inline too!</p>
+
+            <p>SVG bar chart:</p>
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMjAwIDE1MCI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNmZmZmZmYiLz4KICA8cmVjdCB4PSIyMCIgeT0iMTAwIiB3aWR0aD0iMzAiIGhlaWdodD0iNDAiIGZpbGw9IiMyZWNjNzEiLz4KICA8cmVjdCB4PSI2MCIgeT0iNzAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI3MCIgZmlsbD0iIzNjOThlNyIvPgogIDxyZWN0IHg9IjEwMCIgeT0iNTAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI5MCIgZmlsbD0iI2U3NGMzYyIvPgogIDxyZWN0IHg9IjE0MCIgeT0iMzAiIHdpZHRoPSIzMCIgaGVpZ2h0PSIxMTAiIGZpbGw9IiNmMzljMTIiLz4KICA8dGV4dCB4PSIxMDAiIHk9IjE1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMzMzIj5TYWxlcyBDaGFydDwvdGV4dD4KPC9zdmc+"
+                alt="Sales chart"
+                width="200"
+                height="150"
+            />
         </div>
         <div>
             <h1>This is heading 1</h1>
