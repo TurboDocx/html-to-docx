@@ -1,17 +1,15 @@
 import mimeTypes from 'mime-types';
 import axios from 'axios';
 
-/**
- * Checks if sharp is available for SVG conversion.
- * @returns {Promise<boolean>} True if sharp is available
- */
-export async function isSharpAvailable() {
-  try {
-    await import('sharp');
-    return true;
-  } catch (e) {
-    return false;
-  }
+// Import sharp as external dependency
+// It's marked as external in rollup.config.js so it won't be bundled
+let sharp;
+try {
+  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+  sharp = require('sharp');
+} catch (e) {
+  // Sharp not installed - will use native SVG mode
+  sharp = null;
 }
 
 /**
@@ -131,8 +129,10 @@ export function isSVG(mimeTypeOrExtension) {
  */
 export async function convertSVGtoPNG(svgInput, options = {}) {
   try {
-    // Dynamically import sharp
-    const sharp = await import('sharp').then((m) => m.default || m);
+    // Check if sharp is available
+    if (!sharp) {
+      throw new Error('Sharp is not installed. Install it with: npm install sharp');
+    }
 
     const { width, height, density = 72 } = options;
 
