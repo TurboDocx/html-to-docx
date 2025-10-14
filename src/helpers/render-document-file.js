@@ -57,15 +57,24 @@ export const getImageCacheStats = (docxDocumentInstance) => {
     };
   }
 
+  // Calculate statistics in a single pass to avoid race conditions
+  const cacheValues = Array.from(docxDocumentInstance._imageCache.values());
+  let successCount = 0;
+  let failureCount = 0;
+
+  cacheValues.forEach((value) => {
+    if (value === 'FAILED' || value === null) {
+      failureCount += 1;
+    } else {
+      successCount += 1;
+    }
+  });
+
   return {
     size: docxDocumentInstance._imageCache.size,
     urls: Array.from(docxDocumentInstance._imageCache.keys()),
-    successCount: Array.from(docxDocumentInstance._imageCache.values()).filter(
-      (v) => v !== 'FAILED' && v !== null
-    ).length,
-    failureCount: Array.from(docxDocumentInstance._imageCache.values()).filter(
-      (v) => v === 'FAILED' || v === null
-    ).length,
+    successCount,
+    failureCount,
     retryStats: docxDocumentInstance._retryStats,
   };
 };
