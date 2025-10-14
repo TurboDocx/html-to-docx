@@ -1005,7 +1005,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 
       const base64Uri = decodeURIComponent(vNode.properties.src);
       if (base64Uri) {
-        response = docxDocumentInstance.createMediaFile(base64Uri);
+        response = await docxDocumentInstance.createMediaFile(base64Uri);
       }
 
       if (response) {
@@ -3744,21 +3744,45 @@ const buildSrcRectFragment = () =>
     .att('t', '0')
     .up();
 
-const buildBinaryLargeImageOrPicture = (relationshipId) =>
-  fragment({
+const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false) => {
+  const blipFragment = fragment({
     namespaceAlias: { a: namespaces.a, r: namespaces.r },
   })
     .ele('@a', 'blip')
     .att('@r', 'embed', `rId${relationshipId}`)
     // FIXME: possible values 'email', 'none', 'print', 'hqprint', 'screen'
-    .att('cstate', 'print')
-    .up();
+    .att('cstate', 'print');
 
-const buildBinaryLargeImageOrPictureFill = (relationshipId) => {
+  // Add SVGBlip extension for native SVG support (Office 2019+)
+  if (isSVG) {
+    const svgBlipExtension = fragment({
+      namespaceAlias: {
+        a: namespaces.a,
+        r: namespaces.r,
+        asvg: 'http://schemas.microsoft.com/office/drawing/2016/SVG/main'
+      },
+    })
+      .ele('@a', 'extLst')
+      .ele('@a', 'ext')
+      .att('uri', '{96DAC541-7B7A-43C3-8B79-37D633B846F1}')
+      .ele('@asvg', 'svgBlip')
+      .att('xmlns:asvg', 'http://schemas.microsoft.com/office/drawing/2016/SVG/main')
+      .att('@r', 'embed', `rId${relationshipId}`)
+      .up()
+      .up()
+      .up();
+
+    blipFragment.import(svgBlipExtension);
+  }
+
+  return blipFragment.up();
+};
+
+const buildBinaryLargeImageOrPictureFill = (relationshipId, isSVG = false) => {
   const binaryLargeImageOrPictureFillFragment = fragment({
     namespaceAlias: { pic: namespaces.pic },
   }).ele('@pic', 'blipFill');
-  const binaryLargeImageOrPictureFragment = buildBinaryLargeImageOrPicture(relationshipId);
+  const binaryLargeImageOrPictureFragment = buildBinaryLargeImageOrPicture(relationshipId, isSVG);
   binaryLargeImageOrPictureFillFragment.import(binaryLargeImageOrPictureFragment);
   const srcRectFragment = buildSrcRectFragment();
   binaryLargeImageOrPictureFillFragment.import(srcRectFragment);
@@ -3816,6 +3840,7 @@ const buildPicture = ({
   relationshipId,
   width,
   height,
+  isSVG = false,
 }) => {
   const pictureFragment = fragment({ namespaceAlias: { pic: namespaces.pic } }).ele('@pic', 'pic');
   const nonVisualPicturePropertiesFragment = buildNonVisualPictureProperties(
@@ -3824,7 +3849,7 @@ const buildPicture = ({
     description
   );
   pictureFragment.import(nonVisualPicturePropertiesFragment);
-  const binaryLargeImageOrPictureFill = buildBinaryLargeImageOrPictureFill(relationshipId);
+  const binaryLargeImageOrPictureFill = buildBinaryLargeImageOrPictureFill(relationshipId, isSVG);
   pictureFragment.import(binaryLargeImageOrPictureFill);
   const shapeProperties = buildShapeProperties({ width, height });
   pictureFragment.import(shapeProperties);

@@ -2,6 +2,19 @@ import mimeTypes from 'mime-types';
 import axios from 'axios';
 
 /**
+ * Checks if sharp is available for SVG conversion.
+ * @returns {Promise<boolean>} True if sharp is available
+ */
+export async function isSharpAvailable() {
+  try {
+    await import('sharp');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * Tries to guess the MIME type of an image based on the initial bytes (magic numbers) of its base64 representation.
  * This function only handles a few common image types and is not exhaustive.
  *
@@ -85,6 +98,74 @@ export function parseDataUrl(dataUrl) {
     mimeType: match[1],
     base64: match[2],
   };
+}
+
+/**
+ * Checks if a MIME type or file extension indicates an SVG image.
+ *
+ * @param {string} mimeTypeOrExtension - MIME type (e.g., "image/svg+xml") or file extension (e.g., ".svg")
+ * @returns {boolean} True if the input indicates an SVG image
+ */
+export function isSVG(mimeTypeOrExtension) {
+  if (!mimeTypeOrExtension) return false;
+  const normalized = mimeTypeOrExtension.toLowerCase().trim();
+  return (
+    normalized === 'image/svg+xml' ||
+    normalized === 'image/svg' ||
+    normalized === '.svg' ||
+    normalized === 'svg' ||
+    normalized.endsWith('.svg')
+  );
+}
+
+/**
+ * Converts an SVG to PNG using sharp library.
+ *
+ * @param {string|Buffer} svgInput - SVG as string, Buffer, or base64 string
+ * @param {Object} options - Conversion options
+ * @param {number} options.width - Output width in pixels (optional)
+ * @param {number} options.height - Output height in pixels (optional)
+ * @param {number} options.density - DPI density for rendering (default: 72)
+ * @returns {Promise<Buffer>} PNG buffer
+ * @throws {Error} If sharp is not available or conversion fails
+ */
+export async function convertSVGtoPNG(svgInput, options = {}) {
+  try {
+    // Dynamically import sharp
+    const sharp = await import('sharp').then((m) => m.default || m);
+
+    const { width, height, density = 72 } = options;
+
+    let svgBuffer;
+    if (typeof svgInput === 'string') {
+      // Check if it's base64
+      if (svgInput.match(/^[A-Za-z0-9+/=]+$/)) {
+        svgBuffer = Buffer.from(svgInput, 'base64');
+      } else {
+        // Assume it's SVG XML string
+        svgBuffer = Buffer.from(svgInput, 'utf-8');
+      }
+    } else if (Buffer.isBuffer(svgInput)) {
+      svgBuffer = svgInput;
+    } else {
+      throw new Error('Invalid SVG input type');
+    }
+
+    // Convert SVG to PNG using sharp
+    let sharpInstance = sharp(svgBuffer, { density });
+
+    if (width || height) {
+      sharpInstance = sharpInstance.resize(width, height, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 0 },
+      });
+    }
+
+    const pngBuffer = await sharpInstance.png().toBuffer();
+    return pngBuffer;
+  } catch (error) {
+    throw new Error(`Failed to convert SVG to PNG: ${error.message}`);
+  }
 }
 
 /**

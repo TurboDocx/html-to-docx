@@ -1,6 +1,6 @@
 import { create, fragment } from 'xmlbuilder2';
 import { nanoid } from 'nanoid';
-import { parseDataUrl } from './utils/image';
+import { parseDataUrl, isSVG, convertSVGtoPNG } from './utils/image';
 
 import {
   generateCoreXML,
@@ -193,6 +193,7 @@ class DocxDocument {
         ? properties.table.addSpacingAfter
         : defaultDocumentOptions.table.addSpacingAfter;
     this.heading = properties.heading || defaultDocumentOptions.heading;
+    this.imageProcessing = properties.imageProcessing || defaultDocumentOptions.imageProcessing;
     this.lastNumberingId = 0;
     this.lastMediaId = 0;
     this.lastHeaderId = 0;
@@ -506,17 +507,51 @@ class DocxDocument {
     return fontTableObject.fontName;
   }
 
-  createMediaFile(base64String) {
+  async createMediaFile(base64String) {
     const parsed = parseDataUrl(base64String);
     if (!parsed) {
       throw new Error('Invalid base64 string');
     }
 
-    const base64FileContent = parsed.base64;
+    let base64FileContent = parsed.base64;
+    let mimeType = parsed.mimeType;
+
     // Extract file extension from MIME type (e.g., image/jpeg -> jpeg)
-    const mimeTypePart = parsed.mimeType.match(/\/(.*?)$/);
-    const fileExtension =
+    const mimeTypePart = mimeType.match(/\/(.*?)$/);
+    let fileExtension =
       !mimeTypePart || mimeTypePart[1] === 'octet-stream' ? 'png' : mimeTypePart[1];
+
+    // Handle SVG images based on svgHandling option
+    const svgHandling =
+      this.imageProcessing?.svgHandling ||
+      defaultDocumentOptions.imageProcessing.svgHandling;
+
+    if (isSVG(mimeType) && svgHandling === 'convert') {
+      try {
+        // Convert SVG to PNG for backward compatibility with older Word versions
+        // Decode base64 to get SVG string for dimension extraction
+        const svgString = Buffer.from(base64FileContent, 'base64').toString('utf-8');
+
+        // Extract dimensions from SVG if present
+        const widthMatch = svgString.match(/width=["']?(\d+)/);
+        const heightMatch = svgString.match(/height=["']?(\d+)/);
+        const width = widthMatch ? parseInt(widthMatch[1], 10) : undefined;
+        const height = heightMatch ? parseInt(heightMatch[1], 10) : undefined;
+
+        const pngBuffer = await convertSVGtoPNG(base64FileContent, { width, height });
+        base64FileContent = pngBuffer.toString('base64');
+        fileExtension = 'png';
+        mimeType = 'image/png';
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`[ERROR] Failed to convert SVG to PNG: ${error.message}`);
+        // Fall back to using SVG directly if conversion fails
+        fileExtension = 'svg';
+      }
+    } else if (isSVG(mimeType)) {
+      // Use SVG natively (Office 2019+ support)
+      fileExtension = 'svg';
+    }
 
     // Use deterministic IDs when deterministicIds option is enabled (for CI diff testing)
     const imageId = this.deterministicIds ? this.lastMediaId.toString() : nanoid();
@@ -524,7 +559,12 @@ class DocxDocument {
 
     this.lastMediaId += 1;
 
-    return { id: this.lastMediaId, fileContent: base64FileContent, fileNameWithExtension };
+    return {
+      id: this.lastMediaId,
+      fileContent: base64FileContent,
+      fileNameWithExtension,
+      isSVG: fileExtension === 'svg',
+    };
   }
 
   createDocumentRelationships(fileName = 'document', type, target, targetMode = 'External') {

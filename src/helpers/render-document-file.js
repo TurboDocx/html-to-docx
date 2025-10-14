@@ -197,7 +197,7 @@ export const buildImage = async (
     }
 
     if (base64Uri) {
-      response = docxDocumentInstance.createMediaFile(base64Uri);
+      response = await docxDocumentInstance.createMediaFile(base64Uri);
     } else {
       // eslint-disable-next-line no-console
       console.error(`[ERROR] buildImage: No valid base64Uri generated`);

@@ -151,6 +151,7 @@ const defaultDocumentOptions = {
     minImageSize: 1024, // Minimum image size in bytes (1KB)
     maxCacheSize: 20 * 1024 * 1024, // 20MB max total cache size (prevents OOM)
     maxCacheEntries: 100, // Max 100 unique images in cache (LRU eviction)
+    svgHandling: 'convert', // 'convert' (to PNG for compatibility), 'native' (Office 2019+ SVG support), or 'auto' (convert if sharp available, otherwise native)
   },
 };
 const defaultHTMLString = '<p></p>';
