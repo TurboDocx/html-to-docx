@@ -1,6 +1,6 @@
 import { create, fragment } from 'xmlbuilder2';
 import { nanoid } from 'nanoid';
-import { parseDataUrl, isSVG, convertSVGtoPNG } from './utils/image';
+import { parseDataUrl, isSVG, convertSVGtoPNG, parseSVGDimensions } from './utils/image';
 
 import {
   generateCoreXML,
@@ -532,11 +532,11 @@ class DocxDocument {
         // Decode base64 to get SVG string for dimension extraction
         const svgString = Buffer.from(base64FileContent, 'base64').toString('utf-8');
 
-        // Extract dimensions from SVG if present
-        const widthMatch = svgString.match(/width=["']?(\d+)/);
-        const heightMatch = svgString.match(/height=["']?(\d+)/);
-        const width = widthMatch ? parseInt(widthMatch[1], 10) : undefined;
-        const height = heightMatch ? parseInt(heightMatch[1], 10) : undefined;
+        // Extract dimensions from SVG using improved parser that handles:
+        // - Decimal values (100.5)
+        // - Units (100px, 10cm, 5in, etc.)
+        // - ViewBox as fallback
+        const { width, height } = parseSVGDimensions(svgString);
 
         const pngBuffer = await convertSVGtoPNG(base64FileContent, { width, height });
         base64FileContent = pngBuffer.toString('base64');

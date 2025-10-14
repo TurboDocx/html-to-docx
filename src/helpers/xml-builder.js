@@ -60,7 +60,6 @@ import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { isZeroOrTruthy } from '../utils/truthy-check';
 
-
 const setUpDirectionalBorderStroke = (borderStrike = 'nil') => ({
   top: borderStrike,
   bottom: borderStrike,
@@ -979,8 +978,13 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 
     // Handle external URLs with caching and retry (same as buildImage)
     if (isValidUrl(imageSource)) {
-      const imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
-      const base64Uri = await downloadAndCacheImage(docxDocumentInstance, imageSource, imageOptions);
+      const imageOptions =
+        docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
+      const base64Uri = await downloadAndCacheImage(
+        docxDocumentInstance,
+        imageSource,
+        imageOptions
+      );
       if (!base64Uri) {
         // Failed to download after retries, skip this image
         return runFragment;
@@ -1246,13 +1250,13 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
     '@w',
     'pPr'
   );
-  
+
   // Add RTL support when direction is rtl
   if (docxDocumentInstance && docxDocumentInstance.direction === 'rtl') {
     paragraphPropertiesFragment.ele('@w', 'bidi').up();
     paragraphPropertiesFragment.ele('@w', 'rtl').att('@w', 'val', '1').up();
   }
-  
+
   if (attributes && attributes.constructor === Object) {
     Object.keys(attributes).forEach((key) => {
       switch (key) {
@@ -1529,7 +1533,8 @@ const processImageSource = async (docxDocumentInstance, vNode, imageSource, logC
     base64String = parsed.base64;
   } else if (isValidUrl(imageSource)) {
     // Use cached download with retry mechanism
-    const imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
+    const imageOptions =
+      docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
     const base64Uri = await downloadAndCacheImage(docxDocumentInstance, imageSource, imageOptions);
 
     if (!base64Uri) {
@@ -1597,7 +1602,10 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     modifiedAttributes.afterSpacing = modifiedAttributes.afterSpacing || 0;
   }
 
-  const paragraphPropertiesFragment = buildParagraphProperties(modifiedAttributes, docxDocumentInstance);
+  const paragraphPropertiesFragment = buildParagraphProperties(
+    modifiedAttributes,
+    docxDocumentInstance
+  );
   paragraphFragment.import(paragraphPropertiesFragment);
   if (isVNode(vNode) && vNodeHasChildren(vNode)) {
     if (
@@ -1698,7 +1706,12 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     // Or in case the vNode is something like img
     if (isVNode(vNode) && vNode.tagName === 'img') {
       const imageSource = vNode.properties.src;
-      const result = await processImageSource(docxDocumentInstance, vNode, imageSource, 'BUILDPARAGRAPH-VNODE');
+      const result = await processImageSource(
+        docxDocumentInstance,
+        vNode,
+        imageSource,
+        'BUILDPARAGRAPH-VNODE'
+      );
 
       if (!result) {
         paragraphFragment.up();
@@ -3747,7 +3760,7 @@ const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false) => {
       namespaceAlias: {
         a: namespaces.a,
         r: namespaces.r,
-        asvg: 'http://schemas.microsoft.com/office/drawing/2016/SVG/main'
+        asvg: 'http://schemas.microsoft.com/office/drawing/2016/SVG/main',
       },
     })
       .ele('@a', 'extLst')

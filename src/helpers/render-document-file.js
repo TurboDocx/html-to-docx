@@ -60,10 +60,12 @@ export const getImageCacheStats = (docxDocumentInstance) => {
   return {
     size: docxDocumentInstance._imageCache.size,
     urls: Array.from(docxDocumentInstance._imageCache.keys()),
-    successCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v !== 'FAILED' && v !== null)
-      .length,
-    failureCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v === 'FAILED' || v === null)
-      .length,
+    successCount: Array.from(docxDocumentInstance._imageCache.values()).filter(
+      (v) => v !== 'FAILED' && v !== null
+    ).length,
+    failureCount: Array.from(docxDocumentInstance._imageCache.values()).filter(
+      (v) => v === 'FAILED' || v === null
+    ).length,
     retryStats: docxDocumentInstance._retryStats,
   };
 };
@@ -120,10 +122,7 @@ export const downloadAndCacheImage = async (docxDocumentInstance, imageSource, o
     }
 
     try {
-      logVerbose(
-        verboseLogging,
-        `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`
-      );
+      logVerbose(verboseLogging, `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`);
 
       // Use configurable timeout, default 5 seconds, with exponential backoff for retries
       const baseTimeout = Math.max(
@@ -143,10 +142,7 @@ export const downloadAndCacheImage = async (docxDocumentInstance, imageSource, o
       if (base64String) {
         if (attempt > 1 && docxDocumentInstance._retryStats) {
           docxDocumentInstance._retryStats.successAfterRetry += 1;
-          logVerbose(
-            verboseLogging,
-            `[RETRY] Success on attempt ${attempt} for: ${imageSource}`
-          );
+          logVerbose(verboseLogging, `[RETRY] Success on attempt ${attempt} for: ${imageSource}`);
         }
         break;
       }
@@ -195,7 +191,6 @@ export const downloadAndCacheImage = async (docxDocumentInstance, imageSource, o
   );
   return null;
 };
-
 
 // eslint-disable-next-line consistent-return, no-shadow
 export const buildImage = async (
@@ -402,23 +397,23 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 ? [childVNode]
                 : // eslint-disable-next-line no-nested-ternary
                 isVNode(childVNode)
-                  ? childVNode.tagName.toLowerCase() === 'li'
-                    ? [...childVNode.children]
-                    : [childVNode]
-                  : []
+                ? childVNode.tagName.toLowerCase() === 'li'
+                  ? [...childVNode.children]
+                  : [childVNode]
+                : []
             );
 
             childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
 
             const generatedNode = isVNode(childVNode)
               ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-              childVNode.tagName.toLowerCase() === 'li'
+                childVNode.tagName.toLowerCase() === 'li'
                 ? childVNode
                 : childVNode.tagName.toLowerCase() !== 'p'
-                  ? paragraphVNode
-                  : childVNode
+                ? paragraphVNode
+                : childVNode
               : // eslint-disable-next-line prettier/prettier
-              paragraphVNode;
+                paragraphVNode;
 
             accumulator.push({
               // eslint-disable-next-line prettier/prettier, no-nested-ternary
@@ -662,7 +657,9 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     if (imageOptions.verboseLogging) {
       // eslint-disable-next-line no-console
       console.log(
-        `[CACHE] Initialized LRU cache: ${maxCacheEntries} entries, ${Math.round(maxCacheSize / 1024 / 1024)}MB max`
+        `[CACHE] Initialized LRU cache: ${maxCacheEntries} entries, ${Math.round(
+          maxCacheSize / 1024 / 1024
+        )}MB max`
       );
     }
   }
@@ -690,7 +687,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     }
   } else {
     // Handle single VTree node (not an array)
-    if (properties && typeof properties === "object" && vTree.properties) {
+    if (properties && typeof properties === 'object' && vTree.properties) {
       if (!vTree.properties.style) {
         vTree.properties.style = {};
       }
