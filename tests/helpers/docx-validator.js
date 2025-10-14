@@ -230,12 +230,16 @@ class LazyParagraph {
 /**
  * Complete validation helper - extracts and parses DOCX in one call
  * @param {Buffer|Uint8Array} docxBuffer - The DOCX file
- * @returns {Promise<Object>} Object with parsed content: { paragraphs, xml, zip }
+ * @returns {Promise<Object>} Object with parsed content: { paragraphs, xml, zip, contentTypes }
  */
 export async function parseDOCX(docxBuffer) {
   const zip = await unzipDocx(docxBuffer);
   const documentXml = await extractDocumentXML(zip);
   const paragraphs = findParagraphs(documentXml);
+
+  // Extract [Content_Types].xml for content type validation
+  const contentTypesFile = zip.file('[Content_Types].xml');
+  const contentTypes = contentTypesFile ? await contentTypesFile.async('string') : null;
 
   // Wrap each paragraph in LazyParagraph for on-demand parsing
   // Properties are only parsed when accessed, not upfront
@@ -245,5 +249,6 @@ export async function parseDOCX(docxBuffer) {
     paragraphs: parsedParagraphs,
     xml: documentXml,
     zip,
+    contentTypes,
   };
 }

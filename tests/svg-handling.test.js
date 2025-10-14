@@ -242,6 +242,24 @@ describe('SVG Handling', () => {
       expect(parsed.xml).toMatch(/96DAC541-7B7A-43C3-8B79-37D633B846F1/);
     });
 
+    test('should register SVG content type in [Content_Types].xml', async () => {
+      const svgDataUrl = `data:image/svg+xml;base64,${SVG_BASE64}`;
+      const htmlString = `<img src="${svgDataUrl}" />`;
+
+      const docx = await HTMLtoDOCX(htmlString, null, {
+        imageProcessing: {
+          svgHandling: 'native',
+        },
+      });
+
+      const parsed = await parseDOCX(docx);
+
+      // Check that [Content_Types].xml includes SVG content type registration
+      expect(parsed.contentTypes).toBeDefined();
+      expect(parsed.contentTypes).toMatch(/<Default Extension="svg"/);
+      expect(parsed.contentTypes).toMatch(/ContentType="image\/svg\+xml"/);
+    });
+
     test('should handle multiple native SVGs', async () => {
       const svgDataUrl = `data:image/svg+xml;base64,${SVG_BASE64}`;
       const htmlString = `
