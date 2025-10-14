@@ -60,9 +60,9 @@ export const getImageCacheStats = (docxDocumentInstance) => {
   return {
     size: docxDocumentInstance._imageCache.size,
     urls: Array.from(docxDocumentInstance._imageCache.keys()),
-    successCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v !== null)
+    successCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v !== 'FAILED' && v !== null)
       .length,
-    failureCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v === null)
+    failureCount: Array.from(docxDocumentInstance._imageCache.values()).filter((v) => v === 'FAILED' || v === null)
       .length,
     retryStats: docxDocumentInstance._retryStats,
   };
@@ -76,15 +76,16 @@ const logVerbose = (verboseLogging, message, ...args) => {
   }
 };
 
-
-// eslint-disable-next-line consistent-return, no-shadow
-export const buildImage = async (
-  docxDocumentInstance,
-  vNode,
-  maximumWidth = null,
-  options = {}
-) => {
-  // Extract image processing options with defaults from constants.js
+/**
+ * Downloads and caches an image from a URL with retry mechanism.
+ * This function is used by both buildImage and buildRun to ensure consistent caching behavior.
+ *
+ * @param {Object} docxDocumentInstance - The document instance with cache
+ * @param {string} imageSource - The URL of the image to download
+ * @param {Object} options - Options for download (maxRetries, verboseLogging, downloadTimeout, maxImageSize)
+ * @returns {Promise<string|null>} Base64 data URI or null on failure
+ */
+export const downloadAndCacheImage = async (docxDocumentInstance, imageSource, options = {}) => {
   const maxRetries =
     options.maxRetries ||
     docxDocumentInstance.imageProcessing?.maxRetries ||
@@ -93,105 +94,130 @@ export const buildImage = async (
     options.verboseLogging ||
     docxDocumentInstance.imageProcessing?.verboseLogging ||
     defaultDocumentOptions.imageProcessing.verboseLogging;
+
+  // Check cache first for external URLs (if cache is initialized)
+  if (docxDocumentInstance._imageCache && docxDocumentInstance._imageCache.has(imageSource)) {
+    const cachedData = docxDocumentInstance._imageCache.get(imageSource);
+    if (!cachedData || cachedData === 'FAILED') {
+      // Previously failed to download in this document generation, skip this image
+      logVerbose(
+        verboseLogging,
+        `[CACHE] Skipping previously failed image in this document: ${imageSource}`
+      );
+      return null;
+    }
+    logVerbose(verboseLogging, `[CACHE] Using cached image data for: ${imageSource}`);
+    return cachedData;
+  }
+
+  // Download and cache the image with retry mechanism
+  let base64String = null;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    if (docxDocumentInstance._retryStats) {
+      docxDocumentInstance._retryStats.totalAttempts += 1;
+    }
+
+    try {
+      logVerbose(
+        verboseLogging,
+        `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`
+      );
+
+      // Use configurable timeout, default 5 seconds, with exponential backoff for retries
+      const baseTimeout = Math.max(
+        defaultDocumentOptions.imageProcessing.minTimeout,
+        Math.min(
+          options.downloadTimeout || defaultDocumentOptions.imageProcessing.downloadTimeout,
+          defaultDocumentOptions.imageProcessing.maxTimeout
+        )
+      );
+      const timeoutMs = baseTimeout * attempt;
+      const maxSizeBytes = Math.max(
+        defaultDocumentOptions.imageProcessing.minImageSize,
+        options.maxImageSize || defaultDocumentOptions.imageProcessing.maxImageSize
+      );
+
+      base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
+      if (base64String) {
+        if (attempt > 1 && docxDocumentInstance._retryStats) {
+          docxDocumentInstance._retryStats.successAfterRetry += 1;
+          logVerbose(
+            verboseLogging,
+            `[RETRY] Success on attempt ${attempt} for: ${imageSource}`
+          );
+        }
+        break;
+      }
+    } catch (error) {
+      lastError = error;
+      logVerbose(
+        verboseLogging,
+        `[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`
+      );
+
+      // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
+      if (attempt < maxRetries) {
+        const delay = defaultDocumentOptions.imageProcessing.retryDelayBase * attempt;
+        logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  if (!base64String && docxDocumentInstance._retryStats) {
+    docxDocumentInstance._retryStats.finalFailures += 1;
+  }
+
+  if (base64String) {
+    const mimeType = getMimeType(imageSource, base64String);
+    const base64Uri = `data:${mimeType};base64,${base64String}`;
+    // Cache the successful result (if cache is initialized)
+    if (docxDocumentInstance._imageCache) {
+      docxDocumentInstance._imageCache.set(imageSource, base64Uri);
+      logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
+    }
+    return base64Uri;
+  }
+
+  // Cache the failure for THIS document generation only after all retries failed (if cache is initialized)
+  // Each document generation has isolated cache, so failures can be retried in new documents
+  // Use 'FAILED' sentinel value instead of null (LRU cache doesn't handle null well)
+  if (docxDocumentInstance._imageCache) {
+    docxDocumentInstance._imageCache.set(imageSource, 'FAILED');
+  }
+  // eslint-disable-next-line no-console
+  console.error(
+    `[ERROR] downloadAndCacheImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${
+      lastError?.message || 'Unknown error'
+    } - will skip duplicates in this document`
+  );
+  return null;
+};
+
+
+// eslint-disable-next-line consistent-return, no-shadow
+export const buildImage = async (
+  docxDocumentInstance,
+  vNode,
+  maximumWidth = null,
+  options = {}
+) => {
   let response = null;
   let base64Uri = null;
 
   try {
     const imageSource = vNode.properties.src;
 
-    // Check cache first for external URLs
-    if (isValidUrl(imageSource) && docxDocumentInstance._imageCache.has(imageSource)) {
-      const cachedData = docxDocumentInstance._imageCache.get(imageSource);
-      if (!cachedData) {
-        // Previously failed to download in this document generation, skip this image
-        logVerbose(
-          verboseLogging,
-          `[CACHE] Skipping previously failed image in this document: ${imageSource}`
-        );
+    // Handle external URLs with caching and retry
+    if (isValidUrl(imageSource)) {
+      base64Uri = await downloadAndCacheImage(docxDocumentInstance, imageSource, options);
+      if (!base64Uri) {
         return null;
       }
-      logVerbose(verboseLogging, `[CACHE] Using cached image data for: ${imageSource}`);
-      base64Uri = cachedData;
       // Update vNode to reflect the cached data URL for subsequent processing
       vNode.properties.src = base64Uri;
-    } else if (isValidUrl(imageSource)) {
-      // Download and cache the image with retry mechanism
-      let base64String = null;
-      let lastError = null;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
-        docxDocumentInstance._retryStats.totalAttempts += 1;
-
-        try {
-          logVerbose(
-            verboseLogging,
-            `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`
-          );
-
-          // Use configurable timeout, default 5 seconds, with exponential backoff for retries
-          const baseTimeout = Math.max(
-            defaultDocumentOptions.imageProcessing.minTimeout,
-            Math.min(
-              options.downloadTimeout || defaultDocumentOptions.imageProcessing.downloadTimeout,
-              defaultDocumentOptions.imageProcessing.maxTimeout
-            )
-          );
-          const timeoutMs = baseTimeout * attempt;
-          const maxSizeBytes = Math.max(
-            defaultDocumentOptions.imageProcessing.minImageSize,
-            options.maxImageSize || defaultDocumentOptions.imageProcessing.maxImageSize
-          );
-
-          base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
-          if (base64String) {
-            if (attempt > 1) {
-              docxDocumentInstance._retryStats.successAfterRetry += 1;
-              logVerbose(
-                verboseLogging,
-                `[RETRY] Success on attempt ${attempt} for: ${imageSource}`
-              );
-            }
-            break;
-          }
-        } catch (error) {
-          lastError = error;
-          logVerbose(
-            verboseLogging,
-            `[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`
-          );
-
-          // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
-          if (attempt < maxRetries) {
-            const delay = defaultDocumentOptions.imageProcessing.retryDelayBase * attempt;
-            logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
-            await new Promise((resolve) => setTimeout(resolve, delay));
-          }
-        }
-      }
-
-      if (!base64String) {
-        docxDocumentInstance._retryStats.finalFailures += 1;
-      }
-
-      if (base64String) {
-        const mimeType = getMimeType(imageSource, base64String);
-        base64Uri = `data:${mimeType};base64, ${base64String}`;
-        // Cache the successful result
-        docxDocumentInstance._imageCache.set(imageSource, base64Uri);
-        logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
-        // Update vNode to reflect the new data URL for subsequent processing
-        vNode.properties.src = base64Uri;
-      } else {
-        // Cache the failure for THIS document generation only after all retries failed
-        // Each document generation has isolated cache, so failures can be retried in new documents
-        docxDocumentInstance._imageCache.set(imageSource, null);
-        // eslint-disable-next-line no-console
-        console.error(
-          `[ERROR] buildImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${
-            lastError?.message || 'Unknown error'
-          } - will skip duplicates in this document`
-        );
-      }
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
     }
@@ -620,7 +646,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
       max: maxCacheEntries, // Max number of unique images
       maxSize: maxCacheSize, // Max total size in bytes
       sizeCalculation: (value) => {
-        if (!value) return 0;
+        if (!value || value === 'FAILED') return 1; // Minimum size for failed entries
         // Calculate approximate byte size of base64 string
         // Base64 encoding is ~4/3 of original size, so decoded size is ~3/4
         return Math.ceil((value.length * 3) / 4);

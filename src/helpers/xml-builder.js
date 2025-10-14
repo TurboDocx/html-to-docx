@@ -9,7 +9,7 @@ import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
 import sizeOf from 'image-size';
 import { isVNode, isVText } from '../vdom/index';
-import { getMimeType, downloadImageToBase64, parseDataUrl } from '../utils/image';
+import { getMimeType, parseDataUrl } from '../utils/image';
 import { defaultDocumentOptions } from '../constants';
 
 import namespaces from '../namespaces';
@@ -44,7 +44,7 @@ import {
 } from '../utils/unit-conversion';
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
-import { buildImage, buildList } from './render-document-file';
+import { buildImage, buildList, downloadAndCacheImage } from './render-document-file';
 import {
   defaultFont,
   hyperlinkType,
@@ -976,31 +976,21 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
     runFragment.import(textFragment);
   } else if (attributes && attributes.type === 'picture') {
     const imageSource = vNode.properties.src;
-    let requiresConversion = false;
-    let isConverted = false;
 
+    // Handle external URLs with caching and retry (same as buildImage)
     if (isValidUrl(imageSource)) {
-      requiresConversion = true;
-      const timeout =
-        docxDocumentInstance.imageProcessing?.downloadTimeout ||
-        defaultDocumentOptions.imageProcessing.downloadTimeout;
-      const base64String = await downloadImageToBase64(imageSource, timeout).catch((error) => {
-        // eslint-disable-next-line no-console
-        console.warn(`[BUILDRUN] Skipping image download for ${imageSource}: ${error.message}`);
-        return null;
-      });
-      if (base64String) {
-        isConverted = true;
-        vNode.properties.src = `data:${getMimeType(
-          imageSource,
-          base64String
-        )};base64, ${base64String}`;
+      const imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
+      const base64Uri = await downloadAndCacheImage(docxDocumentInstance, imageSource, imageOptions);
+      if (!base64Uri) {
+        // Failed to download after retries, skip this image
+        return runFragment;
       }
+      // Update vNode to use cached data URL
+      vNode.properties.src = base64Uri;
     }
 
-    // we add this check because if the image is not converted, we should not proceed with the conversion
-    const shouldProceed = !(requiresConversion && !isConverted);
-    if (shouldProceed) {
+    // Process the image (either from URL now cached, or data URL)
+    {
       let response = null;
 
       const base64Uri = decodeURIComponent(vNode.properties.src);
@@ -1517,15 +1507,15 @@ const computeImageDimensions = (vNode, attributes) => {
 
 /**
  * Process an image source and return validated image properties
- * Handles data URLs, URL downloads, and buffer validation
+ * Handles data URLs, URL downloads with caching, and buffer validation
  *
+ * @param {Object} docxDocumentInstance - Document instance with cache
  * @param {Object} vNode - Virtual node containing image
  * @param {string} imageSource - Image source URL or data URL
  * @param {string} logContext - Context string for logging (e.g., 'BUILDPARAGRAPH')
- * @param {number} [timeout=5000] - Download timeout in milliseconds
  * @returns {Promise<Object|null>} Object with {base64String, imageProperties} or null if invalid
  */
-const processImageSource = async (vNode, imageSource, logContext, timeout = 5000) => {
+const processImageSource = async (docxDocumentInstance, vNode, imageSource, logContext) => {
   let base64String;
 
   // Check if this is already a data URL (from cache or previous processing)
@@ -1538,22 +1528,26 @@ const processImageSource = async (vNode, imageSource, logContext, timeout = 5000
     }
     base64String = parsed.base64;
   } else if (isValidUrl(imageSource)) {
-    base64String = await downloadImageToBase64(imageSource, timeout).catch((error) => {
-      // eslint-disable-next-line no-console
-      console.warn(`[${logContext}] Skipping image download for ${imageSource}: ${error.message}`);
-      return null;
-    });
+    // Use cached download with retry mechanism
+    const imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
+    const base64Uri = await downloadAndCacheImage(docxDocumentInstance, imageSource, imageOptions);
 
-    if (base64String && getMimeType(imageSource, base64String)) {
-      vNode.properties.src = `data:${getMimeType(
-        imageSource,
-        base64String
-      )};base64, ${base64String}`;
-    } else {
-      // Skip this image if download failed
+    if (!base64Uri) {
+      // Download failed after retries, skip this image
       console.warn(`[${logContext}] Skipping image due to download failure: ${imageSource}`);
       return null;
     }
+
+    // Update vNode to use cached data URL
+    vNode.properties.src = base64Uri;
+
+    // Extract base64 part from data URL
+    const parsed = parseDataUrl(base64Uri);
+    if (!parsed) {
+      console.warn(`[${logContext}] Invalid cached data URL: ${base64Uri}`);
+      return null;
+    }
+    base64String = parsed.base64;
   }
 
   // Validate base64String before creating buffer
@@ -1658,14 +1652,11 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
         const childVNode = vNode.children[index];
         if (childVNode.tagName === 'img') {
           const imageSource = childVNode.properties.src;
-          const timeout =
-            docxDocumentInstance.imageProcessing?.downloadTimeout ||
-            defaultDocumentOptions.imageProcessing.downloadTimeout;
           const result = await processImageSource(
+            docxDocumentInstance,
             childVNode,
             imageSource,
-            'BUILDPARAGRAPH',
-            timeout
+            'BUILDPARAGRAPH'
           );
 
           if (!result) {
@@ -1707,10 +1698,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     // Or in case the vNode is something like img
     if (isVNode(vNode) && vNode.tagName === 'img') {
       const imageSource = vNode.properties.src;
-      const timeout =
-        docxDocumentInstance.imageProcessing?.downloadTimeout ||
-        defaultDocumentOptions.imageProcessing.downloadTimeout;
-      const result = await processImageSource(vNode, imageSource, 'BUILDPARAGRAPH-VNODE', timeout);
+      const result = await processImageSource(docxDocumentInstance, vNode, imageSource, 'BUILDPARAGRAPH-VNODE');
 
       if (!result) {
         paragraphFragment.up();
