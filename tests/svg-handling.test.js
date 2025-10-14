@@ -3,7 +3,7 @@
 
 import HTMLtoDOCX from '../index.js';
 import { parseDOCX } from './helpers/docx-assertions.js';
-import { isSVG, convertSVGtoPNG } from '../src/utils/image.js';
+import { isSVG, convertSVGtoPNG, parseSVGDimensions } from '../src/utils/image.js';
 import { SVG_BASE64, SVG_FIXTURE, PNG_FIXTURE } from './fixtures/index.js';
 
 describe('SVG Handling', () => {
@@ -43,6 +43,132 @@ describe('SVG Handling', () => {
       expect(isSVG('IMAGE/SVG+XML')).toBe(true);
       expect(isSVG('Image/Svg')).toBe(true);
       expect(isSVG('.SVG')).toBe(true);
+    });
+  });
+
+  describe('parseSVGDimensions utility', () => {
+    test('should parse integer width and height', () => {
+      const svg = '<svg width="100" height="200"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200);
+    });
+
+    test('should parse decimal width and height', () => {
+      const svg = '<svg width="100.5" height="200.75"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(101); // Rounded
+      expect(height).toBe(201); // Rounded
+    });
+
+    test('should parse dimensions with px unit', () => {
+      const svg = '<svg width="100px" height="200px"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200);
+    });
+
+    test('should parse dimensions with cm unit', () => {
+      const svg = '<svg width="10cm" height="5cm"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      // 1cm = 37.7952755906 pixels at 96 DPI
+      expect(width).toBe(378); // Rounded from 377.95...
+      expect(height).toBe(189); // Rounded from 188.97...
+    });
+
+    test('should parse dimensions with mm unit', () => {
+      const svg = '<svg width="100mm" height="50mm"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      // 1mm = 3.77952755906 pixels
+      expect(width).toBe(378);
+      expect(height).toBe(189);
+    });
+
+    test('should parse dimensions with inch unit', () => {
+      const svg = '<svg width="2in" height="1in"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      // 1in = 96 pixels at 96 DPI
+      expect(width).toBe(192);
+      expect(height).toBe(96);
+    });
+
+    test('should parse dimensions with pt unit', () => {
+      const svg = '<svg width="72pt" height="36pt"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      // 1pt = 1.33333... pixels
+      expect(width).toBe(96);
+      expect(height).toBe(48);
+    });
+
+    test('should use viewBox when width/height not present', () => {
+      const svg = '<svg viewBox="0 0 100 200"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200);
+    });
+
+    test('should calculate missing width from height and viewBox', () => {
+      const svg = '<svg height="200" viewBox="0 0 100 200"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100); // Calculated from aspect ratio
+      expect(height).toBe(200);
+    });
+
+    test('should calculate missing height from width and viewBox', () => {
+      const svg = '<svg width="100" viewBox="0 0 100 200"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200); // Calculated from aspect ratio
+    });
+
+    test('should handle viewBox with negative minX/minY', () => {
+      const svg = '<svg viewBox="-10 -20 100 200"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200);
+    });
+
+    test('should handle SVG without dimensions', () => {
+      const svg = '<svg><circle r="50"/></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBeUndefined();
+      expect(height).toBeUndefined();
+    });
+
+    test('should handle attributes without quotes', () => {
+      const svg = '<svg width=100 height=200></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200);
+    });
+
+    test('should be case insensitive for attributes', () => {
+      const svg = '<svg WIDTH="100" HEIGHT="200" VIEWBOX="0 0 50 100"></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200);
+    });
+
+    test('should handle whitespace in viewBox', () => {
+      const svg = '<svg viewBox="  0   0   100   200  "></svg>';
+      const { width, height } = parseSVGDimensions(svg);
+
+      expect(width).toBe(100);
+      expect(height).toBe(200);
     });
   });
 

@@ -127,6 +127,88 @@ export function isSVG(mimeTypeOrExtension) {
  * @returns {Promise<Buffer>} PNG buffer
  * @throws {Error} If sharp is not available or conversion fails
  */
+/**
+ * Parses SVG dimensions from SVG string, supporting various formats.
+ * Handles: integers, decimals, units (px, cm, mm, in, pt, pc, em, rem, %), and viewBox fallback.
+ *
+ * @param {string} svgString - The SVG XML string
+ * @returns {Object} Object with {width, height} in pixels, or undefined if not found
+ */
+export function parseSVGDimensions(svgString) {
+  // Try to extract width and height attributes
+  // Regex supports: integers, decimals, and units (px, cm, mm, in, pt, pc, em, rem, %)
+  const widthMatch = svgString.match(/width\s*=\s*["']?([0-9.]+)([a-z%]*)/i);
+  const heightMatch = svgString.match(/height\s*=\s*["']?([0-9.]+)([a-z%]*)/i);
+
+  let width;
+  let height;
+
+  if (widthMatch) {
+    const value = parseFloat(widthMatch[1]);
+    const unit = widthMatch[2]?.toLowerCase() || 'px';
+    width = convertToPixels(value, unit);
+  }
+
+  if (heightMatch) {
+    const value = parseFloat(heightMatch[1]);
+    const unit = heightMatch[2]?.toLowerCase() || 'px';
+    height = convertToPixels(value, unit);
+  }
+
+  // If width/height not found or invalid, try viewBox as fallback
+  if (!width || !height) {
+    const viewBoxMatch = svgString.match(/viewBox\s*=\s*["']?([0-9.\s-]+)["']?/i);
+    if (viewBoxMatch) {
+      const parts = viewBoxMatch[1].trim().split(/\s+/);
+      if (parts.length === 4) {
+        // viewBox format: "minX minY width height"
+        const viewBoxWidth = parseFloat(parts[2]);
+        const viewBoxHeight = parseFloat(parts[3]);
+
+        // If we only have one dimension, calculate the other from viewBox aspect ratio
+        if (!width && height && viewBoxWidth && viewBoxHeight) {
+          width = Math.round((height * viewBoxWidth) / viewBoxHeight);
+        } else if (width && !height && viewBoxWidth && viewBoxHeight) {
+          height = Math.round((width * viewBoxHeight) / viewBoxWidth);
+        } else if (!width && !height) {
+          // Use viewBox dimensions directly
+          width = Math.round(viewBoxWidth);
+          height = Math.round(viewBoxHeight);
+        }
+      }
+    }
+  }
+
+  return { width, height };
+}
+
+/**
+ * Converts dimension values with units to pixels.
+ * Reference: https://www.w3.org/TR/SVG/coords.html#Units
+ *
+ * @param {number} value - The numeric value
+ * @param {string} unit - The unit (px, cm, mm, in, pt, pc, em, rem, %)
+ * @returns {number} Value in pixels
+ */
+function convertToPixels(value, unit) {
+  // Note: em and rem conversions assume 16px base font size
+  // Percentage values cannot be converted without context, so we treat them as pixels
+  const conversions = {
+    px: 1,
+    cm: 37.7952755906, // 96 DPI
+    mm: 3.77952755906,
+    in: 96,
+    pt: 1.33333333333, // 1/72 inch
+    pc: 16, // 1 pica = 12 points
+    em: 16, // Assume 16px default
+    rem: 16, // Assume 16px default
+    '%': 1, // Cannot convert without parent context, treat as pixels
+  };
+
+  const factor = conversions[unit] || 1;
+  return Math.round(value * factor);
+}
+
 export async function convertSVGtoPNG(svgInput, options = {}) {
   try {
     // Check if sharp is available
