@@ -159,13 +159,27 @@
     "virtual-dom": "^2.1.1",
     "xmlbuilder2": "2.1.2"
   },
+  "optionalDependencies": {
+    "sharp": "^0.34.4"
+  },
+  "peerDependencies": {
+    "sharp": "^0.34.4"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    }
+  },
   "overrides": {
     "bl": "^1.2.3",
-    "semver": "^5.7.2"
+    "semver": "^7.6.0",
+    "sharp": {
+      "semver": "^7.6.0"
+    }
   },
   "resolutions": {
     "bl": "^1.2.3",
-    "semver": "^5.7.2"
+    "semver": "^7.6.0"
   },
   "lint-staged": {
     "src/**/*.js": [

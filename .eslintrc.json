@@ -10,7 +10,8 @@
     "prettier/prettier": ["error"],
     "default-case": "off",
     "import/no-cycle": "off",
-    "no-param-reassign": "off", 
-    "no-nested-ternary": "off"
+    "no-param-reassign": "off",
+    "no-nested-ternary": "off",
+    "no-underscore-dangle": ["error", { "allow": ["_imageCache", "_retryStats"] }]
   }
 }

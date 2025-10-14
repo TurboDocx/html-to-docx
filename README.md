@@ -247,6 +247,9 @@ full fledged examples can be found under `example/`
     - `minImageSize` <?[Number]> minimum image size in bytes. Defaults to `1024` (1KB).
     - `maxCacheSize` <?[Number]> maximum total cache size in bytes (LRU cache limit to prevent OOM). Defaults to `20971520` (20MB).
     - `maxCacheEntries` <?[Number]> maximum number of unique images in cache (LRU eviction). Defaults to `100`.
+    - `svgHandling` <?[String]> strategy for handling SVG images. Defaults to `'convert'`. Options:
+      - `'convert'` - Converts SVG to PNG for maximum compatibility with all Word versions (requires `sharp` package)
+      - `'native'` - Embeds SVG natively for Office 2019+ (preserves vector quality)
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns
@@ -279,6 +282,125 @@ Also you could add attribute `data-start="n"` to start the numbering from the n-
 
 `<ol data-start="2">` will start the numbering from ( B. b. II. ii. 2. )
 
+
+## SVG Image Support
+
+The library provides comprehensive SVG image support with two strategies to fit your needs:
+
+### Installation & Package Size
+
+The library includes [`sharp`](https://sharp.pixelplumbing.com/) as an optional dependency for high-quality SVG→PNG conversion.
+
+**Default Installation** (Recommended):
+```bash
+npm install @turbodocx/html-to-docx
+```
+- **Package size**: ~3-4MB (sharp with native binaries for your platform)
+- **Compatibility**: Converts SVGs to PNG - works with all Word versions (2007+)
+- **Best for**: Production applications requiring broad compatibility
+
+**Lightweight Installation** (Advanced):
+```bash
+npm install @turbodocx/html-to-docx --no-optional
+```
+- **Package size**: 0MB additional (sharp not installed)
+- **Compatibility**: SVGs embedded natively - requires Office 2019+ or Microsoft 365
+- **Best for**: Modern-only environments or size-constrained deployments
+- **Auto-fallback**: Library automatically uses native SVG mode when sharp is unavailable
+
+#### Why is sharp optional?
+
+Sharp is a native Node.js module that provides the best SVG to PNG conversion quality, but adds ~3-4MB to your `node_modules`. We've made it optional so you can choose:
+
+| Configuration | Install Size | SVG Handling | Word Compatibility | Use Case |
+|--------------|--------------|--------------|-------------------|----------|
+| **With sharp** (default) | +3-4MB | PNG conversion | All versions (2007+) | Production apps, broad compatibility needed |
+| **Without sharp** | +0MB | Native SVG | Office 2019+ only | Modern environments, Lambda/edge functions with size limits |
+
+The library **gracefully handles both scenarios** - if sharp is unavailable, SVGs are automatically embedded in native format.
+
+### 1. Convert to PNG (Default - Maximum Compatibility)
+
+By default, SVG images are automatically converted to PNG format for maximum compatibility with all Word versions (requires `sharp`):
+
+```javascript
+const htmlWithSVG = `
+  <div>
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzM0OThkYiIvPjwvc3ZnPg==" alt="Circle">
+  </div>
+`;
+
+// Default behavior - SVG converted to PNG
+const docx = await HTMLtoDOCX(htmlWithSVG);
+
+// Or explicitly set to convert
+const docx = await HTMLtoDOCX(htmlWithSVG, null, {
+  imageProcessing: {
+    svgHandling: 'convert'  // Converts SVG to PNG (default)
+  }
+});
+```
+
+**Benefits:**
+- ✅ Works with all Word versions (2007+)
+- ✅ Compatible with Word Online, Google Docs, LibreOffice
+- ✅ No compatibility warnings or errors
+
+### 2. Native SVG (Office 2019+ Only)
+
+For modern Office environments, you can embed SVG images natively to preserve vector quality:
+
+```javascript
+const htmlWithSVG = `
+  <div>
+    <img src="data:image/svg+xml;base64,..." alt="Vector Graphic">
+  </div>
+`;
+
+const docx = await HTMLtoDOCX(htmlWithSVG, null, {
+  imageProcessing: {
+    svgHandling: 'native'  // Embed SVG natively (Office 2019+)
+  }
+});
+```
+
+**Benefits:**
+- ✅ Perfect vector quality at any zoom level
+- ✅ Smaller file sizes for complex graphics
+- ✅ Editable in modern Office applications
+
+**Requirements:**
+- Microsoft Office 2019 or later
+- Microsoft 365
+- Word for Mac 2019+
+
+**Note:** Older Word versions will show an "unreadable content" error with native SVG. Use `'convert'` mode for backwards compatibility.
+
+### Handling SVG Without Sharp
+
+If `sharp` is not installed (e.g., using `--no-optional`), the library automatically falls back to native SVG embedding:
+
+```javascript
+// Even with svgHandling: 'convert', if sharp unavailable → uses native SVG
+const docx = await HTMLtoDOCX(htmlWithSVG, null, {
+  imageProcessing: {
+    svgHandling: 'convert',      // Tries to convert, falls back to native
+    verboseLogging: true          // Shows: "Sharp not available, using native SVG"
+  }
+});
+```
+
+**No crashes, no errors** - the library detects sharp availability at runtime and adjusts automatically:
+
+```bash
+# With sharp installed
+✅ SVG → PNG conversion → Works in Word 2007+
+
+# Without sharp (--no-optional)
+ℹ️  SVG → Native embedding → Works in Office 2019+ only
+```
+
+**Pro tip**: For serverless/Lambda deployments with size constraints, install without sharp and document that generated files require Office 2019+.
 
 ## RTL (Right-to-Left) Language Support
 

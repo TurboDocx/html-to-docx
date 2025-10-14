@@ -573,8 +573,14 @@ describe('Image Processing', () => {
   });
 
   describe('processImageSource helper', () => {
+    let mockDocxInstance;
+
     beforeEach(() => {
       jest.clearAllMocks();
+      // Create a minimal mock document instance
+      mockDocxInstance = {
+        imageProcessing: {},
+      };
     });
 
     test('should process data URL and return image properties', async () => {
@@ -584,7 +590,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+      const result = await processImageSource(mockDocxInstance, vNode, vNode.properties.src, 'TEST');
 
       expect(result).not.toBeNull();
       expect(result.base64String).toBe(PNG_1x1_BASE64);
@@ -605,7 +611,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST', 5000);
+      const result = await processImageSource(mockDocxInstance, vNode, vNode.properties.src, 'TEST');
 
       expect(result).not.toBeNull();
       expect(result.base64String).toBe(PNG_1x1_BASE64);
@@ -623,7 +629,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+      const result = await processImageSource(mockDocxInstance, vNode, vNode.properties.src, 'TEST');
 
       expect(result).toBeNull();
     });
@@ -642,7 +648,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST', 5000);
+      const result = await processImageSource(mockDocxInstance, vNode, vNode.properties.src, 'TEST');
 
       expect(result).toBeNull();
     });
@@ -654,7 +660,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+      const result = await processImageSource(mockDocxInstance, vNode, vNode.properties.src, 'TEST');
 
       expect(result).toBeNull();
     });
@@ -666,7 +672,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+      const result = await processImageSource(mockDocxInstance, vNode, vNode.properties.src, 'TEST');
 
       expect(result).not.toBeNull();
       expect(result.base64String).toBe(JPEG_1x1_BASE64);
@@ -680,7 +686,7 @@ describe('Image Processing', () => {
         },
       };
 
-      const result = await processImageSource(vNode, vNode.properties.src, 'TEST');
+      const result = await processImageSource(mockDocxInstance, vNode, vNode.properties.src, 'TEST');
 
       expect(result).not.toBeNull();
       expect(result.base64String).toBe(GIF_1x1_BASE64);
