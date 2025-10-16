@@ -5,11 +5,10 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-else-return */
 import { fragment } from 'xmlbuilder2';
-import isVNode from 'virtual-dom/vnode/is-vnode';
-import isVText from 'virtual-dom/vnode/is-vtext';
 import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
 import sizeOf from 'image-size';
+import { isVNode, isVText } from '../vdom/index';
 import { getMimeType, downloadImageToBase64, parseDataUrl } from '../utils/image';
 import { defaultDocumentOptions } from '../constants';
 

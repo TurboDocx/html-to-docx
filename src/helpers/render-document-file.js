@@ -1,12 +1,6 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-case-declarations */
 import { fragment } from 'xmlbuilder2';
-import VNode from 'virtual-dom/vnode/vnode';
-import VText from 'virtual-dom/vnode/vtext';
-import isVNode from 'virtual-dom/vnode/is-vnode';
-import isVText from 'virtual-dom/vnode/is-vtext';
-// eslint-disable-next-line import/no-named-default
-import { default as HTMLToVDOM } from 'html-to-vdom';
 import sizeOf from 'image-size';
 import * as lruCache from 'lru-cache';
 const LRUCache = lruCache.default || lruCache.LRUCache || lruCache; // Support both ESM and CommonJS imports
@@ -14,6 +8,8 @@ const LRUCache = lruCache.default || lruCache.LRUCache || lruCache; // Support b
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
 import { cloneDeep } from 'lodash';
+import createHTMLToVDOM from './html-parser';
+import { VNode, isVNode, isVText } from '../vdom/index';
 import * as xmlBuilder from './xml-builder';
 import namespaces from '../namespaces';
 import { imageType, internalRelationship, defaultDocumentOptions } from '../constants';
@@ -21,10 +17,7 @@ import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { getMimeType, downloadImageToBase64 } from '../utils/image';
 
-const convertHTML = HTMLToVDOM({
-  VNode,
-  VText,
-});
+const convertHTML = createHTMLToVDOM();
 
 // Helper function to add lineRule attribute for image consistency
 const addLineRuleToImageFragment = (imageFragment) => {

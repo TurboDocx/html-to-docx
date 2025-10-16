@@ -11,7 +11,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 export default {
   input: 'index.js',
-  external: ['color-name', 'html-to-vdom', 'jszip', 'virtual-dom', 'xmlbuilder2', 'html-entities', 'lru-cache'],
+  external: ['color-name', 'jszip', 'xmlbuilder2', 'html-entities', 'lru-cache', 'htmlparser2'],
   plugins: [
     resolve(),
     json(),
@@ -38,6 +38,12 @@ export default {
       format: 'umd',
       name: 'HTMLToDOCX',
       sourcemap: !isProduction,
+      globals: {
+        htmlparser2: 'htmlparser2',
+        jszip: 'JSZip',
+        xmlbuilder2: 'xmlbuilder2',
+        'html-entities': 'htmlEntities',
+      },
       banner: `// ${meta.homepage} v${meta.version} Copyright ${new Date().getFullYear()} ${
         meta.author
       }`,
