@@ -4,7 +4,7 @@
  */
 
 import createHTMLtoVDOM from '../src/helpers/html-parser.js';
-import { VNode, VText, isVNode, isVText } from '../src/vdom/index.js';
+import { isVNode, isVText } from '../src/vdom/index.js';
 
 const convertHTML = createHTMLtoVDOM();
 
