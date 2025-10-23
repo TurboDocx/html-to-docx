@@ -35,6 +35,20 @@ const defaultTableBorderAttributeOptions = {
   size: 1,
   stroke: 'single',
 };
+
+// SVG unit conversion factors to pixels (at 96 DPI standard)
+// Reference: https://www.w3.org/TR/SVG/coords.html#Units
+const SVG_UNIT_TO_PIXEL_CONVERSIONS = {
+  px: 1,
+  cm: 37.7952755906, // 96 DPI
+  mm: 3.77952755906,
+  in: 96,
+  pt: 1.33333333333, // 1/72 inch
+  pc: 16, // 1 pica = 12 points
+  em: 16, // Assume 16px default
+  rem: 16, // Assume 16px default
+  '%': 1, // Cannot convert without parent context, treat as pixels
+};
 const defaultHeadingOptions = {
   heading1: {
     font: defaultFont,
@@ -227,4 +241,5 @@ export {
   defaultDirection,
   defaultPercentageMarginValue,
   defaultTableBorderAttributeOptions,
+  SVG_UNIT_TO_PIXEL_CONVERSIONS,
 };

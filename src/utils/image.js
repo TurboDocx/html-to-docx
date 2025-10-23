@@ -1,5 +1,6 @@
 import mimeTypes from 'mime-types';
 import axios from 'axios';
+import { SVG_UNIT_TO_PIXEL_CONVERSIONS } from '../constants';
 
 // Import sharp as external dependency
 // It's marked as external in rollup.config.js so it won't be bundled
@@ -127,6 +128,20 @@ export function isSVG(mimeTypeOrExtension) {
  * @returns {Promise<Buffer>} PNG buffer
  * @throws {Error} If sharp is not available or conversion fails
  */
+
+/**
+ * Converts SVG dimension values with units to pixels.
+ * Reference: https://www.w3.org/TR/SVG/coords.html#Units
+ *
+ * @param {number} value - The numeric value
+ * @param {string} unit - The unit (px, cm, mm, in, pt, pc, em, rem, %)
+ * @returns {number} Value in pixels
+ */
+function convertSVGUnitToPixels(value, unit) {
+  const factor = SVG_UNIT_TO_PIXEL_CONVERSIONS[unit] || 1;
+  return Math.round(value * factor);
+}
+
 /**
  * Parses SVG dimensions from SVG string, supporting various formats.
  * Handles: integers, decimals, units (px, cm, mm, in, pt, pc, em, rem, %), and viewBox fallback.
@@ -146,13 +161,13 @@ export function parseSVGDimensions(svgString) {
   if (widthMatch) {
     const value = parseFloat(widthMatch[1]);
     const unit = widthMatch[2]?.toLowerCase() || 'px';
-    width = convertToPixels(value, unit);
+    width = convertSVGUnitToPixels(value, unit);
   }
 
   if (heightMatch) {
     const value = parseFloat(heightMatch[1]);
     const unit = heightMatch[2]?.toLowerCase() || 'px';
-    height = convertToPixels(value, unit);
+    height = convertSVGUnitToPixels(value, unit);
   }
 
   // If width/height not found or invalid, try viewBox as fallback
@@ -180,33 +195,6 @@ export function parseSVGDimensions(svgString) {
   }
 
   return { width, height };
-}
-
-/**
- * Converts dimension values with units to pixels.
- * Reference: https://www.w3.org/TR/SVG/coords.html#Units
- *
- * @param {number} value - The numeric value
- * @param {string} unit - The unit (px, cm, mm, in, pt, pc, em, rem, %)
- * @returns {number} Value in pixels
- */
-function convertToPixels(value, unit) {
-  // Note: em and rem conversions assume 16px base font size
-  // Percentage values cannot be converted without context, so we treat them as pixels
-  const conversions = {
-    px: 1,
-    cm: 37.7952755906, // 96 DPI
-    mm: 3.77952755906,
-    in: 96,
-    pt: 1.33333333333, // 1/72 inch
-    pc: 16, // 1 pica = 12 points
-    em: 16, // Assume 16px default
-    rem: 16, // Assume 16px default
-    '%': 1, // Cannot convert without parent context, treat as pixels
-  };
-
-  const factor = conversions[unit] || 1;
-  return Math.round(value * factor);
 }
 
 export async function convertSVGtoPNG(svgInput, options = {}) {
