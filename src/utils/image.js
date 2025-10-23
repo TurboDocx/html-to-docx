@@ -1,6 +1,6 @@
 import mimeTypes from 'mime-types';
 import axios from 'axios';
-import { SVG_UNIT_TO_PIXEL_CONVERSIONS } from '../constants';
+import { SVG_UNIT_TO_PIXEL_CONVERSIONS, defaultDocumentOptions } from '../constants';
 
 // Import sharp as external dependency (optional)
 // It's marked as external in rollup.config.js so it won't be bundled
@@ -277,3 +277,133 @@ export async function downloadImageToBase64(url, timeout = 5000, maxSize = 10 * 
     throw error;
   }
 }
+
+/**
+ * Helper function for verbose logging
+ * @param {boolean} verboseLogging - Whether verbose logging is enabled
+ * @param {string} message - Message to log
+ * @param {...any} args - Additional arguments to log
+ */
+const logVerbose = (verboseLogging, message, ...args) => {
+  if (verboseLogging) {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+/**
+ * Downloads and caches an image with retry logic and exponential backoff.
+ * Handles caching, retries, and failure tracking per document instance.
+ *
+ * @param {Object} docxDocumentInstance - The document instance containing cache and stats
+ * @param {string} imageSource - The image URL to download
+ * @param {Object} options - Download options (maxRetries, verboseLogging, etc.)
+ * @returns {Promise<string|null>} Base64 data URI or null on failure
+ */
+export const downloadAndCacheImage = async (docxDocumentInstance, imageSource, options = {}) => {
+  const maxRetries =
+    options.maxRetries ||
+    docxDocumentInstance.imageProcessing?.maxRetries ||
+    defaultDocumentOptions.imageProcessing.maxRetries;
+  const verboseLogging =
+    options.verboseLogging ||
+    docxDocumentInstance.imageProcessing?.verboseLogging ||
+    defaultDocumentOptions.imageProcessing.verboseLogging;
+
+  // Check cache first for external URLs (if cache is initialized)
+  if (docxDocumentInstance._imageCache && docxDocumentInstance._imageCache.has(imageSource)) {
+    const cachedData = docxDocumentInstance._imageCache.get(imageSource);
+    if (!cachedData || cachedData === 'FAILED') {
+      // Previously failed to download in this document generation, skip this image
+      logVerbose(
+        verboseLogging,
+        `[CACHE] Skipping previously failed image in this document: ${imageSource}`
+      );
+      return null;
+    }
+    logVerbose(verboseLogging, `[CACHE] Using cached image data for: ${imageSource}`);
+    return cachedData;
+  }
+
+  // Download and cache the image with retry mechanism
+  let base64String = null;
+  let lastError = null;
+
+  // eslint-disable-next-line no-await-in-loop
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    if (docxDocumentInstance._retryStats) {
+      docxDocumentInstance._retryStats.totalAttempts += 1;
+    }
+
+    try {
+      logVerbose(verboseLogging, `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`);
+
+      // Use configurable timeout, default 5 seconds, with exponential backoff for retries
+      const baseTimeout = Math.max(
+        defaultDocumentOptions.imageProcessing.minTimeout,
+        Math.min(
+          options.downloadTimeout || defaultDocumentOptions.imageProcessing.downloadTimeout,
+          defaultDocumentOptions.imageProcessing.maxTimeout
+        )
+      );
+      const timeoutMs = baseTimeout * attempt;
+      const maxSizeBytes = Math.max(
+        defaultDocumentOptions.imageProcessing.minImageSize,
+        options.maxImageSize || defaultDocumentOptions.imageProcessing.maxImageSize
+      );
+
+      // eslint-disable-next-line no-await-in-loop
+      base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
+      if (base64String) {
+        if (attempt > 1 && docxDocumentInstance._retryStats) {
+          docxDocumentInstance._retryStats.successAfterRetry += 1;
+          logVerbose(verboseLogging, `[RETRY] Success on attempt ${attempt} for: ${imageSource}`);
+        }
+        break;
+      }
+    } catch (error) {
+      lastError = error;
+      logVerbose(
+        verboseLogging,
+        `[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`
+      );
+
+      // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
+      if (attempt < maxRetries) {
+        const delay = defaultDocumentOptions.imageProcessing.retryDelayBase * attempt;
+        logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  if (!base64String && docxDocumentInstance._retryStats) {
+    docxDocumentInstance._retryStats.finalFailures += 1;
+  }
+
+  if (base64String) {
+    const mimeType = getMimeType(imageSource, base64String);
+    const base64Uri = `data:${mimeType};base64,${base64String}`;
+    // Cache the successful result (if cache is initialized)
+    if (docxDocumentInstance._imageCache) {
+      docxDocumentInstance._imageCache.set(imageSource, base64Uri);
+      logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
+    }
+    return base64Uri;
+  }
+
+  // Cache the failure for THIS document generation only after all retries failed (if cache is initialized)
+  // Each document generation has isolated cache, so failures can be retried in new documents
+  // Use 'FAILED' sentinel value instead of null (LRU cache doesn't handle null well)
+  if (docxDocumentInstance._imageCache) {
+    docxDocumentInstance._imageCache.set(imageSource, 'FAILED');
+  }
+  // eslint-disable-next-line no-console
+  console.error(
+    `[ERROR] downloadAndCacheImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${
+      lastError?.message || 'Unknown error'
+    } - will skip duplicates in this document`
+  );
+  return null;
+};

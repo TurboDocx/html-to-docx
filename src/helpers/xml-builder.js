@@ -9,7 +9,7 @@ import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
 import sizeOf from 'image-size';
 import { isVNode, isVText } from '../vdom/index';
-import { parseDataUrl } from '../utils/image';
+import { parseDataUrl, downloadAndCacheImage } from '../utils/image';
 import { defaultDocumentOptions } from '../constants';
 
 import namespaces from '../namespaces';
@@ -44,7 +44,7 @@ import {
 } from '../utils/unit-conversion';
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
-import { buildImage, buildList, downloadAndCacheImage } from './render-document-file';
+import { buildImage, buildList } from './render-document-file';
 import {
   defaultFont,
   hyperlinkType,
