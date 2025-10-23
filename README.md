@@ -289,34 +289,34 @@ The library provides comprehensive SVG image support with two strategies to fit 
 
 ### Installation & Package Size
 
-The library includes [`sharp`](https://sharp.pixelplumbing.com/) as an optional dependency for high-quality SVG→PNG conversion.
+The library supports SVG images with [`sharp`](https://sharp.pixelplumbing.com/) as an optional peer dependency for high-quality SVG→PNG conversion.
 
-**Default Installation** (Recommended):
+**Basic Installation** (Lightweight):
 ```bash
 npm install @turbodocx/html-to-docx
 ```
+- **Package size**: ~2.8MB (sharp not included)
+- **Compatibility**: SVGs embedded natively - requires Office 2019+ or Microsoft 365
+- **Best for**: Modern-only environments or size-constrained deployments (Lambda, Edge)
+- **Auto-fallback**: Library automatically uses native SVG mode when sharp is unavailable
+
+**Full Installation** (Maximum Compatibility - Recommended):
+```bash
+npm install @turbodocx/html-to-docx sharp
+```
 - **Base package**: ~2.8MB
-- **With sharp**: Additional ~34MB (platform-specific native binaries installed automatically)
+- **With sharp**: Additional ~34MB (platform-specific native binaries)
 - **Compatibility**: Converts SVGs to PNG - works with all Word versions (2007+)
 - **Best for**: Production applications requiring broad compatibility
 
-**Lightweight Installation** (Advanced):
-```bash
-npm install @turbodocx/html-to-docx --no-optional
-```
-- **Package size**: ~2.8MB (sharp not installed)
-- **Compatibility**: SVGs embedded natively - requires Office 2019+ or Microsoft 365
-- **Best for**: Modern-only environments or size-constrained deployments
-- **Auto-fallback**: Library automatically uses native SVG mode when sharp is unavailable
-
 #### Why is sharp optional?
 
-Sharp is a native Node.js module that provides the best SVG to PNG conversion quality, but adds ~34MB of platform-specific native binaries to your `node_modules`. We've made it optional so you can choose:
+Sharp is a native Node.js module that provides the best SVG to PNG conversion quality, but adds ~34MB of platform-specific native binaries to your `node_modules`. We've made it an optional peer dependency so you can choose:
 
-| Configuration | Install Size | SVG Handling | Word Compatibility | Use Case |
-|--------------|--------------|--------------|-------------------|----------|
-| **With sharp** (default) | Base 2.8MB + 34MB binaries | PNG conversion | All versions (2007+) | Production apps, broad compatibility needed |
-| **Without sharp** | 2.8MB | Native SVG | Office 2019+ only | Modern environments, Lambda/edge functions with size limits |
+| Configuration | Install Command | Size | SVG Handling | Word Compatibility | Use Case |
+|--------------|-----------------|------|--------------|-------------------|----------|
+| **Without sharp** (default) | `npm install @turbodocx/html-to-docx` | 2.8MB | Native SVG | Office 2019+ only | Modern environments, Lambda/edge functions |
+| **With sharp** (recommended) | `npm install @turbodocx/html-to-docx sharp` | 2.8MB + 34MB binaries | PNG conversion | All versions (2007+) | Production apps, broad compatibility |
 
 The library **gracefully handles both scenarios** - if sharp is unavailable, SVGs are automatically embedded in native format.
 

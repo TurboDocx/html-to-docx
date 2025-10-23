@@ -158,14 +158,6 @@
     "nanoid": "^3.1.25",
     "xmlbuilder2": "2.1.2"
   },
-  "optionalDependencies": {
-    "sharp": "^0.34.4"
-  },
-  "peerDependenciesMeta": {
-    "sharp": {
-      "optional": true
-    }
-  },
   "overrides": {
     "bl": "^1.2.3",
     "semver": "^7.6.0",
