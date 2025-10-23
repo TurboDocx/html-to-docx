@@ -2,6 +2,9 @@ import { create, fragment } from 'xmlbuilder2';
 import { nanoid } from 'nanoid';
 import { parseDataUrl, isSVG, convertSVGtoPNG, parseSVGDimensions } from './utils/image';
 
+// Track if we've already warned about missing sharp (show once per process)
+let sharpMissingWarningShown = false;
+
 import {
   generateCoreXML,
   generateStylesXML,
@@ -543,8 +546,26 @@ class DocxDocument {
         fileExtension = 'png';
         mimeType = 'image/png';
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error(`[ERROR] Failed to convert SVG to PNG: ${error.message}`);
+        // Sharp not available - fall back to native SVG mode
+        if (error.message.includes('Sharp is not installed')) {
+          // Only show the warning once per process to avoid spam (unless suppressed)
+          const suppressWarning =
+            this.imageProcessing?.suppressSharpWarning ||
+            defaultDocumentOptions.imageProcessing.suppressSharpWarning;
+
+          if (!sharpMissingWarningShown && !suppressWarning) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              '\n[INFO] Sharp not installed - SVG images will be embedded natively (requires Office 2019+ or Microsoft 365).\n' +
+                'For maximum compatibility with all Word versions, install sharp: npm install sharp\n' +
+                'Learn more: https://github.com/TurboDocx/html-to-docx#svg-image-support\n'
+            );
+            sharpMissingWarningShown = true;
+          }
+        } else {
+          // eslint-disable-next-line no-console
+          console.error(`[ERROR] Failed to convert SVG to PNG: ${error.message}`);
+        }
         // Fall back to using SVG directly if conversion fails
         fileExtension = 'svg';
       }

@@ -156,13 +156,8 @@
     "lru-cache": "^10.4.3",
     "mime-types": "^2.1.35",
     "nanoid": "^3.1.25",
+    "sharp": "^0.34.4",
     "xmlbuilder2": "2.1.2"
-  },
-  "optionalDependencies": {
-    "sharp": "^0.34.4"
-  },
-  "peerDependencies": {
-    "sharp": "^0.34.4"
   },
   "peerDependenciesMeta": {
     "sharp": {

@@ -385,8 +385,9 @@ If `sharp` is not installed (e.g., using `--no-optional`), the library automatic
 // Even with svgHandling: 'convert', if sharp unavailable → uses native SVG
 const docx = await HTMLtoDOCX(htmlWithSVG, null, {
   imageProcessing: {
-    svgHandling: 'convert',      // Tries to convert, falls back to native
-    verboseLogging: true          // Shows: "Sharp not available, using native SVG"
+    svgHandling: 'convert',         // Tries to convert, falls back to native
+    suppressSharpWarning: false,    // Set to true to suppress warning when sharp is missing
+    verboseLogging: true            // Shows: "Sharp not available, using native SVG"
   }
 });
 ```
@@ -399,9 +400,12 @@ const docx = await HTMLtoDOCX(htmlWithSVG, null, {
 
 # Without sharp (--no-optional)
 ℹ️  SVG → Native embedding → Works in Office 2019+ only
+
+# Suppress the warning (if intentionally using native SVG mode)
+imageProcessing: { suppressSharpWarning: true }
 ```
 
-**Pro tip**: For serverless/Lambda deployments with size constraints, install without sharp and document that generated files require Office 2019+.
+**Pro tip**: For serverless/Lambda deployments with size constraints, install without sharp and set `suppressSharpWarning: true` to avoid console warnings. Document that generated files require Office 2019+.
 
 ## RTL (Right-to-Left) Language Support
 
