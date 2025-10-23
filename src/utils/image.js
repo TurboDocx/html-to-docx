@@ -2,8 +2,10 @@ import mimeTypes from 'mime-types';
 import axios from 'axios';
 import { SVG_UNIT_TO_PIXEL_CONVERSIONS } from '../constants';
 
-// Import sharp as external dependency
+// Import sharp as external dependency (optional)
 // It's marked as external in rollup.config.js so it won't be bundled
+// Try-catch prevents module load failure when sharp is not installed
+// convertSVGtoPNG will throw a helpful error if sharp is needed but missing
 let sharp;
 try {
   // eslint-disable-next-line global-require, import/no-extraneous-dependencies
@@ -118,18 +120,6 @@ export function isSVG(mimeTypeOrExtension) {
 }
 
 /**
- * Converts an SVG to PNG using sharp library.
- *
- * @param {string|Buffer} svgInput - SVG as string, Buffer, or base64 string
- * @param {Object} options - Conversion options
- * @param {number} options.width - Output width in pixels (optional)
- * @param {number} options.height - Output height in pixels (optional)
- * @param {number} options.density - DPI density for rendering (default: 72)
- * @returns {Promise<Buffer>} PNG buffer
- * @throws {Error} If sharp is not available or conversion fails
- */
-
-/**
  * Converts SVG dimension values with units to pixels.
  * Reference: https://www.w3.org/TR/SVG/coords.html#Units
  *
@@ -194,7 +184,12 @@ export function parseSVGDimensions(svgString) {
     }
   }
 
-  return { width, height };
+  // Default fallback if no dimensions found
+  // Using reasonable defaults for SVG without explicit dimensions
+  return {
+    width: width || 300,
+    height: height || 150,
+  };
 }
 
 export async function convertSVGtoPNG(svgInput, options = {}) {

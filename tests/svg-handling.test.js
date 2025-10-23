@@ -143,8 +143,9 @@ describe('SVG Handling', () => {
       const svg = '<svg><circle r="50"/></svg>';
       const { width, height } = parseSVGDimensions(svg);
 
-      expect(width).toBeUndefined();
-      expect(height).toBeUndefined();
+      // Should return reasonable defaults when no dimensions found
+      expect(width).toBe(300);
+      expect(height).toBe(150);
     });
 
     test('should handle attributes without quotes', () => {
