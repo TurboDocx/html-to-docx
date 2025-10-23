@@ -160,11 +160,14 @@
   },
   "overrides": {
     "bl": "^1.2.3",
-    "semver": "^5.7.2"
+    "semver": "^7.6.0",
+    "sharp": {
+      "semver": "^7.6.0"
+    }
   },
   "resolutions": {
     "bl": "^1.2.3",
-    "semver": "^5.7.2"
+    "semver": "^7.6.0"
   },
   "lint-staged": {
     "src/**/*.js": [

@@ -35,6 +35,20 @@ const defaultTableBorderAttributeOptions = {
   size: 1,
   stroke: 'single',
 };
+
+// SVG unit conversion factors to pixels (at 96 DPI standard)
+// Reference: https://www.w3.org/TR/SVG/coords.html#Units
+const SVG_UNIT_TO_PIXEL_CONVERSIONS = {
+  px: 1,
+  cm: 37.7952755906, // 96 DPI
+  mm: 3.77952755906,
+  in: 96,
+  pt: 1.33333333333, // 1/72 inch
+  pc: 16, // 1 pica = 12 points
+  em: 16, // Assume 16px default
+  rem: 16, // Assume 16px default
+  '%': 1, // Cannot convert without parent context, treat as pixels
+};
 const defaultHeadingOptions = {
   heading1: {
     font: defaultFont,
@@ -151,6 +165,8 @@ const defaultDocumentOptions = {
     minImageSize: 1024, // Minimum image size in bytes (1KB)
     maxCacheSize: 20 * 1024 * 1024, // 20MB max total cache size (prevents OOM)
     maxCacheEntries: 100, // Max 100 unique images in cache (LRU eviction)
+    svgHandling: 'convert', // 'convert' (to PNG for compatibility), 'native' (Office 2019+ SVG support), or 'auto' (convert if sharp available, otherwise native)
+    suppressSharpWarning: false, // Set to true to suppress the warning when sharp is not installed
   },
 };
 const defaultHTMLString = '<p></p>';
@@ -226,4 +242,5 @@ export {
   defaultDirection,
   defaultPercentageMarginValue,
   defaultTableBorderAttributeOptions,
+  SVG_UNIT_TO_PIXEL_CONVERSIONS,
 };

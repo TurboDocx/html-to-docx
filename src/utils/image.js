@@ -1,5 +1,19 @@
 import mimeTypes from 'mime-types';
 import axios from 'axios';
+import { SVG_UNIT_TO_PIXEL_CONVERSIONS, defaultDocumentOptions } from '../constants';
+
+// Import sharp as external dependency (optional)
+// It's marked as external in rollup.config.js so it won't be bundled
+// Try-catch prevents module load failure when sharp is not installed
+// convertSVGtoPNG will throw a helpful error if sharp is needed but missing
+let sharp;
+try {
+  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+  sharp = require('sharp');
+} catch (e) {
+  // Sharp not installed - will use native SVG mode
+  sharp = null;
+}
 
 /**
  * Tries to guess the MIME type of an image based on the initial bytes (magic numbers) of its base64 representation.
@@ -88,6 +102,138 @@ export function parseDataUrl(dataUrl) {
 }
 
 /**
+ * Checks if a MIME type or file extension indicates an SVG image.
+ *
+ * @param {string} mimeTypeOrExtension - MIME type (e.g., "image/svg+xml") or file extension (e.g., ".svg")
+ * @returns {boolean} True if the input indicates an SVG image
+ */
+export function isSVG(mimeTypeOrExtension) {
+  if (!mimeTypeOrExtension) return false;
+  const normalized = mimeTypeOrExtension.toLowerCase().trim();
+  return (
+    normalized === 'image/svg+xml' ||
+    normalized === 'image/svg' ||
+    normalized === '.svg' ||
+    normalized === 'svg' ||
+    normalized.endsWith('.svg')
+  );
+}
+
+/**
+ * Converts SVG dimension values with units to pixels.
+ * Reference: https://www.w3.org/TR/SVG/coords.html#Units
+ *
+ * @param {number} value - The numeric value
+ * @param {string} unit - The unit (px, cm, mm, in, pt, pc, em, rem, %)
+ * @returns {number} Value in pixels
+ */
+function convertSVGUnitToPixels(value, unit) {
+  const factor = SVG_UNIT_TO_PIXEL_CONVERSIONS[unit] || 1;
+  return Math.round(value * factor);
+}
+
+/**
+ * Parses SVG dimensions from SVG string, supporting various formats.
+ * Handles: integers, decimals, units (px, cm, mm, in, pt, pc, em, rem, %), and viewBox fallback.
+ *
+ * @param {string} svgString - The SVG XML string
+ * @returns {Object} Object with {width, height} in pixels, or undefined if not found
+ */
+export function parseSVGDimensions(svgString) {
+  // Try to extract width and height attributes
+  // Regex supports: integers, decimals, and units (px, cm, mm, in, pt, pc, em, rem, %)
+  const widthMatch = svgString.match(/width\s*=\s*["']?([0-9.]+)([a-z%]*)/i);
+  const heightMatch = svgString.match(/height\s*=\s*["']?([0-9.]+)([a-z%]*)/i);
+
+  let width;
+  let height;
+
+  if (widthMatch) {
+    const value = parseFloat(widthMatch[1]);
+    const unit = widthMatch[2]?.toLowerCase() || 'px';
+    width = convertSVGUnitToPixels(value, unit);
+  }
+
+  if (heightMatch) {
+    const value = parseFloat(heightMatch[1]);
+    const unit = heightMatch[2]?.toLowerCase() || 'px';
+    height = convertSVGUnitToPixels(value, unit);
+  }
+
+  // If width/height not found or invalid, try viewBox as fallback
+  if (!width || !height) {
+    const viewBoxMatch = svgString.match(/viewBox\s*=\s*["']?([0-9.\s-]+)["']?/i);
+    if (viewBoxMatch) {
+      const parts = viewBoxMatch[1].trim().split(/\s+/);
+      if (parts.length === 4) {
+        // viewBox format: "minX minY width height"
+        const viewBoxWidth = parseFloat(parts[2]);
+        const viewBoxHeight = parseFloat(parts[3]);
+
+        // If we only have one dimension, calculate the other from viewBox aspect ratio
+        if (!width && height && viewBoxWidth && viewBoxHeight) {
+          width = Math.round((height * viewBoxWidth) / viewBoxHeight);
+        } else if (width && !height && viewBoxWidth && viewBoxHeight) {
+          height = Math.round((width * viewBoxHeight) / viewBoxWidth);
+        } else if (!width && !height) {
+          // Use viewBox dimensions directly
+          width = Math.round(viewBoxWidth);
+          height = Math.round(viewBoxHeight);
+        }
+      }
+    }
+  }
+
+  // Default fallback if no dimensions found
+  // Using reasonable defaults for SVG without explicit dimensions
+  return {
+    width: width || 300,
+    height: height || 150,
+  };
+}
+
+export async function convertSVGtoPNG(svgInput, options = {}) {
+  try {
+    // Check if sharp is available
+    if (!sharp) {
+      throw new Error('Sharp is not installed. Install it with: npm install sharp');
+    }
+
+    const { width, height, density = 72 } = options;
+
+    let svgBuffer;
+    if (typeof svgInput === 'string') {
+      // Check if it's base64
+      if (svgInput.match(/^[A-Za-z0-9+/=]+$/)) {
+        svgBuffer = Buffer.from(svgInput, 'base64');
+      } else {
+        // Assume it's SVG XML string
+        svgBuffer = Buffer.from(svgInput, 'utf-8');
+      }
+    } else if (Buffer.isBuffer(svgInput)) {
+      svgBuffer = svgInput;
+    } else {
+      throw new Error('Invalid SVG input type');
+    }
+
+    // Convert SVG to PNG using sharp
+    let sharpInstance = sharp(svgBuffer, { density });
+
+    if (width || height) {
+      sharpInstance = sharpInstance.resize(width, height, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 0 },
+      });
+    }
+
+    const pngBuffer = await sharpInstance.png().toBuffer();
+    return pngBuffer;
+  } catch (error) {
+    throw new Error(`Failed to convert SVG to PNG: ${error.message}`);
+  }
+}
+
+/**
  * Downloads an image from a URL and converts it to base64.
  *
  * @param {string} url - The URL of the image to download
@@ -131,3 +277,133 @@ export async function downloadImageToBase64(url, timeout = 5000, maxSize = 10 * 
     throw error;
   }
 }
+
+/**
+ * Helper function for verbose logging
+ * @param {boolean} verboseLogging - Whether verbose logging is enabled
+ * @param {string} message - Message to log
+ * @param {...any} args - Additional arguments to log
+ */
+const logVerbose = (verboseLogging, message, ...args) => {
+  if (verboseLogging) {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+/**
+ * Downloads and caches an image with retry logic and exponential backoff.
+ * Handles caching, retries, and failure tracking per document instance.
+ *
+ * @param {Object} docxDocumentInstance - The document instance containing cache and stats
+ * @param {string} imageSource - The image URL to download
+ * @param {Object} options - Download options (maxRetries, verboseLogging, etc.)
+ * @returns {Promise<string|null>} Base64 data URI or null on failure
+ */
+export const downloadAndCacheImage = async (docxDocumentInstance, imageSource, options = {}) => {
+  const maxRetries =
+    options.maxRetries ||
+    docxDocumentInstance.imageProcessing?.maxRetries ||
+    defaultDocumentOptions.imageProcessing.maxRetries;
+  const verboseLogging =
+    options.verboseLogging ||
+    docxDocumentInstance.imageProcessing?.verboseLogging ||
+    defaultDocumentOptions.imageProcessing.verboseLogging;
+
+  // Check cache first for external URLs (if cache is initialized)
+  if (docxDocumentInstance._imageCache && docxDocumentInstance._imageCache.has(imageSource)) {
+    const cachedData = docxDocumentInstance._imageCache.get(imageSource);
+    if (!cachedData || cachedData === 'FAILED') {
+      // Previously failed to download in this document generation, skip this image
+      logVerbose(
+        verboseLogging,
+        `[CACHE] Skipping previously failed image in this document: ${imageSource}`
+      );
+      return null;
+    }
+    logVerbose(verboseLogging, `[CACHE] Using cached image data for: ${imageSource}`);
+    return cachedData;
+  }
+
+  // Download and cache the image with retry mechanism
+  let base64String = null;
+  let lastError = null;
+
+  // eslint-disable-next-line no-await-in-loop
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    if (docxDocumentInstance._retryStats) {
+      docxDocumentInstance._retryStats.totalAttempts += 1;
+    }
+
+    try {
+      logVerbose(verboseLogging, `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`);
+
+      // Use configurable timeout, default 5 seconds, with exponential backoff for retries
+      const baseTimeout = Math.max(
+        defaultDocumentOptions.imageProcessing.minTimeout,
+        Math.min(
+          options.downloadTimeout || defaultDocumentOptions.imageProcessing.downloadTimeout,
+          defaultDocumentOptions.imageProcessing.maxTimeout
+        )
+      );
+      const timeoutMs = baseTimeout * attempt;
+      const maxSizeBytes = Math.max(
+        defaultDocumentOptions.imageProcessing.minImageSize,
+        options.maxImageSize || defaultDocumentOptions.imageProcessing.maxImageSize
+      );
+
+      // eslint-disable-next-line no-await-in-loop
+      base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
+      if (base64String) {
+        if (attempt > 1 && docxDocumentInstance._retryStats) {
+          docxDocumentInstance._retryStats.successAfterRetry += 1;
+          logVerbose(verboseLogging, `[RETRY] Success on attempt ${attempt} for: ${imageSource}`);
+        }
+        break;
+      }
+    } catch (error) {
+      lastError = error;
+      logVerbose(
+        verboseLogging,
+        `[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`
+      );
+
+      // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
+      if (attempt < maxRetries) {
+        const delay = defaultDocumentOptions.imageProcessing.retryDelayBase * attempt;
+        logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  if (!base64String && docxDocumentInstance._retryStats) {
+    docxDocumentInstance._retryStats.finalFailures += 1;
+  }
+
+  if (base64String) {
+    const mimeType = getMimeType(imageSource, base64String);
+    const base64Uri = `data:${mimeType};base64,${base64String}`;
+    // Cache the successful result (if cache is initialized)
+    if (docxDocumentInstance._imageCache) {
+      docxDocumentInstance._imageCache.set(imageSource, base64Uri);
+      logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
+    }
+    return base64Uri;
+  }
+
+  // Cache the failure for THIS document generation only after all retries failed (if cache is initialized)
+  // Each document generation has isolated cache, so failures can be retried in new documents
+  // Use 'FAILED' sentinel value instead of null (LRU cache doesn't handle null well)
+  if (docxDocumentInstance._imageCache) {
+    docxDocumentInstance._imageCache.set(imageSource, 'FAILED');
+  }
+  // eslint-disable-next-line no-console
+  console.error(
+    `[ERROR] downloadAndCacheImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${
+      lastError?.message || 'Unknown error'
+    } - will skip duplicates in this document`
+  );
+  return null;
+};
