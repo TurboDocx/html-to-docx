@@ -1,9 +1,6 @@
 import { create } from 'xmlbuilder2';
-import VNode from 'virtual-dom/vnode/vnode';
-import VText from 'virtual-dom/vnode/vtext';
-// eslint-disable-next-line import/no-named-default
-import { default as HTMLToVDOM } from 'html-to-vdom';
 import { decode } from 'html-entities';
+import createHTMLToVDOM from './helpers/html-parser';
 
 import { relsXML } from './schemas';
 import DocxDocument from './docx-document';
@@ -23,10 +20,7 @@ import {
   themeType,
 } from './constants';
 
-const convertHTML = HTMLToVDOM({
-  VNode,
-  VText,
-});
+const convertHTML = createHTMLToVDOM();
 
 // Ref: https://en.wikipedia.org/wiki/Office_Open_XML_file_formats
 // http://officeopenxml.com/anatomyofOOXML.php
