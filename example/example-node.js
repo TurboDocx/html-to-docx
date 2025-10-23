@@ -2043,6 +2043,11 @@ const htmlString = `<!DOCTYPE html>
     footer: true,
     pageNumber: true,
     preprocessing: { skipHTMLMinify: false },
+    imageProcessing: {
+      // By default, shows a warning when sharp is not installed
+      // Uncomment to suppress the warning (useful for intentional native SVG mode):
+    //   suppressSharpWarning: true,
+    },
     // ===================================================================
     // WARNING: deterministicIds is ONLY for CI/CD testing purposes.
     // DO NOT use this option in production.
