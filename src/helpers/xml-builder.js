@@ -9,7 +9,7 @@ import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
 import sizeOf from 'image-size';
 import { isVNode, isVText } from '../vdom/index';
-import { getMimeType, parseDataUrl } from '../utils/image';
+import { parseDataUrl } from '../utils/image';
 import { defaultDocumentOptions } from '../constants';
 
 import namespaces from '../namespaces';
