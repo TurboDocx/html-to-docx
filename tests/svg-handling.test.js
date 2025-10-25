@@ -6,6 +6,60 @@ import { parseDOCX } from './helpers/docx-assertions.js';
 import { isSVG, convertSVGtoPNG, parseSVGDimensions } from '../src/utils/image.js';
 import { SVG_BASE64, SVG_FIXTURE, PNG_FIXTURE } from './fixtures/index.js';
 
+// Mock sharp module
+jest.mock('sharp', () => {
+  const mockSharp = jest.fn((buffer) => {
+    // Check if buffer contains invalid SVG for test purposes
+    const bufferContent = buffer.toString('utf-8');
+    const shouldThrowError = bufferContent.includes('not valid svg') ||
+                            (!bufferContent.includes('<svg') && !bufferContent.includes('<?xml'));
+
+    const api = {
+      resize: jest.fn(() => api),
+      png: jest.fn(() => api),
+      toBuffer: jest.fn(async () => {
+        if (shouldThrowError) {
+          throw new Error('Input buffer contains unsupported image format');
+        }
+
+        // Return a minimal but valid PNG buffer that image-size can read
+        // PNG file structure: signature + IHDR chunk (width=100, height=100)
+        const pngData = Buffer.from([
+          // PNG signature
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+          // IHDR chunk length (13 bytes)
+          0x00, 0x00, 0x00, 0x0d,
+          // IHDR chunk type
+          0x49, 0x48, 0x44, 0x52,
+          // Width: 100
+          0x00, 0x00, 0x00, 0x64,
+          // Height: 100
+          0x00, 0x00, 0x00, 0x64,
+          // Bit depth: 8
+          0x08,
+          // Color type: 2 (RGB)
+          0x02,
+          // Compression: 0
+          0x00,
+          // Filter: 0
+          0x00,
+          // Interlace: 0
+          0x00,
+          // CRC (dummy)
+          0x00, 0x00, 0x00, 0x00,
+          // IEND chunk
+          0x00, 0x00, 0x00, 0x00,
+          0x49, 0x45, 0x4e, 0x44,
+          0xae, 0x42, 0x60, 0x82
+        ]);
+        return pngData;
+      }),
+    };
+    return api;
+  });
+  return mockSharp;
+}, { virtual: true });
+
 describe('SVG Handling', () => {
   describe('isSVG utility', () => {
     test('should detect SVG from image/svg+xml MIME type', () => {
