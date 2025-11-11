@@ -101,6 +101,83 @@ export const buildImage = async (
       }
       // Update vNode to reflect the cached data URL for subsequent processing
       vNode.properties.src = base64Uri;
+    } else if (isValidUrl(imageSource)) {
+      // Download and cache the image with retry mechanism
+      let base64String = null;
+      let lastError = null;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+        docxDocumentInstance._retryStats.totalAttempts += 1;
+
+        try {
+          logVerbose(
+            verboseLogging,
+            `[RETRY] Attempt ${attempt}/${maxRetries} for: ${imageSource}`
+          );
+
+          // Use configurable timeout, default 5 seconds, with exponential backoff for retries
+          const baseTimeout = Math.max(
+            defaultDocumentOptions.imageProcessing.minTimeout,
+            Math.min(
+              options.downloadTimeout || defaultDocumentOptions.imageProcessing.downloadTimeout,
+              defaultDocumentOptions.imageProcessing.maxTimeout
+            )
+          );
+          const timeoutMs = baseTimeout * attempt;
+          const maxSizeBytes = Math.max(
+            defaultDocumentOptions.imageProcessing.minImageSize,
+            options.maxImageSize || defaultDocumentOptions.imageProcessing.maxImageSize
+          );
+
+          base64String = await downloadImageToBase64(imageSource, timeoutMs, maxSizeBytes);
+          if (base64String) {
+            if (attempt > 1) {
+              docxDocumentInstance._retryStats.successAfterRetry += 1;
+              logVerbose(
+                verboseLogging,
+                `[RETRY] Success on attempt ${attempt} for: ${imageSource}`
+              );
+            }
+            break;
+          }
+        } catch (error) {
+          lastError = error;
+          logVerbose(
+            verboseLogging,
+            `[RETRY] Attempt ${attempt}/${maxRetries} failed for ${imageSource}: ${error.message}`
+          );
+
+          // Add delay before retry (exponential backoff: 500ms, 1000ms, etc.)
+          if (attempt < maxRetries) {
+            const delay = defaultDocumentOptions.imageProcessing.retryDelayBase * attempt;
+            logVerbose(verboseLogging, `[RETRY] Waiting ${delay}ms before retry...`);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+        }
+      }
+
+      if (!base64String) {
+        docxDocumentInstance._retryStats.finalFailures += 1;
+      }
+
+      if (base64String) {
+        const mimeType = getMimeType(imageSource, base64String);
+        base64Uri = `data:${mimeType};base64, ${base64String}`;
+        // Cache the successful result
+        docxDocumentInstance._imageCache.set(imageSource, base64Uri);
+        logVerbose(verboseLogging, `[CACHE] Cached new image data for: ${imageSource}`);
+        // Update vNode to reflect the new data URL for subsequent processing
+        vNode.properties.src = base64Uri;
+      } else {
+        // Don't cache null/failure values when using maxSize - lru-cache v10+ requires valid size
+        // Failed images will be retried on each attempt (not cached)
+        // eslint-disable-next-line no-console
+        console.error(
+          `[ERROR] buildImage: Failed to convert URL to base64 after ${maxRetries} attempts: ${
+            lastError?.message || 'Unknown error'
+          }`
+        );
+      }
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
     }
@@ -529,7 +606,11 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
       max: maxCacheEntries, // Max number of unique images
       maxSize: maxCacheSize, // Max total size in bytes
       sizeCalculation: (value) => {
-        if (!value || value === 'FAILED') return 1; // Minimum size for failed entries
+        // In lru-cache v10+, sizeCalculation must return a positive integer
+        // We should never store null/invalid values, but handle defensively
+        if (!value || typeof value !== 'string' || value.length === 0) {
+          throw new Error('Invalid cache value: sizeCalculation requires non-empty string');
+        }
         // Calculate approximate byte size of base64 string
         // Base64 encoding is ~4/3 of original size, so decoded size is ~3/4
         return Math.ceil((value.length * 3) / 4);
