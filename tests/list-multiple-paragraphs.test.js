@@ -437,4 +437,222 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       expect(para2Index).toBeGreaterThan(para1Index);
     });
   });
+
+  describe('Block-level elements in list items', () => {
+    describe('Headings in list items', () => {
+      test('should render heading and paragraph in list item', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <h3>Section Title</h3>
+              <p>Section content paragraph</p>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const parsed = await parseDOCX(docx);
+
+        // Should have 2 elements: heading + paragraph
+        expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(2);
+
+        const allText = parsed.paragraphs.map((p) => p.text).join(' ');
+        expect(allText).toContain('Section Title');
+        expect(allText).toContain('Section content paragraph');
+      });
+
+      test('should render multiple headings in list item', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <h2>Main Heading</h2>
+              <p>Intro paragraph</p>
+              <h3>Subheading</h3>
+              <p>Detail paragraph</p>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const parsed = await parseDOCX(docx);
+
+        const allText = parsed.paragraphs.map((p) => p.text).join(' ');
+        expect(allText).toContain('Main Heading');
+        expect(allText).toContain('Intro paragraph');
+        expect(allText).toContain('Subheading');
+        expect(allText).toContain('Detail paragraph');
+      });
+
+      test('should apply continuation indenting to heading after first block', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <p>First paragraph (with bullet)</p>
+              <h3>Heading (should be indented, no bullet)</h3>
+              <p>Second paragraph (indented)</p>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const JSZip = require('jszip');
+        const zip = await JSZip.loadAsync(docx);
+        const documentXml = await zip.file('word/document.xml').async('string');
+
+        // First element should have numbering
+        // Subsequent elements (including heading) should have indentation
+        const numPrMatches = documentXml.match(/<w:numPr>/g);
+        const numPrCount = numPrMatches ? numPrMatches.length : 0;
+
+        // Should only have ONE element with numbering (the first paragraph)
+        expect(numPrCount).toBe(1);
+      });
+    });
+
+    describe('Blockquotes in list items', () => {
+      test('should render blockquote in list item', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <p>Introduction</p>
+              <blockquote>
+                <p>This is a quoted paragraph</p>
+              </blockquote>
+              <p>Conclusion</p>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const parsed = await parseDOCX(docx);
+
+        const allText = parsed.paragraphs.map((p) => p.text).join(' ');
+        expect(allText).toContain('Introduction');
+        expect(allText).toContain('This is a quoted paragraph');
+        expect(allText).toContain('Conclusion');
+      });
+
+      test('should handle blockquote with multiple paragraphs', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <p>Before quote</p>
+              <blockquote>
+                <p>Quote paragraph 1</p>
+                <p>Quote paragraph 2</p>
+              </blockquote>
+              <p>After quote</p>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const parsed = await parseDOCX(docx);
+
+        const allText = parsed.paragraphs.map((p) => p.text).join(' ');
+        expect(allText).toContain('Before quote');
+        expect(allText).toContain('Quote paragraph 1');
+        expect(allText).toContain('Quote paragraph 2');
+        expect(allText).toContain('After quote');
+      });
+    });
+
+    describe('Pre/code blocks in list items', () => {
+      test('should render pre block in list item', async () => {
+        // Note: <pre> with direct text content requires <code> wrapper for proper rendering
+        // This is a known limitation of html-to-docx's pre tag handling
+        const htmlString = `
+          <ul>
+            <li>
+              <p>Code example:</p>
+              <pre><code>def calculate_sum(a, b): return a + b</code></pre>
+              <p>End of example</p>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const parsed = await parseDOCX(docx);
+
+        const allText = parsed.paragraphs.map((p) => p.text).join(' ');
+        expect(allText).toContain('Code example:');
+        expect(allText).toContain('calculate_sum');
+        expect(allText).toContain('End of example');
+      });
+
+      test('should render code block with proper formatting', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <p>Install via npm:</p>
+              <pre><code>npm install html-to-docx</code></pre>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const parsed = await parseDOCX(docx);
+
+        const allText = parsed.paragraphs.map((p) => p.text).join(' ');
+        expect(allText).toContain('Install via npm:');
+        expect(allText).toContain('npm install html-to-docx');
+      });
+    });
+
+    describe('Mixed block elements in list items', () => {
+      test('should handle h3 + p + blockquote + ul + p sequence', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <h3>Section Title</h3>
+              <p>Introduction paragraph</p>
+              <blockquote><p>Important note</p></blockquote>
+              <ul>
+                <li>Nested item</li>
+              </ul>
+              <p>Final paragraph</p>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const parsed = await parseDOCX(docx);
+
+        const allText = parsed.paragraphs.map((p) => p.text).join(' ');
+        expect(allText).toContain('Section Title');
+        expect(allText).toContain('Introduction paragraph');
+        expect(allText).toContain('Important note');
+        expect(allText).toContain('Nested item');
+        expect(allText).toContain('Final paragraph');
+      });
+
+      test('should properly indent all continuation blocks', async () => {
+        const htmlString = `
+          <ul>
+            <li>
+              <p>First block (with bullet)</p>
+              <h4>Heading block (indented)</h4>
+              <blockquote><p>Quote block (indented)</p></blockquote>
+              <pre>Code block (indented)</pre>
+            </li>
+          </ul>
+        `;
+
+        const docx = await HTMLtoDOCX(htmlString);
+        const JSZip = require('jszip');
+        const zip = await JSZip.loadAsync(docx);
+        const documentXml = await zip.file('word/document.xml').async('string');
+
+        // Only first block should have numbering
+        const numPrMatches = documentXml.match(/<w:numPr>/g);
+        const numPrCount = numPrMatches ? numPrMatches.length : 0;
+        expect(numPrCount).toBe(1);
+
+        // Should have indentation for continuation blocks
+        const indMatches = documentXml.match(/<w:ind/g);
+        const indCount = indMatches ? indMatches.length : 0;
+        expect(indCount).toBeGreaterThanOrEqual(1);
+      });
+    });
+  });
 });
