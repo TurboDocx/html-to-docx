@@ -81,10 +81,7 @@ describe('List items with multiple paragraphs - Issue #145', () => {
   });
 
   describe('Multiple list items with multiple paragraphs', () => {
-    // Note: Known limitation - multiple sequential <li> elements with multiple <p> tags
-    // may not all be processed. The primary use case (single <li> with multiple <p>)
-    // works correctly as per issue #145.
-    test.skip('should render multiple list items each with multiple paragraphs', async () => {
+    test('should render multiple list items each with multiple paragraphs', async () => {
       const htmlString = `
         <ul>
           <li>
@@ -109,7 +106,7 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       expect(allText).toContain('Item 2, Para 2');
     });
 
-    test.skip('should handle mixed paragraph counts across list items', async () => {
+    test('should handle mixed paragraph counts across list items', async () => {
       const htmlString = `
         <ul>
           <li>
@@ -245,9 +242,7 @@ describe('List items with multiple paragraphs - Issue #145', () => {
   });
 
   describe('Complex scenarios', () => {
-    // Note: Known limitation - nested lists combined with multiple paragraphs
-    // may not render all content. This is an edge case beyond the scope of issue #145.
-    test.skip('should handle nested lists where inner list items have multiple paragraphs', async () => {
+    test('should handle nested lists where inner list items have multiple paragraphs', async () => {
       const htmlString = `
         <ul>
           <li>
@@ -337,6 +332,64 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       assertParagraphCount(parsed, 2);
       assertParagraphText(parsed, 0, 'Paragraph inside div 1');
       assertParagraphText(parsed, 1, 'Paragraph inside div 2');
+    });
+  });
+
+  describe('Continuation paragraphs (OOXML compliance)', () => {
+    test('should NOT add numbering to continuation paragraphs', async () => {
+      const htmlString = `
+        <ul>
+          <li>
+            <p>First paragraph with bullet</p>
+            <p>Second paragraph without bullet</p>
+            <p>Third paragraph without bullet</p>
+          </li>
+        </ul>
+      `;
+
+      const docx = await HTMLtoDOCX(htmlString);
+      const parsed = await parseDOCX(docx);
+
+      // Verify all paragraphs exist
+      assertParagraphCount(parsed, 3);
+      assertParagraphText(parsed, 0, 'First paragraph with bullet');
+      assertParagraphText(parsed, 1, 'Second paragraph without bullet');
+      assertParagraphText(parsed, 2, 'Third paragraph without bullet');
+
+      // Check the raw XML for numbering properties
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(docx);
+      const documentXml = await zip.file('word/document.xml').async('string');
+
+      // Count numPr elements (should only be 1, for the first paragraph)
+      const numPrMatches = documentXml.match(/<w:numPr>/g);
+      const numPrCount = numPrMatches ? numPrMatches.length : 0;
+
+      // Should only have ONE paragraph with numbering (the first one)
+      expect(numPrCount).toBe(1);
+    });
+
+    test('should maintain proper indentation for continuation paragraphs', async () => {
+      const htmlString = `
+        <ul>
+          <li>
+            <p>First para</p>
+            <p>Continuation para should be indented</p>
+          </li>
+        </ul>
+      `;
+
+      const docx = await HTMLtoDOCX(htmlString);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(docx);
+      const documentXml = await zip.file('word/document.xml').async('string');
+
+      // Continuation paragraphs should have indentation (w:ind)
+      const indMatches = documentXml.match(/<w:ind/g);
+      const indCount = indMatches ? indMatches.length : 0;
+
+      // Should have indentation for continuation paragraph(s)
+      expect(indCount).toBeGreaterThanOrEqual(1);
     });
   });
 
