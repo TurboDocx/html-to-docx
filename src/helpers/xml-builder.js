@@ -1166,6 +1166,19 @@ const buildNumberingProperties = (levelId, numberingId) =>
     .up()
     .up();
 
+// Helper function to build list continuation paragraph indentation
+// Provides proper indent without showing bullet/number (for issue #145)
+const buildListContinuationIndent = (level) => {
+  // Calculate indent: 720 TWIPs = 0.5 inch per level
+  // Add extra indent to align with text after bullet (not with bullet itself)
+  const leftIndent = (level + 1) * 720 + 360; // Extra 360 TWIPs (0.25 inch) for text alignment
+  return fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'ind')
+    .att('@w', 'left', String(leftIndent))
+    .att('@w', 'hanging', '0')
+    .up();
+};
+
 const buildNumberingInstances = () =>
   fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'num')
@@ -1261,9 +1274,16 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
     Object.keys(attributes).forEach((key) => {
       switch (key) {
         case 'numbering':
-          const { levelId, numberingId } = attributes[key];
-          const numberingPropertiesFragment = buildNumberingProperties(levelId, numberingId);
-          paragraphPropertiesFragment.import(numberingPropertiesFragment);
+          // Handle continuation paragraphs (issue #145)
+          // Continuation paragraphs get indentation instead of numbering
+          if (attributes.isContinuation) {
+            const indentationFragment = buildListContinuationIndent(attributes.indentLevel || 0);
+            paragraphPropertiesFragment.import(indentationFragment);
+          } else {
+            const { levelId, numberingId } = attributes[key];
+            const numberingPropertiesFragment = buildNumberingProperties(levelId, numberingId);
+            paragraphPropertiesFragment.import(numberingPropertiesFragment);
+          }
           // eslint-disable-next-line no-param-reassign
           delete attributes.numbering;
           break;

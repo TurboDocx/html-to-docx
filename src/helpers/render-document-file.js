@@ -212,40 +212,51 @@ export const buildImage = async (
 };
 
 /**
- * Helper function to extract block-level paragraph elements from a node
- * Handles nested structures like <li><div><p>...</p><p>...</p></div></li>
- * Returns an array of paragraph-like nodes
+ * Helper function to separate content within a list item into distinct categories
+ * Handles complex structures like <li><p>...</p><ul>...</ul><p>...</p></li>
+ * Returns object with: paragraphs, nestedLists, and otherContent arrays
+ *
+ * This is used for issue #145 to properly handle:
+ * - Multiple paragraphs in one list item
+ * - Nested lists mixed with paragraphs
+ * - Inline content that needs to be wrapped
  */
-const extractParagraphNodes = (node) => {
-  if (!isVNode(node)) {
-    return [];
+const separateListItemContent = (liNode) => {
+  if (!isVNode(liNode)) {
+    return { paragraphs: [], nestedLists: [], otherContent: [] };
   }
 
-  const tagName = node.tagName.toLowerCase();
+  const paragraphs = [];
+  const nestedLists = [];
+  const otherContent = [];
 
-  // If it's already a paragraph, return it
-  if (tagName === 'p') {
-    return [node];
-  }
-
-  // If it's a div or other container, look for paragraphs inside
-  if (['div', 'li'].includes(tagName)) {
-    const paragraphs = [];
-    node.children.forEach((child) => {
-      if (isVNode(child)) {
-        const childTag = child.tagName.toLowerCase();
-        if (childTag === 'p') {
-          paragraphs.push(child);
-        } else if (['div'].includes(childTag)) {
-          // Recursively extract from nested divs
-          paragraphs.push(...extractParagraphNodes(child));
-        }
+  const processNode = (node) => {
+    if (!isVNode(node)) {
+      // Text nodes go to other content
+      if (node && node.text) {
+        otherContent.push(node);
       }
-    });
-    return paragraphs;
-  }
+      return;
+    }
 
-  return [];
+    const tagName = node.tagName.toLowerCase();
+
+    if (tagName === 'p') {
+      paragraphs.push(node);
+    } else if (['ul', 'ol'].includes(tagName)) {
+      nestedLists.push(node);
+    } else if (tagName === 'div') {
+      // Recurse into divs to extract nested content
+      node.children.forEach(processNode);
+    } else {
+      // Other inline elements (span, strong, em, etc.)
+      otherContent.push(node);
+    }
+  };
+
+  liNode.children.forEach(processNode);
+
+  return { paragraphs, nestedLists, otherContent };
 };
 
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
@@ -272,6 +283,8 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
         tempVNodeObject.node,
         {
           numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
+          isContinuation: tempVNodeObject.isContinuation || false,
+          indentLevel: tempVNodeObject.indentLevel,
         },
         docxDocumentInstance
       );
@@ -300,7 +313,9 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
           if (
             accumulator.length > 0 &&
             isVNode(accumulator[accumulator.length - 1].node) &&
-            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p'
+            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p' &&
+            // Don't merge list items - they need to be processed independently (issue #145)
+            !(isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li')
           ) {
             accumulator[accumulator.length - 1].node.children.push(childVNode);
           } else {
@@ -316,14 +331,14 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
             };
 
             // FIX for Issue #145: Handle multiple paragraphs in list items
-            // When a list item contains multiple <p> tags, process each as a separate paragraph
+            // Separate content into paragraphs, nested lists, and other content
             if (isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li') {
-              // Extract all paragraph nodes from the list item (handles nested divs too)
-              const paragraphNodes = extractParagraphNodes(childVNode);
+              const { paragraphs, nestedLists, otherContent } = separateListItemContent(childVNode);
 
-              if (paragraphNodes.length > 1) {
-                // Multiple paragraph nodes found: process each separately
-                paragraphNodes.forEach((paragraphNode) => {
+              // Process paragraphs (with continuation support)
+              if (paragraphs.length > 0) {
+                paragraphs.forEach((paragraphNode, index) => {
+                  const isFirstParagraph = index === 0;
                   const blockProperties = {
                     attributes: {
                       ...properties.attributes,
@@ -344,36 +359,29 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                     node: paragraphNode,
                     level: tempVNodeObject.level,
                     type: tempVNodeObject.type,
-                    numberingId: tempVNodeObject.numberingId,
+                    numberingId: isFirstParagraph ? tempVNodeObject.numberingId : null,
+                    isContinuation: !isFirstParagraph,
+                    indentLevel: tempVNodeObject.level,
                   });
                 });
-              } else if (paragraphNodes.length === 1) {
-                // Single paragraph node: process it directly
-                const paragraphNode = paragraphNodes[0];
-                const blockProperties = {
-                  attributes: {
-                    ...properties.attributes,
-                    ...(paragraphNode?.properties?.attributes || {}),
-                  },
-                  style: {
-                    ...properties.style,
-                    ...(paragraphNode?.properties?.style || {}),
-                  },
-                };
+              }
 
-                paragraphNode.properties = {
-                  ...cloneDeep(blockProperties),
-                  ...paragraphNode.properties,
-                };
-
+              // Process nested lists (add back to processing queue)
+              nestedLists.forEach((listNode) => {
                 accumulator.push({
-                  node: paragraphNode,
-                  level: tempVNodeObject.level,
-                  type: tempVNodeObject.type,
-                  numberingId: tempVNodeObject.numberingId,
+                  node: listNode,
+                  level: tempVNodeObject.level + 1,
+                  type: listNode.tagName,
+                  numberingId: docxDocumentInstance.createNumbering(
+                    listNode.tagName,
+                    listNode.properties
+                  ),
                 });
-              } else {
-                // No paragraph nodes: use original behavior (spread all children)
+              });
+
+              // Process other content (wrap in paragraph if needed)
+              if (otherContent.length > 0 && paragraphs.length === 0) {
+                // No paragraphs but has other content - wrap it
                 childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
 
                 accumulator.push({
