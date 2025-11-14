@@ -197,6 +197,28 @@ const htmlString = `<!DOCTYPE html>
             </li>
         </ul>
         <br>
+
+        <!-- Multiple paragraphs in list items (Issue #145) -->
+        <h3>Lists with Multiple Paragraphs (Issue #145)</h3>
+        <p>Demonstrates proper handling of multiple paragraphs within list items:</p>
+        <ul>
+            <li>
+                <p>First paragraph of item 1 (with bullet)</p>
+                <p>Second paragraph of item 1 (indented, no bullet)</p>
+                <ul>
+                    <li>
+                        <p>Nested list paragraph 1 (with bullet)</p>
+                        <p>Nested list paragraph 2 (indented, no bullet)</p>
+                    </li>
+                </ul>
+                <p>Third paragraph of item 1 (after nested list, indented, no bullet)</p>
+            </li>
+            <li>
+                <p>Item 2 paragraph 1 (with bullet)</p>
+                <p>Item 2 paragraph 2 (indented, no bullet)</p>
+            </li>
+        </ul>
+        <br>
         <table>
             <tr>
                 <th>Country</th>
