@@ -2,8 +2,7 @@
 /* eslint-disable no-case-declarations */
 import { fragment } from 'xmlbuilder2';
 import sizeOf from 'image-size';
-import * as lruCache from 'lru-cache';
-const LRUCache = lruCache.default || lruCache.LRUCache || lruCache; // Support both ESM and CommonJS imports
+import * as lruCache from 'lru-cache'; // Support both ESM and CommonJS imports
 
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
@@ -16,6 +15,8 @@ import { imageType, internalRelationship, defaultDocumentOptions } from '../cons
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { downloadAndCacheImage } from '../utils/image';
+
+const LRUCache = lruCache.default || lruCache.LRUCache || lruCache;
 
 const convertHTML = createHTMLToVDOM();
 
@@ -78,7 +79,6 @@ export const getImageCacheStats = (docxDocumentInstance) => {
     retryStats: docxDocumentInstance._retryStats,
   };
 };
-
 
 // eslint-disable-next-line consistent-return, no-shadow
 export const buildImage = async (
@@ -211,6 +211,43 @@ export const buildImage = async (
   }
 };
 
+/**
+ * Helper function to extract block-level paragraph elements from a node
+ * Handles nested structures like <li><div><p>...</p><p>...</p></div></li>
+ * Returns an array of paragraph-like nodes
+ */
+const extractParagraphNodes = (node) => {
+  if (!isVNode(node)) {
+    return [];
+  }
+
+  const tagName = node.tagName.toLowerCase();
+
+  // If it's already a paragraph, return it
+  if (tagName === 'p') {
+    return [node];
+  }
+
+  // If it's a div or other container, look for paragraphs inside
+  if (['div', 'li'].includes(tagName)) {
+    const paragraphs = [];
+    node.children.forEach((child) => {
+      if (isVNode(child)) {
+        const childTag = child.tagName.toLowerCase();
+        if (childTag === 'p') {
+          paragraphs.push(child);
+        } else if (['div'].includes(childTag)) {
+          // Recursively extract from nested divs
+          paragraphs.push(...extractParagraphNodes(child));
+        }
+      }
+    });
+    return paragraphs;
+  }
+
+  return [];
+};
+
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   const listElements = [];
 
@@ -277,39 +314,99 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 ...(childVNode?.properties?.style || {}),
               },
             };
-            const paragraphVNode = new VNode(
-              'p',
-              properties, // copy properties for styling purposes
-              // eslint-disable-next-line no-nested-ternary
-              isVText(childVNode)
-                ? [childVNode]
-                : // eslint-disable-next-line no-nested-ternary
-                isVNode(childVNode)
-                ? childVNode.tagName.toLowerCase() === 'li'
-                  ? [...childVNode.children]
-                  : [childVNode]
-                : []
-            );
 
-            childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+            // FIX for Issue #145: Handle multiple paragraphs in list items
+            // When a list item contains multiple <p> tags, process each as a separate paragraph
+            if (isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li') {
+              // Extract all paragraph nodes from the list item (handles nested divs too)
+              const paragraphNodes = extractParagraphNodes(childVNode);
 
-            const generatedNode = isVNode(childVNode)
-              ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-                childVNode.tagName.toLowerCase() === 'li'
-                ? childVNode
-                : childVNode.tagName.toLowerCase() !== 'p'
-                ? paragraphVNode
-                : childVNode
-              : // eslint-disable-next-line prettier/prettier
-                paragraphVNode;
+              if (paragraphNodes.length > 1) {
+                // Multiple paragraph nodes found: process each separately
+                paragraphNodes.forEach((paragraphNode) => {
+                  const blockProperties = {
+                    attributes: {
+                      ...properties.attributes,
+                      ...(paragraphNode?.properties?.attributes || {}),
+                    },
+                    style: {
+                      ...properties.style,
+                      ...(paragraphNode?.properties?.style || {}),
+                    },
+                  };
 
-            accumulator.push({
-              // eslint-disable-next-line prettier/prettier, no-nested-ternary
-              node: generatedNode,
-              level: tempVNodeObject.level,
-              type: tempVNodeObject.type,
-              numberingId: tempVNodeObject.numberingId,
-            });
+                  paragraphNode.properties = {
+                    ...cloneDeep(blockProperties),
+                    ...paragraphNode.properties,
+                  };
+
+                  accumulator.push({
+                    node: paragraphNode,
+                    level: tempVNodeObject.level,
+                    type: tempVNodeObject.type,
+                    numberingId: tempVNodeObject.numberingId,
+                  });
+                });
+              } else if (paragraphNodes.length === 1) {
+                // Single paragraph node: process it directly
+                const paragraphNode = paragraphNodes[0];
+                const blockProperties = {
+                  attributes: {
+                    ...properties.attributes,
+                    ...(paragraphNode?.properties?.attributes || {}),
+                  },
+                  style: {
+                    ...properties.style,
+                    ...(paragraphNode?.properties?.style || {}),
+                  },
+                };
+
+                paragraphNode.properties = {
+                  ...cloneDeep(blockProperties),
+                  ...paragraphNode.properties,
+                };
+
+                accumulator.push({
+                  node: paragraphNode,
+                  level: tempVNodeObject.level,
+                  type: tempVNodeObject.type,
+                  numberingId: tempVNodeObject.numberingId,
+                });
+              } else {
+                // No paragraph nodes: use original behavior (spread all children)
+                childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+
+                accumulator.push({
+                  node: childVNode,
+                  level: tempVNodeObject.level,
+                  type: tempVNodeObject.type,
+                  numberingId: tempVNodeObject.numberingId,
+                });
+              }
+            } else {
+              // Not an <li> tag: use original processing logic
+              const paragraphVNode = new VNode(
+                'p',
+                properties, // copy properties for styling purposes
+                // eslint-disable-next-line no-nested-ternary
+                isVText(childVNode) ? [childVNode] : isVNode(childVNode) ? [childVNode] : []
+              );
+
+              childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+
+              const generatedNode = isVNode(childVNode)
+                ? childVNode.tagName.toLowerCase() !== 'p'
+                  ? paragraphVNode
+                  : childVNode
+                : paragraphVNode;
+
+              accumulator.push({
+                node: generatedNode,
+                level: tempVNodeObject.level,
+                type: tempVNodeObject.type,
+                numberingId: tempVNodeObject.numberingId,
+              });
+            }
           }
         }
 
