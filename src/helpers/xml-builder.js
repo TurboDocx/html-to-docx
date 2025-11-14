@@ -2797,6 +2797,18 @@ const buildTableCell = async (
         if (vNodeHasChildren(childVNode)) {
           await buildList(childVNode, docxDocumentInstance, tableCellFragment);
         }
+      } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
+        // FIX for Issue #147: render nested table in table cell
+        // eslint-disable-next-line no-use-before-define
+        const nestedTableFragment = await buildTable(
+          childVNode,
+          {
+            ...modifiedAttributes,
+            maximumWidth: modifiedAttributes.maximumWidth || parentWidth,
+          },
+          docxDocumentInstance
+        );
+        tableCellFragment.import(nestedTableFragment);
       } else {
         const paragraphFragment = await buildParagraph(
           childVNode,
