@@ -96,12 +96,29 @@ export const getImageCacheStats = (docxDocumentInstance) => {
  */
 const separateListItemContent = (liNode) => {
   if (!isVNode(liNode)) {
-    return { paragraphs: [], nestedLists: [], otherContent: [] };
+    return { blockElements: [], nestedLists: [], otherContent: [] };
   }
 
-  const paragraphs = [];
+  const blockElements = [];
   const nestedLists = [];
   const otherContent = [];
+
+  // Block-level elements that should be treated as separate paragraphs in DOCX
+  const blockLevelTags = [
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'code',
+    'hr',
+    'table',
+    'dl',
+  ];
 
   const processNode = (node) => {
     if (!isVNode(node)) {
@@ -114,22 +131,27 @@ const separateListItemContent = (liNode) => {
 
     const tagName = node.tagName.toLowerCase();
 
-    if (tagName === 'p') {
-      paragraphs.push(node);
+    if (blockLevelTags.includes(tagName)) {
+      blockElements.push(node);
     } else if (['ul', 'ol'].includes(tagName)) {
       nestedLists.push(node);
     } else if (tagName === 'div') {
-      // Recurse into divs to extract nested content
-      node.children.forEach(processNode);
+      // Recurse into divs to extract nested content. Defensive against
+      // malformed vDOM where children is missing or not iterable.
+      if (Array.isArray(node.children)) {
+        node.children.forEach(processNode);
+      }
     } else {
       // Other inline elements (span, strong, em, etc.)
       otherContent.push(node);
     }
   };
 
-  liNode.children.forEach(processNode);
+  if (Array.isArray(liNode.children)) {
+    liNode.children.forEach(processNode);
+  }
 
-  return { paragraphs, nestedLists, otherContent };
+  return { blockElements, nestedLists, otherContent };
 };
 
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
@@ -152,6 +174,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       isVText(tempVNodeObject.node) ||
       (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
     ) {
+      // `isContinuation` tells buildParagraph whether to draw the bullet/number
+      // marker. The first paragraph inside an <li> gets the numbering element;
+      // any subsequent block elements in that same <li> (issue #145) are
+      // continuation paragraphs — same indentation, no marker. `indentLevel`
+      // carries the nesting depth so the continuation lines up under the bullet
+      // rather than sliding back to the margin.
       const paragraphFragment = await xmlBuilder.buildParagraph(
         tempVNodeObject.node,
         {
@@ -203,37 +231,55 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
               },
             };
 
-            // FIX for Issue #145: Handle multiple paragraphs in list items
-            // Separate content into paragraphs, nested lists, and other content
+            // Issue #145 — multi-paragraph list items.
+            //
+            // Before this fix, an <li> with more than one block-level child
+            // (e.g. <li><p>A</p><p>B</p></li>) was collapsed into a single
+            // paragraph, and only "A" appeared in the DOCX output. Word's
+            // own behavior is to render the first block with the bullet/number
+            // and each subsequent block as a "continuation" paragraph — same
+            // indent, no marker.
+            //
+            // To produce that, we walk the <li>'s children once with
+            // separateListItemContent() and bucket them into:
+            //   - blockElements: each one becomes its own paragraph. The
+            //     first inherits this list item's numberingId (gets a marker);
+            //     the rest get isContinuation=true (no marker, just indent).
+            //   - nestedLists:   pushed back onto the queue at level+1, so a
+            //     fresh numberingId is allocated and bullets render correctly.
+            //   - otherContent:  inline content that wasn't wrapped in a block
+            //     element. Falls back to the legacy "wrap the whole <li>"
+            //     path so inline-only list items still work.
             if (isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li') {
-              const { paragraphs, nestedLists, otherContent } = separateListItemContent(childVNode);
+              const { blockElements, nestedLists, otherContent } =
+                separateListItemContent(childVNode);
 
-              // Process paragraphs (with continuation support)
-              if (paragraphs.length > 0) {
-                paragraphs.forEach((paragraphNode, index) => {
-                  const isFirstParagraph = index === 0;
+              // Process block elements (with continuation support)
+              if (blockElements.length > 0) {
+                blockElements.forEach((blockNode, index) => {
+                  const isFirstBlock = index === 0;
                   const blockProperties = {
                     attributes: {
                       ...properties.attributes,
-                      ...(paragraphNode?.properties?.attributes || {}),
+                      ...(blockNode?.properties?.attributes || {}),
                     },
                     style: {
                       ...properties.style,
-                      ...(paragraphNode?.properties?.style || {}),
+                      ...(blockNode?.properties?.style || {}),
                     },
                   };
 
-                  paragraphNode.properties = {
+                  blockNode.properties = {
                     ...cloneDeep(blockProperties),
-                    ...paragraphNode.properties,
+                    ...blockNode.properties,
                   };
 
                   accumulator.push({
-                    node: paragraphNode,
+                    node: blockNode,
                     level: tempVNodeObject.level,
                     type: tempVNodeObject.type,
-                    numberingId: isFirstParagraph ? tempVNodeObject.numberingId : null,
-                    isContinuation: !isFirstParagraph,
+                    numberingId: isFirstBlock ? tempVNodeObject.numberingId : null,
+                    isContinuation: !isFirstBlock,
                     indentLevel: tempVNodeObject.level,
                   });
                 });
@@ -252,13 +298,24 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 });
               });
 
-              // Process other content (wrap in paragraph if needed)
-              if (otherContent.length > 0 && paragraphs.length === 0) {
-                // No paragraphs but has other content - wrap it
-                childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+              // Process other content (wrap in paragraph if needed).
+              //
+              // Bug fix: when an <li> has BOTH otherContent and nestedLists
+              // (e.g. <li>Black tea <ol>...</ol></li>), pushing the original
+              // childVNode here re-enqueues the entire <li>, including its
+              // nested <ol> child — which we already pushed above. That
+              // caused the nested list to be processed twice (and items at
+              // deeper nesting levels to be duplicated exponentially).
+              //
+              // Clone the <li>, strip its block/list children, and push only
+              // the otherContent shell so the inline text renders once.
+              if (otherContent.length > 0 && blockElements.length === 0) {
+                const liShell = cloneDeep(childVNode);
+                liShell.children = otherContent;
+                liShell.properties = { ...cloneDeep(properties), ...childVNode.properties };
 
                 accumulator.push({
-                  node: childVNode,
+                  node: liShell,
                   level: tempVNodeObject.level,
                   type: tempVNodeObject.type,
                   numberingId: tempVNodeObject.numberingId,
@@ -595,7 +652,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     // Apply inherited properties from parent elements to child elements
     // Properties object contains CSS-style properties that should be inherited (e.g., alignment, fonts)
     // This enables proper formatting when content is injected into existing document structure
-    for (const child of vTree) {
+    vTree.forEach((child) => {
       // Validate properties object and ensure child.properties.style exists
       if (properties && typeof properties === 'object' && child.properties) {
         // Initialize style object if it doesn't exist
@@ -605,15 +662,13 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
         // Merge inherited properties with explicit child properties (child properties take precedence)
         child.properties.style = { ...properties, ...child.properties.style };
       }
-    }
-  } else {
+    });
+  } else if (properties && typeof properties === 'object' && vTree.properties) {
     // Handle single VTree node (not an array)
-    if (properties && typeof properties === 'object' && vTree.properties) {
-      if (!vTree.properties.style) {
-        vTree.properties.style = {};
-      }
-      vTree.properties.style = { ...properties, ...vTree.properties.style };
+    if (!vTree.properties.style) {
+      vTree.properties.style = {};
     }
+    vTree.properties.style = { ...properties, ...vTree.properties.style };
   }
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
