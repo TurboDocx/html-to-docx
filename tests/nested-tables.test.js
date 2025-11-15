@@ -317,7 +317,7 @@ describe('Nested Tables - Issue #147', () => {
       `;
 
       const docx = await HTMLtoDOCX(htmlString);
-      const parsed = await parseDOCX(docx);
+
 
       // Should render without errors
       expect(docx).toBeDefined();
