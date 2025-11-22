@@ -17,12 +17,12 @@ Based on the original work and assisted by the original contributors of [private
 
 ## TurboDocx Packages & SDKs
 
-| Package | Platform | Description |
-|---------|----------|-------------|
-| [@turbodocx/n8n-nodes-turbodocx](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) | npm | n8n community node for TurboDocx API & TurboSign |
-<!-- | turbodocx | npm | TurboDocx Node.js SDK | -->
-<!-- | turbodocx | PyPI | TurboDocx Python SDK | -->
-<!-- | turbodocx | RubyGems | TurboDocx Ruby SDK | -->
+| Package | Links | Description |
+|---------|-------|-------------|
+| n8n-nodes-turbodocx | [![npm](https://img.shields.io/npm/v/@turbodocx/n8n-nodes-turbodocx?logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) [![GitHub](https://img.shields.io/github/stars/turbodocx/n8n-nodes-turbodocx?style=social)](https://github.com/turbodocx/n8n-nodes-turbodocx) | n8n community node for TurboDocx API & TurboSign |
+<!-- | turbodocx | [![npm](https://img.shields.io/npm/v/turbodocx?logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/turbodocx) | TurboDocx Node.js SDK | -->
+<!-- | turbodocx-python | [![PyPI](https://img.shields.io/pypi/v/turbodocx?logo=python&logoColor=white&label=pypi)](https://pypi.org/project/turbodocx/) | TurboDocx Python SDK | -->
+<!-- | turbodocx-ruby | [![Gem](https://img.shields.io/gem/v/turbodocx?logo=ruby&logoColor=white&label=gem)](https://rubygems.org/gems/turbodocx) | TurboDocx Ruby SDK | -->
 
 ## Why @turbodocx/html-to-docx?
 
