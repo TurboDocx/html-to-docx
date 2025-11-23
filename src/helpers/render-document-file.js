@@ -529,7 +529,11 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
       max: maxCacheEntries, // Max number of unique images
       maxSize: maxCacheSize, // Max total size in bytes
       sizeCalculation: (value) => {
-        if (!value || value === 'FAILED') return 1; // Minimum size for failed entries
+        // In lru-cache v10+, sizeCalculation must return a positive integer
+        // We should never store null/invalid values, but handle defensively
+        if (!value || typeof value !== 'string' || value.length === 0) {
+          throw new Error('Invalid cache value: sizeCalculation requires non-empty string');
+        }
         // Calculate approximate byte size of base64 string
         // Base64 encoding is ~4/3 of original size, so decoded size is ~3/4
         return Math.ceil((value.length * 3) / 4);

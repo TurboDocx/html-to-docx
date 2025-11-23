@@ -16,7 +16,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       # Install dependencies with clean install (respects package-lock.json exactly)
       - run: npm ci
@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           registry-url: https://registry.npmjs.org/  # Configure npm registry for publishing
 
       # Install dependencies
