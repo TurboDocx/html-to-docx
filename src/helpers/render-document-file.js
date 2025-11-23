@@ -2,8 +2,7 @@
 /* eslint-disable no-case-declarations */
 import { fragment } from 'xmlbuilder2';
 import sizeOf from 'image-size';
-import * as lruCache from 'lru-cache';
-const LRUCache = lruCache.default || lruCache.LRUCache || lruCache; // Support both ESM and CommonJS imports
+import * as lruCache from 'lru-cache'; // Support both ESM and CommonJS imports
 
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
@@ -16,6 +15,8 @@ import { imageType, internalRelationship, defaultDocumentOptions } from '../cons
 import { vNodeHasChildren } from '../utils/vnode';
 import { isValidUrl } from '../utils/url';
 import { downloadAndCacheImage } from '../utils/image';
+
+const LRUCache = lruCache.default || lruCache.LRUCache || lruCache;
 
 const convertHTML = createHTMLToVDOM();
 
@@ -78,7 +79,6 @@ export const getImageCacheStats = (docxDocumentInstance) => {
     retryStats: docxDocumentInstance._retryStats,
   };
 };
-
 
 // eslint-disable-next-line consistent-return, no-shadow
 export const buildImage = async (
@@ -211,6 +211,71 @@ export const buildImage = async (
   }
 };
 
+/**
+ * Helper function to separate content within a list item into distinct categories
+ * Handles complex structures like <li><p>...</p><ul>...</ul><p>...</p></li>
+ * Returns object with: paragraphs, nestedLists, and otherContent arrays
+ *
+ * This is used for issue #145 to properly handle:
+ * - Multiple paragraphs in one list item
+ * - Nested lists mixed with paragraphs
+ * - Inline content that needs to be wrapped
+ */
+const separateListItemContent = (liNode) => {
+  if (!isVNode(liNode)) {
+    return { blockElements: [], nestedLists: [], otherContent: [] };
+  }
+
+  const blockElements = [];
+  const nestedLists = [];
+  const otherContent = [];
+
+  // Block-level elements that should be treated as separate paragraphs in DOCX
+  const blockLevelTags = [
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'code',
+    'hr',
+    'table',
+    'dl',
+  ];
+
+  const processNode = (node) => {
+    if (!isVNode(node)) {
+      // Text nodes go to other content
+      if (node && node.text) {
+        otherContent.push(node);
+      }
+      return;
+    }
+
+    const tagName = node.tagName.toLowerCase();
+
+    if (blockLevelTags.includes(tagName)) {
+      blockElements.push(node);
+    } else if (['ul', 'ol'].includes(tagName)) {
+      nestedLists.push(node);
+    } else if (tagName === 'div') {
+      // Recurse into divs to extract nested content
+      node.children.forEach(processNode);
+    } else {
+      // Other inline elements (span, strong, em, etc.)
+      otherContent.push(node);
+    }
+  };
+
+  liNode.children.forEach(processNode);
+
+  return { blockElements, nestedLists, otherContent };
+};
+
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   const listElements = [];
 
@@ -235,6 +300,8 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
         tempVNodeObject.node,
         {
           numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
+          isContinuation: tempVNodeObject.isContinuation || false,
+          indentLevel: tempVNodeObject.indentLevel,
         },
         docxDocumentInstance
       );
@@ -263,7 +330,9 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
           if (
             accumulator.length > 0 &&
             isVNode(accumulator[accumulator.length - 1].node) &&
-            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p'
+            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p' &&
+            // Don't merge list items - they need to be processed independently (issue #145)
+            !(isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li')
           ) {
             accumulator[accumulator.length - 1].node.children.push(childVNode);
           } else {
@@ -277,39 +346,93 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 ...(childVNode?.properties?.style || {}),
               },
             };
-            const paragraphVNode = new VNode(
-              'p',
-              properties, // copy properties for styling purposes
-              // eslint-disable-next-line no-nested-ternary
-              isVText(childVNode)
-                ? [childVNode]
-                : // eslint-disable-next-line no-nested-ternary
-                isVNode(childVNode)
-                ? childVNode.tagName.toLowerCase() === 'li'
-                  ? [...childVNode.children]
-                  : [childVNode]
-                : []
-            );
 
-            childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+            // FIX for Issue #145: Handle multiple block elements in list items
+            // Separate content into block elements, nested lists, and other content
+            if (isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li') {
+              const { blockElements, nestedLists, otherContent } =
+                separateListItemContent(childVNode);
 
-            const generatedNode = isVNode(childVNode)
-              ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-                childVNode.tagName.toLowerCase() === 'li'
-                ? childVNode
-                : childVNode.tagName.toLowerCase() !== 'p'
-                ? paragraphVNode
-                : childVNode
-              : // eslint-disable-next-line prettier/prettier
-                paragraphVNode;
+              // Process block elements (with continuation support)
+              if (blockElements.length > 0) {
+                blockElements.forEach((blockNode, index) => {
+                  const isFirstBlock = index === 0;
+                  const blockProperties = {
+                    attributes: {
+                      ...properties.attributes,
+                      ...(blockNode?.properties?.attributes || {}),
+                    },
+                    style: {
+                      ...properties.style,
+                      ...(blockNode?.properties?.style || {}),
+                    },
+                  };
 
-            accumulator.push({
-              // eslint-disable-next-line prettier/prettier, no-nested-ternary
-              node: generatedNode,
-              level: tempVNodeObject.level,
-              type: tempVNodeObject.type,
-              numberingId: tempVNodeObject.numberingId,
-            });
+                  blockNode.properties = {
+                    ...cloneDeep(blockProperties),
+                    ...blockNode.properties,
+                  };
+
+                  accumulator.push({
+                    node: blockNode,
+                    level: tempVNodeObject.level,
+                    type: tempVNodeObject.type,
+                    numberingId: isFirstBlock ? tempVNodeObject.numberingId : null,
+                    isContinuation: !isFirstBlock,
+                    indentLevel: tempVNodeObject.level,
+                  });
+                });
+              }
+
+              // Process nested lists (add back to processing queue)
+              nestedLists.forEach((listNode) => {
+                accumulator.push({
+                  node: listNode,
+                  level: tempVNodeObject.level + 1,
+                  type: listNode.tagName,
+                  numberingId: docxDocumentInstance.createNumbering(
+                    listNode.tagName,
+                    listNode.properties
+                  ),
+                });
+              });
+
+              // Process other content (wrap in paragraph if needed)
+              if (otherContent.length > 0 && blockElements.length === 0) {
+                // No block elements but has other content - wrap it
+                childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+
+                accumulator.push({
+                  node: childVNode,
+                  level: tempVNodeObject.level,
+                  type: tempVNodeObject.type,
+                  numberingId: tempVNodeObject.numberingId,
+                });
+              }
+            } else {
+              // Not an <li> tag: use original processing logic
+              const paragraphVNode = new VNode(
+                'p',
+                properties, // copy properties for styling purposes
+                // eslint-disable-next-line no-nested-ternary
+                isVText(childVNode) ? [childVNode] : isVNode(childVNode) ? [childVNode] : []
+              );
+
+              childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+
+              const generatedNode = isVNode(childVNode)
+                ? childVNode.tagName.toLowerCase() !== 'p'
+                  ? paragraphVNode
+                  : childVNode
+                : paragraphVNode;
+
+              accumulator.push({
+                node: generatedNode,
+                level: tempVNodeObject.level,
+                type: tempVNodeObject.type,
+                numberingId: tempVNodeObject.numberingId,
+              });
+            }
           }
         }
 
@@ -562,7 +685,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     // Apply inherited properties from parent elements to child elements
     // Properties object contains CSS-style properties that should be inherited (e.g., alignment, fonts)
     // This enables proper formatting when content is injected into existing document structure
-    for (const child of vTree) {
+    vTree.forEach((child) => {
       // Validate properties object and ensure child.properties.style exists
       if (properties && typeof properties === 'object' && child.properties) {
         // Initialize style object if it doesn't exist
@@ -572,15 +695,13 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
         // Merge inherited properties with explicit child properties (child properties take precedence)
         child.properties.style = { ...properties, ...child.properties.style };
       }
-    }
-  } else {
+    });
+  } else if (properties && typeof properties === 'object' && vTree.properties) {
     // Handle single VTree node (not an array)
-    if (properties && typeof properties === 'object' && vTree.properties) {
-      if (!vTree.properties.style) {
-        vTree.properties.style = {};
-      }
-      vTree.properties.style = { ...properties, ...vTree.properties.style };
+    if (!vTree.properties.style) {
+      vTree.properties.style = {};
     }
+    vTree.properties.style = { ...properties, ...vTree.properties.style };
   }
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
