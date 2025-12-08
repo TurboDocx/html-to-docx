@@ -874,6 +874,11 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
             case 'sup':
               tempAttributes.sup = true;
               break;
+            case 'del':
+            case 's':
+            case 'strike':
+              tempAttributes.strike = true;
+              break;
           }
           const formattingFragment = buildFormatting(tempVNode);
           formattingFragmentAttributes = modifiedStyleAttributesBuilder(
