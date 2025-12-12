@@ -488,3 +488,11 @@ Made with [contrib.rocks](https://contrib.rocks).
 ---
 
 **Note:** Currently optimized for Node.js environments. Browser support is planned for future releases.
+
+---
+
+<div align="center">
+
+[![TurboDocx](./footer.png)](https://www.turbodocx.com)
+
+</div>
