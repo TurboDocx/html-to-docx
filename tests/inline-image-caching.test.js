@@ -1,11 +1,10 @@
 // Unit tests for inline image caching functionality
-// Tests that inline images (via buildRun in xml-builder.js) use the same caching mechanism as block images
-
-import HTMLtoDOCX from '../index.js';
-import { parseDOCX, assertParagraphCount } from './helpers/docx-assertions.js';
-import { getImageCacheStats, clearImageCache } from '../src/helpers/render-document-file.js';
-import { PNG_1x1_BASE64, JPEG_1x1_BASE64 } from './fixtures/index.js';
+// Tests that inline images (via buildRun in xml-builder) use the same caching mechanism as block images
 import axios from 'axios';
+
+import HTMLtoDOCX from '../index';
+import { parseDOCX } from './helpers/docx-assertions';
+import { PNG_1x1_BASE64, JPEG_1x1_BASE64 } from './fixtures/index';
 
 // Mock axios for downloadImageToBase64 tests
 jest.mock('axios');

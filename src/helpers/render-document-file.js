@@ -1,21 +1,19 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-case-declarations */
 import { fragment } from 'xmlbuilder2';
-import sizeOf from 'image-size';
 import * as lruCache from 'lru-cache';
-const LRUCache = lruCache.default || lruCache.LRUCache || lruCache; // Support both ESM and CommonJS imports
-
-// FIXME: remove the cyclic dependency
-// eslint-disable-next-line import/no-cycle
 import { cloneDeep } from 'lodash';
+
 import createHTMLToVDOM from './html-parser';
 import { VNode, isVNode, isVText } from '../vdom/index';
 import * as xmlBuilder from './xml-builder';
 import namespaces from '../namespaces';
-import { imageType, internalRelationship, defaultDocumentOptions } from '../constants';
+import { defaultDocumentOptions } from '../constants';
+import { buildImage } from '../utils/image';
 import { vNodeHasChildren } from '../utils/vnode';
-import { isValidUrl } from '../utils/url';
-import { downloadAndCacheImage } from '../utils/image';
+import { buildSVGElement } from '../utils/svg';
+
+const LRUCache = lruCache.default || lruCache.LRUCache || lruCache; // Support both ESM and CommonJS imports
 
 const convertHTML = createHTMLToVDOM();
 
@@ -77,138 +75,6 @@ export const getImageCacheStats = (docxDocumentInstance) => {
     failureCount,
     retryStats: docxDocumentInstance._retryStats,
   };
-};
-
-
-// eslint-disable-next-line consistent-return, no-shadow
-export const buildImage = async (
-  docxDocumentInstance,
-  vNode,
-  maximumWidth = null,
-  options = {}
-) => {
-  let response = null;
-  let base64Uri = null;
-
-  try {
-    const imageSource = vNode.properties.src;
-
-    // Handle external URLs with caching and retry
-    if (isValidUrl(imageSource)) {
-      base64Uri = await downloadAndCacheImage(docxDocumentInstance, imageSource, options);
-      if (!base64Uri) {
-        return null;
-      }
-      // Update vNode to reflect the cached data URL for subsequent processing
-      vNode.properties.src = base64Uri;
-    } else {
-      base64Uri = decodeURIComponent(vNode.properties.src);
-    }
-
-    if (base64Uri) {
-      response = await docxDocumentInstance.createMediaFile(base64Uri);
-    } else {
-      // eslint-disable-next-line no-console
-      console.error(`[ERROR] buildImage: No valid base64Uri generated`);
-      return null;
-    }
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(`[ERROR] buildImage: Error during image processing:`, error);
-    return null;
-  }
-
-  if (response) {
-    try {
-      // Validate response has required properties
-      if (!response.fileContent || !response.fileNameWithExtension) {
-        // eslint-disable-next-line no-console
-        console.error(
-          `[ERROR] buildImage: Invalid response object for ${vNode.properties.src}:`,
-          response
-        );
-        return null;
-      }
-
-      const imageBuffer = Buffer.from(response.fileContent, 'base64');
-
-      docxDocumentInstance.zip
-        .folder('word')
-        .folder('media')
-        .file(response.fileNameWithExtension, imageBuffer, {
-          createFolders: false,
-        });
-
-      const documentRelsId = docxDocumentInstance.createDocumentRelationships(
-        docxDocumentInstance.relationshipFilename,
-        imageType,
-        `media/${response.fileNameWithExtension}`,
-        internalRelationship
-      );
-
-      // Add validation before calling sizeOf
-      if (!imageBuffer || imageBuffer.length === 0) {
-        // eslint-disable-next-line no-console
-        console.error(`[ERROR] buildImage: Empty image buffer for ${vNode.properties.src}`);
-        return null;
-      }
-
-      // Check if we got HTML instead of image data (common with Wikimedia errors)
-      const firstBytes = imageBuffer.slice(0, 20).toString('utf8');
-      if (firstBytes.startsWith('<!DOCTYPE') || firstBytes.startsWith('<html')) {
-        // eslint-disable-next-line no-console
-        console.error(
-          `[ERROR] buildImage: Received HTML instead of image data for ${vNode.properties.src}`
-        );
-        return null;
-      }
-
-      let imageProperties;
-      try {
-        imageProperties = sizeOf(imageBuffer);
-        if (!imageProperties || !imageProperties.width || !imageProperties.height) {
-          // eslint-disable-next-line no-console
-          console.error(
-            `[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`,
-            imageProperties
-          );
-          return null;
-        }
-      } catch (sizeError) {
-        // eslint-disable-next-line no-console
-        console.error(
-          `[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`,
-          sizeError.message
-        );
-        return null;
-      }
-
-      const imageFragment = await xmlBuilder.buildParagraph(
-        vNode,
-        {
-          type: 'picture',
-          inlineOrAnchored: true,
-          relationshipId: documentRelsId,
-          ...response,
-          description: vNode.properties.alt,
-          maximumWidth: maximumWidth || docxDocumentInstance.availableDocumentSpace,
-          originalWidth: imageProperties.width,
-          originalHeight: imageProperties.height,
-        },
-        docxDocumentInstance
-      );
-
-      return imageFragment;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(`[ERROR] buildImage: Error during XML generation:`, error);
-      return null;
-    }
-  } else {
-    // eslint-disable-next-line no-console
-    console.error(`[ERROR] buildImage: No response from createMediaFile`);
-    return null;
-  }
 };
 
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
@@ -456,6 +322,17 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
       } else {
         // eslint-disable-next-line no-console
         console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
+      }
+      return;
+    case 'svg':
+      const svgFragment = await buildSVGElement(docxDocumentInstance, vNode, null, imageOptions);
+      if (svgFragment) {
+        // Add lineRule attribute for consistency
+        addLineRuleToImageFragment(svgFragment);
+        xmlFragment.import(svgFragment);
+      } else {
+        // eslint-disable-next-line no-console
+        console.log(`[DEBUG] findXMLEquivalent: buildSVGElement returned null/undefined`);
       }
       return;
     case 'br':

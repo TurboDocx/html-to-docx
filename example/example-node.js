@@ -35,14 +35,14 @@ const htmlString = `<!DOCTYPE html>
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with color and font-family styles"
             />
-            
+
             <p>Testing images with mixed dimensional and non-dimensional styles:</p>
             <img
                 style="width: 100px; font-family: Arial; color: blue;"
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with mixed styles"
             />
-            
+
             <p>Testing images with various non-dimensional styles:</p>
             <img
                 style="text-align: center; background-color: yellow;"
@@ -1696,7 +1696,7 @@ const htmlString = `<!DOCTYPE html>
                 </ul>
             </li>
             <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Heading 3</span></li>
-        </ul>   
+        </ul>
         <div>
             <p>One More test case</p>
             <p style="margin: 0in; line-height: normal; font-size: 11pt; font-family: Calibri, sans-serif;"><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">PHASE ONE</span></strong><br /><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif; color: red;">CONFIDENTIAL <br />HOURS: 1 – 2</span></strong></p>
@@ -1841,7 +1841,7 @@ const htmlString = `<!DOCTYPE html>
                 </p>
             </div>
         </div>
-        
+
         <!-- Image edge case tests covering aspect ratio safety, MIME validation, and error handling -->
         <div>
             <p>Testing aspect ratio safety with zero/invalid dimensions:</p>
@@ -1855,7 +1855,7 @@ const htmlString = `<!DOCTYPE html>
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with zero width"
             />
-            
+
             <p>Testing extreme aspect ratios:</p>
             <img
                 style="width: 500px; height: 1px;"
@@ -1867,14 +1867,14 @@ const htmlString = `<!DOCTYPE html>
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Very tall image"
             />
-            
+
             <p>Testing auto dimensions with CSS styles:</p>
             <img
                 style="width: auto; height: auto; font-family: serif;"
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Auto dimensions with non-dimensional styles"
             />
-            
+
             <p>Testing images in figures (lineRule attribute fix):</p>
             <figure>
                 <img
@@ -1884,14 +1884,14 @@ const htmlString = `<!DOCTYPE html>
                 />
                 <figcaption>Image with consistent lineRule processing</figcaption>
             </figure>
-            
+
             <p>Testing images with max-width/max-height constraints:</p>
             <img
                 style="max-width: 200px; max-height: 150px;"
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Image with max constraints"
             />
-            
+
             <p>Testing images exceeding maximum document width (auto-scaling):</p>
             <img
                 style="width: 2000px; height: 1500px;"
@@ -1928,7 +1928,7 @@ const htmlString = `<!DOCTYPE html>
             </tr>
           </tbody>
         </table>
-        
+
         <!-- Test cases for PR #100 - TinyMCE image dimensions fix -->
         <!-- Test image: Porsche 992 Turbo S - Original size: 5,807 × 2,817 pixels, 8.35 MB JPEG -->
         <div class="page-break" style="page-break-after: always"></div>
@@ -1936,7 +1936,7 @@ const htmlString = `<!DOCTYPE html>
             <h2>Testing Image Width/Height Attribute Handling (Fix for TinyMCE dimensions)</h2>
             <p>These test cases verify that width and height HTML attributes are properly honored in DOCX generation:</p>
             <p><em>Test image original size: 5,807 × 2,817 pixels (8.35 MB JPEG)</em></p>
-            
+
             <p><strong>Test 1:</strong> Image with explicit width and height attributes (should render as 100x100):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
@@ -1944,21 +1944,21 @@ const htmlString = `<!DOCTYPE html>
                 height="100"
                 alt="100x100 dimensions test"
             />
-            
+
             <p><strong>Test 2:</strong> Image with only width attribute (height should maintain aspect ratio):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
                 width="150"
                 alt="Width only test"
             />
-            
+
             <p><strong>Test 3:</strong> Image with only height attribute (width should maintain aspect ratio):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
                 height="80"
                 alt="Height only test"
             />
-            
+
             <p><strong>Test 4:</strong> Image with width/height and additional styles (TinyMCE scenario):</p>
             <img
                 style="font-family: Calibri Light;"
@@ -1967,13 +1967,13 @@ const htmlString = `<!DOCTYPE html>
                 height="60"
                 alt="TinyMCE style with dimensions"
             />
-            
+
             <p><strong>Test 5:</strong> Image without dimensions (should use original image size - fallback behavior):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
                 alt="No dimensions - fallback test"
             />
-            
+
             <p><strong>Test 6:</strong> Larger image with custom dimensions (demonstrates actual resize):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
@@ -1981,7 +1981,7 @@ const htmlString = `<!DOCTYPE html>
                 height="100"
                 alt="Large image resized to 200x100"
             />
-            
+
             <h3>Unit Support Tests</h3>
             <p><strong>Test 7:</strong> Image with pixel units (explicit px):</p>
             <img
@@ -1990,7 +1990,7 @@ const htmlString = `<!DOCTYPE html>
                 height="90px"
                 alt="180px x 90px image"
             />
-            
+
             <p><strong>Test 8:</strong> Image with point units (pt):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
@@ -1998,7 +1998,7 @@ const htmlString = `<!DOCTYPE html>
                 height="72pt"
                 alt="144pt x 72pt image (192px x 96px equivalent)"
             />
-            
+
             <p><strong>Test 9:</strong> Image with centimeter units (cm):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
@@ -2006,7 +2006,7 @@ const htmlString = `<!DOCTYPE html>
                 height="2cm"
                 alt="4cm x 2cm image"
             />
-            
+
             <p><strong>Test 10:</strong> Image with inch units (in):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
@@ -2014,7 +2014,7 @@ const htmlString = `<!DOCTYPE html>
                 height="0.75in"
                 alt="1.5in x 0.75in image"
             />
-            
+
             <p><strong>Test 11:</strong> Image with percentage units (% of original size):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
@@ -2022,7 +2022,7 @@ const htmlString = `<!DOCTYPE html>
                 height="10%"
                 alt="10% x 10% of original size"
             />
-            
+
             <p><strong>Test 12:</strong> Mixed units - width in cm, height in inches:</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
@@ -2046,7 +2046,7 @@ const htmlString = `<!DOCTYPE html>
     imageProcessing: {
       // By default, shows a warning when sharp is not installed
       // Uncomment to suppress the warning (useful for intentional native SVG mode):
-    //   suppressSharpWarning: true,
+      // suppressSharpWarning: true,
     },
     // ===================================================================
     // WARNING: deterministicIds is ONLY for CI/CD testing purposes.
