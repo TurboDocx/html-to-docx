@@ -25,7 +25,7 @@ const serializeVNodeToSVG = (vNode, isRoot = false) => {
 
   // Add regular attributes
   Object.entries(attributes).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
+    if (value) {
       // Escape quotes and special XML characters in attribute values
       const escapedValue = String(value)
         .replace(/&/g, '&amp;')
@@ -103,7 +103,7 @@ export const buildSVGElement = async (
     // Serialize the SVG VNode to an SVG string (isRoot=true for proper namespace handling)
     const svgString = serializeVNodeToSVG(vNode, true);
 
-    if (!svgString || svgString.trim().length === 0) {
+    if (!svgString?.trim()?.length) {
       // eslint-disable-next-line no-console
       console.error('[ERROR] buildSVGElement: Failed to serialize SVG element');
       return null;
