@@ -60,6 +60,46 @@ function assertTableCellBorder(xml, borderSide, expectedAttrs = {}) {
 }
 
 describe('Table Cell Borders - Issue #160 Regression Tests', () => {
+  describe('Exact bug from Issue #160', () => {
+    test('should render bottom border - exact example from issue reporter', async () => {
+      // EXACT code from Issue #160 report by dt-eric-lefevreardant
+      // Original issue: https://github.com/TurboDocx/html-to-docx/issues/160
+      const htmlString = '<table><tr><td>left</td><td>right</td></tr></table>';
+      const options = {
+        table: {
+          borderOptions: {
+            size: 1,
+            stroke: 'single',
+            color: '000000',
+          },
+        },
+      };
+
+      const result = await HTMLtoDOCX(htmlString, undefined, options);
+      const parsed = await parseDOCX(result);
+
+      // Before fix: <w:tcBorders> only contained <w:top> and <w:left>
+      // After fix: should contain all four borders including <w:bottom>
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      expect(tcBordersMatches).not.toBeNull();
+      expect(tcBordersMatches.length).toBeGreaterThan(0);
+
+      // Verify bottom border exists as reported missing in the issue
+      const bottomBorderRegex = /<w:bottom\s+w:val="single"\s+w:sz="1"\s+w:space="0"\s+w:color="000000"\s*\/>/;
+      const hasBottomBorder = tcBordersMatches.some((tcBorders) =>
+        bottomBorderRegex.test(tcBorders)
+      );
+      expect(hasBottomBorder).toBe(true);
+
+      // Also verify right border (also reported missing)
+      const rightBorderRegex = /<w:right\s+w:val="single"\s+w:sz="1"\s+w:space="0"\s+w:color="000000"\s*\/>/;
+      const hasRightBorder = tcBordersMatches.some((tcBorders) => rightBorderRegex.test(tcBorders));
+      expect(hasRightBorder).toBe(true);
+    });
+  });
+
   describe('Basic border rendering', () => {
     test('should include bottom border when specified with borderOptions', async () => {
       // This is the exact example from GitHub Issue #160
