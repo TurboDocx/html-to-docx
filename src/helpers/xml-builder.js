@@ -1763,10 +1763,10 @@ const buildTableCellBorders = (tableCellBorder) => {
 
   const { colors, strokes, ...borders } = tableCellBorder;
   Object.keys(borders).forEach((border) => {
-    if (tableCellBorder[border]) {
+    if (borders[border]) {
       const borderFragment = buildBorder(
         border,
-        tableCellBorder[border],
+        borders[border],
         0,
         colors[border],
         strokes[border]
@@ -2569,43 +2569,28 @@ const buildTableCell = async (
   const columnIndexEquivalentFirst = columnIndexEquivalent.indexOf('first');
   const columnIndexEquivalentLast = columnIndexEquivalent.indexOf('last');
 
-  // if table cell styles will be given, then below 4 are overridden
-  if (rowIndexEquivalentFirst !== -1) {
-    // it means that the cell is in first row
-    // we set the top border of cells to table top border
-    modifiedAttributes.tableCellBorder.strokes.top = modifiedAttributes.tableBorder.strokes.top;
-    modifiedAttributes.tableCellBorder.colors.top = modifiedAttributes.tableBorder.colors.top;
-    modifiedAttributes.tableCellBorder.top =
-      modifiedAttributes.tableBorder.top || docxDocumentInstance.tableBorders.size;
-  }
+  // Apply table-level borders to all cells (edge and non-edge)
+  // This ensures that when borderOptions is set, all cells get borders creating a complete grid
+  // Individual cell styles (if present) can override these later in fixupTableCellBorder()
+  modifiedAttributes.tableCellBorder.strokes.top = modifiedAttributes.tableBorder.strokes.top;
+  modifiedAttributes.tableCellBorder.colors.top = modifiedAttributes.tableBorder.colors.top;
+  modifiedAttributes.tableCellBorder.top =
+    modifiedAttributes.tableBorder.top || docxDocumentInstance.tableBorders.size;
 
-  if (rowIndexEquivalentLast !== -1) {
-    // it means that the cell is in last row
-    // we set the bottom border of cells to that of table
-    modifiedAttributes.tableCellBorder.strokes.bottom =
-      modifiedAttributes.tableBorder.strokes.bottom;
-    modifiedAttributes.tableCellBorder.colors.bottom = modifiedAttributes.tableBorder.colors.bottom;
-    modifiedAttributes.tableCellBorder.bottom =
-      modifiedAttributes.tableBorder.bottom || docxDocumentInstance.tableBorders.size;
-  }
+  modifiedAttributes.tableCellBorder.strokes.bottom = modifiedAttributes.tableBorder.strokes.bottom;
+  modifiedAttributes.tableCellBorder.colors.bottom = modifiedAttributes.tableBorder.colors.bottom;
+  modifiedAttributes.tableCellBorder.bottom =
+    modifiedAttributes.tableBorder.bottom || docxDocumentInstance.tableBorders.size;
 
-  if (columnIndexEquivalentFirst !== -1) {
-    // it means that the cell is in first column
-    // we set the left border of cells to that of table
-    modifiedAttributes.tableCellBorder.strokes.left = modifiedAttributes.tableBorder.strokes.left;
-    modifiedAttributes.tableCellBorder.colors.left = modifiedAttributes.tableBorder.colors.left;
-    modifiedAttributes.tableCellBorder.left =
-      modifiedAttributes.tableBorder.left || docxDocumentInstance.tableBorders.size;
-  }
+  modifiedAttributes.tableCellBorder.strokes.left = modifiedAttributes.tableBorder.strokes.left;
+  modifiedAttributes.tableCellBorder.colors.left = modifiedAttributes.tableBorder.colors.left;
+  modifiedAttributes.tableCellBorder.left =
+    modifiedAttributes.tableBorder.left || docxDocumentInstance.tableBorders.size;
 
-  if (columnIndexEquivalentLast !== -1) {
-    // it means that the cell is in last column
-    // we set the right border of cells to that of table
-    modifiedAttributes.tableCellBorder.strokes.right = modifiedAttributes.tableBorder.strokes.right;
-    modifiedAttributes.tableCellBorder.colors.right = modifiedAttributes.tableBorder.colors.right;
-    modifiedAttributes.tableCellBorder.right =
-      modifiedAttributes.tableBorder.right || docxDocumentInstance.tableBorders.size;
-  }
+  modifiedAttributes.tableCellBorder.strokes.right = modifiedAttributes.tableBorder.strokes.right;
+  modifiedAttributes.tableCellBorder.colors.right = modifiedAttributes.tableBorder.colors.right;
+  modifiedAttributes.tableCellBorder.right =
+    modifiedAttributes.tableBorder.right || docxDocumentInstance.tableBorders.size;
 
   if (isVNode(vNode) && vNode.properties) {
     if (vNode.properties.rowSpan) {
