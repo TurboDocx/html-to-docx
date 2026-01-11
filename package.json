@@ -55,6 +55,8 @@
   ],
   "scripts": {
     "test": "npm run build && node example/example-node.js",
+    "test:comprehensive-svg": "npm run build && node example/comprehensive-svg-test.js",
+    "test:example-inline-svg": "npm run build && node example/example-inline-svg.js",
     "test:rtl": "npm run build && node example/example-rtl.js",
     "test:headings": "npm run build && node example/example-heading-styles.js",
     "test:ts": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/typescript-example.ts",
