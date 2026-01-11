@@ -318,10 +318,13 @@ export const sanitizeSVGVNode = (vNode, options = {}) => {
     return null;
   }
 
-  const tagName = vNode.tagName.toLowerCase();
+  // SVG elements can be camelCase (linearGradient, radialGradient, etc.)
+  // so we need to check both original case and lowercase
+  const { tagName } = vNode;
+  const lowerTagName = tagName.toLowerCase();
 
   // Block explicitly disallowed elements
-  if (DISALLOWED_ELEMENTS.has(tagName)) {
+  if (DISALLOWED_ELEMENTS.has(lowerTagName)) {
     if (verboseLogging) {
       // eslint-disable-next-line no-console
       console.warn(`[SVG SANITIZER] Blocked dangerous element: <${vNode.tagName}>`);
@@ -329,8 +332,8 @@ export const sanitizeSVGVNode = (vNode, options = {}) => {
     return null;
   }
 
-  // Only allow whitelisted elements
-  if (!ALLOWED_ELEMENTS.has(tagName)) {
+  // Only allow whitelisted elements (check both camelCase and lowercase)
+  if (!ALLOWED_ELEMENTS.has(tagName) && !ALLOWED_ELEMENTS.has(lowerTagName)) {
     if (verboseLogging) {
       // eslint-disable-next-line no-console
       console.warn(`[SVG SANITIZER] Removed non-whitelisted element: <${vNode.tagName}>`);

@@ -197,13 +197,29 @@ export const buildSVGElement = async (
       }
     }
 
+    // If width/height are still missing, try to extract from viewBox
+    if ((!width || !height) && vNode.properties?.attributes?.viewBox) {
+      const viewBox = String(vNode.properties.attributes.viewBox).trim();
+      // viewBox format: "minX minY width height"
+      const viewBoxParts = viewBox.split(/\s+/);
+      if (viewBoxParts.length === 4) {
+        const vbWidth = parseFloat(viewBoxParts[2]);
+        const vbHeight = parseFloat(viewBoxParts[3]);
+        if (!width && !Number.isNaN(vbWidth) && vbWidth > 0) {
+          width = Math.round(vbWidth);
+        }
+        if (!height && !Number.isNaN(vbHeight) && vbHeight > 0) {
+          height = Math.round(vbHeight);
+        }
+      }
+    }
+
     // Create a temporary vNode that looks like an img element with the SVG data URI
     const imgVNode = {
       tagName: 'img',
       properties: {
         src: dataUri,
         alt: vNode.properties?.attributes?.title || 'SVG image',
-        // Add width/height if we extracted valid values
         ...(width && !Number.isNaN(width) && { width }),
         ...(height && !Number.isNaN(height) && { height }),
       },

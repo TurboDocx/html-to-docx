@@ -166,14 +166,16 @@ describe('SVG Sanitization - Security Tests', () => {
     });
 
     it('should preserve gradient elements', () => {
-      const safeVNode = new VNode('defs', {}, [
-        new VNode('linearGradient', { attributes: { id: 'grad1' } }, [
-          new VNode('stop', { attributes: { offset: '0%', 'stop-color': '#e74c3c' } }),
-          new VNode('stop', { attributes: { offset: '100%', 'stop-color': '#3498db' } }),
-        ]),
-      ]);
+      const stopVNode1 = new VNode('stop', { attributes: { offset: '0%', 'stop-color': '#e74c3c' } }, []);
+      const stopVNode2 = new VNode('stop', { attributes: { offset: '100%', 'stop-color': '#3498db' } }, []);
+      const linearGradient = new VNode(
+        'linearGradient',
+        { attributes: { id: 'grad1' } },
+        [stopVNode1, stopVNode2]
+      );
+      const defsVNode = new VNode('defs', {}, [linearGradient]);
 
-      const result = sanitizeSVGVNode(safeVNode);
+      const result = sanitizeSVGVNode(defsVNode);
       expect(result).not.toBeNull();
       expect(result.children).toHaveLength(1);
       expect(result.children[0].tagName).toBe('linearGradient');

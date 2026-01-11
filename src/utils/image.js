@@ -501,23 +501,33 @@ export const buildImage = async (
       }
 
       let imageProperties;
-      try {
-        imageProperties = sizeOf(imageBuffer);
-        if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+
+      // For SVG files, use dimensions from vNode properties instead of sizeOf
+      // (sizeOf doesn't work on SVG XML content)
+      if (response.isSVG) {
+        imageProperties = {
+          width: vNode.properties.width || 100,
+          height: vNode.properties.height || 100,
+        };
+      } else {
+        try {
+          imageProperties = sizeOf(imageBuffer);
+          if (!imageProperties || !imageProperties.width || !imageProperties.height) {
+            // eslint-disable-next-line no-console
+            console.error(
+              `[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`,
+              imageProperties
+            );
+            return null;
+          }
+        } catch (sizeError) {
           // eslint-disable-next-line no-console
           console.error(
-            `[ERROR] buildImage: Invalid image properties for ${vNode.properties.src}:`,
-            imageProperties
+            `[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`,
+            sizeError.message
           );
           return null;
         }
-      } catch (sizeError) {
-        // eslint-disable-next-line no-console
-        console.error(
-          `[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`,
-          sizeError.message
-        );
-        return null;
       }
 
       const imageFragment = await xmlBuilder.buildParagraph(
