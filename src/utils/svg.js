@@ -1,4 +1,5 @@
 import { buildImage } from './image';
+import { sanitizeSVGVNode, validateSVGString } from './svg-sanitizer';
 
 /**
  * Serializes a VNode to an SVG XML string
@@ -90,6 +91,8 @@ const serializeVNodeToSVG = (vNode, isRoot = false) => {
  * @param {Object} vNode - The VNode representing the SVG element
  * @param {number|null} maximumWidth - Maximum width for the image
  * @param {Object} options - Processing options
+ * @param {boolean} options.svgSanitization - Enable/disable SVG sanitization (default: true)
+ * @param {boolean} options.verboseLogging - Enable detailed logging
  * @returns {Promise<Object|null>} XML fragment or null
  */
 // eslint-disable-next-line import/prefer-default-export
@@ -100,8 +103,38 @@ export const buildSVGElement = async (
   options = {}
 ) => {
   try {
+    // Get sanitization settings from options or document instance
+    const svgSanitization = options.svgSanitization
+      ? options.svgSanitization
+      : docxDocumentInstance.imageProcessing?.svgSanitization
+      ? docxDocumentInstance.imageProcessing.svgSanitization
+      : true; // Default: enabled for security
+
+    const verboseLogging =
+      options.verboseLogging || docxDocumentInstance.imageProcessing?.verboseLogging || false;
+
+    // Sanitize the VNode before serialization (if enabled)
+    let sanitizedVNode = vNode;
+    if (svgSanitization) {
+      sanitizedVNode = sanitizeSVGVNode(vNode, { verboseLogging, enabled: true });
+
+      if (!sanitizedVNode) {
+        // eslint-disable-next-line no-console
+        console.error('[ERROR] buildSVGElement: SVG element was blocked by sanitizer');
+        return null;
+      }
+
+      if (verboseLogging) {
+        // eslint-disable-next-line no-console
+        console.log('[SVG] Sanitization completed successfully');
+      }
+    } else if (verboseLogging) {
+      // eslint-disable-next-line no-console
+      console.warn('[SVG] WARNING: SVG sanitization is disabled - only use with trusted content!');
+    }
+
     // Serialize the SVG VNode to an SVG string (isRoot=true for proper namespace handling)
-    const svgString = serializeVNodeToSVG(vNode, true);
+    const svgString = serializeVNodeToSVG(sanitizedVNode, true);
 
     if (!svgString?.trim()?.length) {
       // eslint-disable-next-line no-console
@@ -109,9 +142,16 @@ export const buildSVGElement = async (
       return null;
     }
 
+    // Validate the serialized SVG string for any remaining dangerous content
+    if (svgSanitization) {
+      const validation = validateSVGString(svgString);
+      if (!validation.valid && verboseLogging) {
+        // eslint-disable-next-line no-console
+        console.warn('[SVG] Validation warnings:', validation.warnings);
+      }
+    }
+
     // Log the serialized SVG for debugging (if verbose logging is enabled)
-    const verboseLogging =
-      options.verboseLogging || docxDocumentInstance.imageProcessing?.verboseLogging || false;
     if (verboseLogging) {
       // eslint-disable-next-line no-console
       console.log(
