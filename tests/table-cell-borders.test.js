@@ -88,7 +88,7 @@ describe('Table Cell Borders - Issue #160 Regression Tests', () => {
 
       // Verify bottom border exists as reported missing in the issue
       const bottomBorderRegex = /<w:bottom\s+w:val="single"\s+w:sz="1"\s+w:space="0"\s+w:color="000000"\s*\/>/;
-      const hasBottomBorder = tcBordersMatches.some((tcBorders) =>
+      const hasBottomBorder = tcBordersMatches.every((tcBorders) =>
         bottomBorderRegex.test(tcBorders)
       );
       expect(hasBottomBorder).toBe(true);
