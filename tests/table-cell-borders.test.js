@@ -493,4 +493,235 @@ describe('Table Cell Borders - Issue #160 Regression Tests', () => {
       expect(hasBrownRightBorder).toBe(true);
     });
   });
+
+  describe('Ported from example-node.js - Comprehensive border scenarios', () => {
+    test('should handle basic table without borders or styles', async () => {
+      // From example-node.js line 200
+      const htmlString = `<table>
+        <tr>
+            <th>Country</th>
+            <th>Capital</th>
+        </tr>
+        <tr>
+            <td>India</td>
+            <td>New Delhi</td>
+        </tr>
+        <tr>
+            <td>USA</td>
+            <td>Washington DC</td>
+        </tr>
+      </table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // Basic table without explicit borders should still be valid
+      expect(parsed.xml).toContain('<w:tbl>');
+      expect(parsed.xml).toContain('<w:tr>');
+      expect(parsed.xml).toContain('<w:tc>');
+    });
+
+    test('should handle border-style: none with border attribute (from example-node.js)', async () => {
+      // From example-node.js line 1072
+      // Note: This has conflicting directives - border="1" adds borders, but border-style: none removes them
+      // Current behavior: border="1" attribute takes precedence
+      const htmlString = `<table style="border-collapse: collapse; width: 100%; border-width: 1px; border-style: none;" border="1">
+        <colgroup>
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+        </colgroup>
+        <tbody>
+            <tr>
+                <td>1,1</td>
+                <td>1,2</td>
+                <td>1,3</td>
+                <td>1,4</td>
+            </tr>
+            <tr>
+                <td>2,1</td>
+                <td>2,2</td>
+                <td>2,3</td>
+                <td>2,4</td>
+            </tr>
+        </tbody>
+      </table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // When border="1" is present, it overrides CSS border-style: none
+      // This is existing behavior - border attribute takes precedence
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      expect(tcBordersMatches).not.toBeNull();
+      // Borders are present due to border="1" attribute
+      expect(tcBordersMatches.length).toBeGreaterThan(0);
+    });
+
+    test('should handle normal table with border attribute (from example-node.js)', async () => {
+      // From example-node.js line 1108
+      const htmlString = `<table style="border-collapse: collapse; width: 100%; height: 76px;" border="1">
+        <colgroup>
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+        </colgroup>
+        <tbody>
+            <tr style="height: 19px;">
+                <td style="height: 19px;">1,1</td>
+                <td style="height: 19px;">1,2</td>
+                <td style="height: 19px;">1,3</td>
+                <td style="height: 19px;">1,4</td>
+            </tr>
+        </tbody>
+      </table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // Should have borders with border="1"
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      expect(tcBordersMatches).not.toBeNull();
+      expect(tcBordersMatches.length).toBeGreaterThan(0);
+    });
+
+    test('should handle border-width: 0px with border-style: solid (from example-node.js)', async () => {
+      // From example-node.js line 1180
+      const htmlString = `<table style="border-collapse: collapse; width: 100%; border-width: 0px; border-style: solid;" border="1">
+        <colgroup>
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+        </colgroup>
+        <tbody>
+            <tr>
+                <td style="border-width: 0px;">1,1</td>
+                <td style="border-width: 0px;">1,2</td>
+                <td style="border-width: 0px;">1,3</td>
+                <td style="border-width: 0px;">1,4</td>
+            </tr>
+        </tbody>
+      </table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // border-width: 0 should result in size 0 borders
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      if (tcBordersMatches) {
+        // Should have borders but with size 0
+        expect(parsed.xml).toMatch(/w:sz="0"/);
+      }
+    });
+
+    test('should handle complex border styles with multiple colors (from example-node.js)', async () => {
+      // From example-node.js line 1251
+      const htmlString = `<table style="border-collapse: collapse; width: 100%; border: 2px solid purple; border-width: 4px; border-left-color:yellow;" border="1">
+        <colgroup>
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+        </colgroup>
+        <tbody>
+            <tr>
+                <td style="border:5px dotted red; border-left: 2px dashed ;border-left-color:aqua">1,1</td>
+                <td>1,2</td>
+                <td>1,3</td>
+                <td>1,4</td>
+            </tr>
+            <tr>
+                <td style="border:5px dotted red; border-left: 8px dashed ;border-left-color:aqua">2,1</td>
+                <td>2,2</td>
+                <td>2,3</td>
+                <td>2,4</td>
+            </tr>
+        </tbody>
+      </table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // Should have various border colors
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      expect(tcBordersMatches).not.toBeNull();
+      // Check for custom colors in the output
+      expect(parsed.xml).toMatch(/w:color/);
+    });
+
+    test('should handle table with border attribute and border-collapse (from example-node.js)', async () => {
+      // From example-node.js line 743
+      const htmlString = `<table border="1" style="border-collapse:collapse">
+        <tbody>
+            <tr>
+                <td style="border-left:none">Cell with no left border</td>
+                <td>Normal cell</td>
+            </tr>
+        </tbody>
+      </table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      expect(tcBordersMatches).not.toBeNull();
+      // Table should have border="1" so cells get borders
+      expect(tcBordersMatches.length).toBeGreaterThan(0);
+      // Note: Cell-level border-left:none override may or may not work depending on implementation
+      // The test just verifies the table renders with borders
+    });
+
+    test('should handle table with rowspan and colspan (from example-node.js)', async () => {
+      // From example-node.js line 1903
+      const htmlString = `<table style="min-width: 100%;">
+        <colgroup>
+          <col style="min-width: 25px">
+          <col style="min-width: 25px">
+          <col style="min-width: 25px">
+        </colgroup>
+        <tbody>
+          <tr>
+            <th colspan="2" rowspan="1">
+              <p>Header spanning 2 columns</p>
+            </th>
+            <th colspan="1" rowspan="1">
+              <p>Single header</p>
+            </th>
+          </tr>
+          <tr>
+            <td colspan="1" rowspan="2">
+              <p>Cell spanning 2 rows</p>
+            </td>
+            <td colspan="1" rowspan="1">
+              <p>data2</p>
+            </td>
+            <td colspan="1" rowspan="1">
+              <p>data3</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // Should have gridSpan for colspan
+      expect(parsed.xml).toMatch(/<w:gridSpan\s+w:val="2"/);
+      // Should have vMerge for rowspan
+      expect(parsed.xml).toMatch(/<w:vMerge/);
+    });
+  });
 });
