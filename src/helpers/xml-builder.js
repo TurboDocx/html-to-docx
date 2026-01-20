@@ -2572,25 +2572,34 @@ const buildTableCell = async (
   // Apply table-level borders to all cells (edge and non-edge)
   // This ensures that when borderOptions is set, all cells get borders creating a complete grid
   // Individual cell styles (if present) can override these later in fixupTableCellBorder()
-  modifiedAttributes.tableCellBorder.strokes.top = modifiedAttributes.tableBorder.strokes.top;
-  modifiedAttributes.tableCellBorder.colors.top = modifiedAttributes.tableBorder.colors.top;
-  modifiedAttributes.tableCellBorder.top =
-    modifiedAttributes.tableBorder.top || docxDocumentInstance.tableBorders.size;
+  // IMPORTANT: Don't apply borders if table has border-style: hidden or border-style: none
+  if (modifiedAttributes.tableBorder.strokes.top !== 'hidden' && modifiedAttributes.tableBorder.strokes.top !== 'none') {
+    modifiedAttributes.tableCellBorder.strokes.top = modifiedAttributes.tableBorder.strokes.top;
+    modifiedAttributes.tableCellBorder.colors.top = modifiedAttributes.tableBorder.colors.top;
+    modifiedAttributes.tableCellBorder.top =
+      modifiedAttributes.tableBorder.top || docxDocumentInstance.tableBorders.size;
+  }
 
-  modifiedAttributes.tableCellBorder.strokes.bottom = modifiedAttributes.tableBorder.strokes.bottom;
-  modifiedAttributes.tableCellBorder.colors.bottom = modifiedAttributes.tableBorder.colors.bottom;
-  modifiedAttributes.tableCellBorder.bottom =
-    modifiedAttributes.tableBorder.bottom || docxDocumentInstance.tableBorders.size;
+  if (modifiedAttributes.tableBorder.strokes.bottom !== 'hidden' && modifiedAttributes.tableBorder.strokes.bottom !== 'none') {
+    modifiedAttributes.tableCellBorder.strokes.bottom = modifiedAttributes.tableBorder.strokes.bottom;
+    modifiedAttributes.tableCellBorder.colors.bottom = modifiedAttributes.tableBorder.colors.bottom;
+    modifiedAttributes.tableCellBorder.bottom =
+      modifiedAttributes.tableBorder.bottom || docxDocumentInstance.tableBorders.size;
+  }
 
-  modifiedAttributes.tableCellBorder.strokes.left = modifiedAttributes.tableBorder.strokes.left;
-  modifiedAttributes.tableCellBorder.colors.left = modifiedAttributes.tableBorder.colors.left;
-  modifiedAttributes.tableCellBorder.left =
-    modifiedAttributes.tableBorder.left || docxDocumentInstance.tableBorders.size;
+  if (modifiedAttributes.tableBorder.strokes.left !== 'hidden' && modifiedAttributes.tableBorder.strokes.left !== 'none') {
+    modifiedAttributes.tableCellBorder.strokes.left = modifiedAttributes.tableBorder.strokes.left;
+    modifiedAttributes.tableCellBorder.colors.left = modifiedAttributes.tableBorder.colors.left;
+    modifiedAttributes.tableCellBorder.left =
+      modifiedAttributes.tableBorder.left || docxDocumentInstance.tableBorders.size;
+  }
 
-  modifiedAttributes.tableCellBorder.strokes.right = modifiedAttributes.tableBorder.strokes.right;
-  modifiedAttributes.tableCellBorder.colors.right = modifiedAttributes.tableBorder.colors.right;
-  modifiedAttributes.tableCellBorder.right =
-    modifiedAttributes.tableBorder.right || docxDocumentInstance.tableBorders.size;
+  if (modifiedAttributes.tableBorder.strokes.right !== 'hidden' && modifiedAttributes.tableBorder.strokes.right !== 'none') {
+    modifiedAttributes.tableCellBorder.strokes.right = modifiedAttributes.tableBorder.strokes.right;
+    modifiedAttributes.tableCellBorder.colors.right = modifiedAttributes.tableBorder.colors.right;
+    modifiedAttributes.tableCellBorder.right =
+      modifiedAttributes.tableBorder.right || docxDocumentInstance.tableBorders.size;
+  }
 
   if (isVNode(vNode) && vNode.properties) {
     if (vNode.properties.rowSpan) {

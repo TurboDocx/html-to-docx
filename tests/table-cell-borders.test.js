@@ -392,4 +392,105 @@ describe('Table Cell Borders - Issue #160 Regression Tests', () => {
       }
     });
   });
+
+  describe('Regression: Kushal bug report - border-style: hidden should suppress borders', () => {
+    test('should NOT render cell borders when table has border-style: hidden', async () => {
+      // Bug reported by Kushal: tables with border-style: hidden incorrectly show borders
+      // after the fix for issue #160
+      const htmlString = `<table style="border-collapse: collapse; width: 100%; border-width: 1px; border-style: hidden; height: 76px;" border="1">
+    <colgroup>
+        <col style="width: 25.0399%;">
+        <col style="width: 25.0399%;">
+        <col style="width: 25.0399%;">
+        <col style="width: 25.0399%;">
+    </colgroup>
+    <tbody>
+        <tr style="height: 19px;">
+            <td style="height: 19px;">1,1</td>
+            <td style="height: 19px;">1,2</td>
+            <td style="height: 19px;">1,3</td>
+            <td style="height: 19px;">1,4</td>
+        </tr>
+        <tr style="height: 19px;">
+            <td style="height: 19px;">2,1</td>
+            <td style="height: 19px;">2,2</td>
+            <td style="height: 19px;">2,3</td>
+            <td style="height: 19px;">2,4</td>
+        </tr>
+        <tr style="height: 19px;">
+            <td style="height: 19px;">3,1</td>
+            <td style="height: 19px;">3,2</td>
+            <td style="height: 19px;">3,3</td>
+            <td style="height: 19px;">3,4</td>
+        </tr>
+        <tr style="height: 19px;">
+            <td style="height: 19px;">4,1</td>
+            <td style="height: 19px;">4,2</td>
+            <td style="height: 19px;">&nbsp;4,3</td>
+            <td style="height: 19px;">4,4</td>
+        </tr>
+    </tbody>
+</table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // When border-style: hidden, there should be NO cell borders
+      // Check that either tcBorders doesn't exist OR all borders are 'nil' or 'none'
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      if (tcBordersMatches) {
+        // If borders exist, they should all be nil/none
+        for (const tcBorder of tcBordersMatches) {
+          // Should not have visible borders (single, double, etc. with size > 0)
+          expect(tcBorder).not.toMatch(/<w:bottom\s+w:val="single"\s+w:sz="[1-9]/);
+          expect(tcBorder).not.toMatch(/<w:top\s+w:val="single"\s+w:sz="[1-9]/);
+          expect(tcBorder).not.toMatch(/<w:left\s+w:val="single"\s+w:sz="[1-9]/);
+          expect(tcBorder).not.toMatch(/<w:right\s+w:val="single"\s+w:sz="[1-9]/);
+        }
+      }
+    });
+
+    test('should respect table-level border styles when border-collapse: collapse', async () => {
+      // Bug reported by Kushal: table-level borders are not respected correctly
+      const htmlString = `<table style="border-collapse: collapse; border-left:1px solid black; border-right: 2px solid brown; border-top: 2px solid yellow; border-bottom: 4px solid orange">
+    <tbody>
+        <tr>
+            <td>Row 1, Col 1</td>
+            <td>Row 1, Col 2</td>
+        </tr>
+        <tr>
+            <td>Row 2, Col 1</td>
+            <td>Row 2, Col 2</td>
+        </tr>
+    </tbody>
+</table>`;
+
+      const result = await HTMLtoDOCX(htmlString, undefined, {});
+      const parsed = await parseDOCX(result);
+
+      // Should have table-level borders, not cell-level overrides
+      // The expected behavior: table borders should take precedence
+      // Top border should be yellow (FFFF00), size 16 (2px * 8)
+      // Bottom border should be orange (FFA500), size 32 (4px * 8)
+      // Left border should be black (000000), size 8 (1px * 8)
+      // Right border should be brown (A52A2A), size 16 (2px * 8)
+
+      const tcBordersRegex = /<w:tcBorders>(.*?)<\/w:tcBorders>/gs;
+      const tcBordersMatches = parsed.xml.match(tcBordersRegex);
+
+      expect(tcBordersMatches).not.toBeNull();
+
+      // Check that borders match table-level styles, not default cell borders
+      // Find cells with specific border colors matching table borders
+      const hasYellowTopBorder = parsed.xml.includes('w:color="FFFF00"') || parsed.xml.includes('w:color="ffff00"');
+      const hasOrangeBottomBorder = parsed.xml.includes('w:color="FFA500"') || parsed.xml.includes('w:color="ffa500"');
+      const hasBrownRightBorder = parsed.xml.includes('w:color="A52A2A"') || parsed.xml.includes('w:color="a52a2a"');
+
+      expect(hasYellowTopBorder).toBe(true);
+      expect(hasOrangeBottomBorder).toBe(true);
+      expect(hasBrownRightBorder).toBe(true);
+    });
+  });
 });
