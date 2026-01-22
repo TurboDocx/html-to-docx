@@ -145,6 +145,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@turbodocx/html-to-docx": "^1.18.1",
     "axios": "^1.12.2",
     "color-name": "^1.1.4",
     "html-entities": "^2.3.3",
