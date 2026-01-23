@@ -9,6 +9,7 @@ import nodePolyfills from 'rollup-plugin-polyfill-node';
 import * as meta from './package.json';
 
 const isProduction = process.env.NODE_ENV === 'production';
+const browserOnly = process.env.BUILD_TARGET === 'browser';
 
 const banner = `// ${meta.homepage} v${meta.version} Copyright ${new Date().getFullYear()} ${meta.author}`;
 
@@ -82,4 +83,4 @@ const browserConfig = {
   },
 };
 
-export default [libraryConfig, browserConfig];
+export default browserOnly ? [browserConfig] : [libraryConfig, browserConfig];
