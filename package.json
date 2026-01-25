@@ -1,6 +1,6 @@
 {
   "name": "@turbodocx/html-to-docx",
-  "version": "1.18.1",
+  "version": "1.19.0",
   "description": "HTML to DOCX converter",
   "keywords": [
     "html-to-docx",
