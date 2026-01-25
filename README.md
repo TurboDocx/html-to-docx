@@ -19,7 +19,7 @@ Based on the original work and assisted by the original contributors of [private
 
 | Package | Links | Description |
 |---------|-------|-------------|
-| API & SDK | [![Website](https://img.shields.io/badge/Website-TurboDocx-8A2BE2)](https://www.turbodocx.com/products/api-and-sdk) | Production-ready REST API for document generation and template processing |
+| API & SDK | [![Website](https://img.shields.io/badge/Website-TurboDocx-8A2BE2)](https://www.turbodocx.com/products/api-and-sdk) | Production-ready SDK for e-signature, document generation, template processing, and more |
 | TurboSign | [![Website](https://img.shields.io/badge/Website-TurboDocx-8A2BE2)](https://www.turbodocx.com/products/api-and-sdk) | Digital signature API for seamless e-signature workflows |
 | sdk | [![GitHub](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/TurboDocx/sdk) | Official TurboDocx SDK for seamless API integration |
 | next-plugin-llms | [![GitHub](https://img.shields.io/github/stars/turbodocx/next-plugin-llms?style=social)](https://github.com/TurboDocx/next-plugin-llms) | Next.js plugin for automatic llms.txt generation |
