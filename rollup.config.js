@@ -58,6 +58,9 @@ const browserConfig = {
   // Only exclude sharp (Node.js native module, not supported in browser)
   external: ['sharp'],
   plugins: [
+    cleaner({
+      targets: ['./dist/'],
+    }),
     resolve({
       browser: true,
       preferBuiltins: false,

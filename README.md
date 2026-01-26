@@ -209,10 +209,33 @@ Include the standalone browser build directly in your HTML:
   <title>HTML to DOCX Demo</title>
 </head>
 <body>
-  <!-- Polyfills for Node.js globals (required) -->
+  <!-- 
+    Polyfills for Node.js globals (required)
+    Note: While rollup-plugin-polyfill-node bundles most Node.js polyfills,
+    these runtime globals must be set before the library loads because
+    some dependencies check for them synchronously during initialization.
+  -->
   <script>
     if (typeof global === 'undefined') window.global = window;
     if (typeof process === 'undefined') window.process = { env: {} };
+    if (typeof Buffer === 'undefined') {
+      window.Buffer = {
+        from: function(data, encoding) {
+          if (typeof data === 'string') {
+            // Handle base64 and utf-8 encoding
+            if (encoding === 'base64') {
+              var binary = atob(data);
+              var bytes = new Uint8Array(binary.length);
+              for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+              return bytes;
+            }
+            return new TextEncoder().encode(data);
+          }
+          return new Uint8Array(data);
+        },
+        isBuffer: function() { return false; }
+      };
+    }
   </script>
   
   <!-- Include the standalone browser build -->
@@ -603,10 +626,6 @@ MIT
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
-
----
-
-**Note:** Currently optimized for Node.js environments. Browser support is planned for future releases.
 
 ---
 
