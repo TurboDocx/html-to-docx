@@ -58,9 +58,8 @@ const browserConfig = {
   // Only exclude sharp (Node.js native module, not supported in browser)
   external: ['sharp'],
   plugins: [
-    cleaner({
-      targets: ['./dist/'],
-    }),
+    // Only clean when building browser-only (cleaner already runs in libraryConfig for full builds)
+    ...(browserOnly ? [cleaner({ targets: ['./dist/'] })] : []),
     resolve({
       browser: true,
       preferBuiltins: false,
