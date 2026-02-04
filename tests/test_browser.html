@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML to DOCX Browser Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status.info {
+      background: #cce5ff;
+      color: #004085;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 HTML to DOCX Browser Test</h1>
+    <p>Enter HTML content below and click the button to generate a DOCX file.</p>
+    
+    <textarea id="htmlInput"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Document</title>
+</head>
+<body>
+  <h1 style="color: #2c3e50; font-family: Arial;">Hello World!</h1>
+  <h2 style="color: #3498db;">This is a Heading 2</h2>
+  
+  <p style="font-size: 14pt; font-family: Arial; line-height: 1.5;">
+    This is a paragraph with <strong>bold text</strong>, 
+    <em>italic text</em>, and <u>underlined text</u>.
+    You can also use <span style="color: red;">colored text</span> 
+    and <span style="background-color: yellow;">highlighted text</span>.
+  </p>
+  
+  <p style="text-align: center; font-size: 12pt;">
+    This paragraph is centered.
+  </p>
+  
+  <h3>Unordered List:</h3>
+  <ul>
+    <li>Item 1</li>
+    <li>Item 2</li>
+    <li>Item 3</li>
+  </ul>
+  
+  <h3>Ordered List:</h3>
+  <ol style="list-style-type: decimal;">
+    <li>First item</li>
+    <li>Second item</li>
+    <li>Third item</li>
+  </ol>
+  
+  <h3>Table Example:</h3>
+  <table style="border: 1px solid black; border-collapse: collapse; width: 100%;">
+    <thead>
+      <tr style="background-color: #3498db; color: white;">
+        <th style="border: 1px solid black; padding: 8px;">Header 1</th>
+        <th style="border: 1px solid black; padding: 8px;">Header 2</th>
+        <th style="border: 1px solid black; padding: 8px;">Header 3</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border: 1px solid black; padding: 8px;">Row 1, Cell 1</td>
+        <td style="border: 1px solid black; padding: 8px;">Row 1, Cell 2</td>
+        <td style="border: 1px solid black; padding: 8px;">Row 1, Cell 3</td>
+      </tr>
+      <tr style="background-color: #ecf0f1;">
+        <td style="border: 1px solid black; padding: 8px;">Row 2, Cell 1</td>
+        <td style="border: 1px solid black; padding: 8px;">Row 2, Cell 2</td>
+        <td style="border: 1px solid black; padding: 8px;">Row 2, Cell 3</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <p style="margin-top: 20px;">
+    <a href="https://www.turbodocx.com">This is a link</a>
+  </p>
+  
+  <blockquote style="border-left: 3px solid #3498db; padding-left: 10px; color: #666;">
+    This is a blockquote with styled content.
+  </blockquote>
+  
+  <p>Here is some <code style="background-color: #f4f4f4; padding: 2px 6px;">inline code</code> example.</p>
+  
+  <p style="font-style: italic; color: #888;">
+    Created with @turbodocx/html-to-docx browser version.
+  </p>
+</body>
+</html></textarea>
+    
+    <button id="generateBtn" onclick="generateDocx()">📄 Generate DOCX</button>
+    
+    <div id="status"></div>
+  </div>
+
+  <!-- Polyfill for Node.js globals in browser -->
+  <script>
+    if (typeof global === 'undefined') {
+      window.global = window;
+    }
+    if (typeof process === 'undefined') {
+      window.process = { env: {} };
+    }
+    if (typeof Buffer === 'undefined') {
+      window.Buffer = {
+        from: function(arr) { return new Uint8Array(arr); },
+        isBuffer: function() { return false; }
+      };
+    }
+  </script>
+  <script src="../dist/html-to-docx.browser.js"></script>
+  <script>
+    // Check if library loaded correctly
+    window.addEventListener('DOMContentLoaded', function() {
+      const status = document.getElementById('status');
+      if (typeof HTMLToDOCX === 'undefined') {
+        status.className = 'status error';
+        status.textContent = '❌ Error: HTMLToDOCX library failed to load. Make sure to run "npm run build" first and serve via HTTP server.';
+        document.getElementById('generateBtn').disabled = true;
+        console.error('HTMLToDOCX is not defined. Check if the script loaded correctly.');
+      } else {
+        status.className = 'status success';
+        status.textContent = '✅ Library loaded successfully! Ready to generate DOCX files.';
+        console.log('HTMLToDOCX loaded:', typeof HTMLToDOCX);
+      }
+    });
+
+    async function generateDocx() {
+      const btn = document.getElementById('generateBtn');
+      const status = document.getElementById('status');
+      const htmlString = document.getElementById('htmlInput').value;
+
+      if (typeof HTMLToDOCX === 'undefined') {
+        status.className = 'status error';
+        status.textContent = '❌ Error: HTMLToDOCX library not loaded.';
+        return;
+      }
+
+      if (!htmlString.trim()) {
+        status.className = 'status error';
+        status.textContent = '❌ Please enter some HTML content.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating...';
+      status.className = 'status info';
+      status.textContent = '🔄 Converting HTML to DOCX...';
+
+      try {
+        const result = await HTMLToDOCX(htmlString, null, {
+          title: 'Browser Test Document',
+          creator: 'TurboDocx Browser Test',
+          orientation: 'portrait',
+          font: 'Arial',
+          fontSize: 24,  // 12pt (in half-points)
+          table: {
+            row: { cantSplit: true },
+            borderOptions: {
+              size: 1,
+              color: '000000'
+            }
+          },
+          pageNumber: false,
+          footer: false,
+          margins: {
+            top: 1440,    // 1 inch
+            right: 1440,
+            bottom: 1440,
+            left: 1440
+          }
+        });
+
+        console.log('HTMLToDOCX result type:', Object.prototype.toString.call(result));
+        
+        // Convert result to Blob if needed
+        let blob;
+        if (result instanceof Blob) {
+          blob = result;
+        } else if (result instanceof ArrayBuffer) {
+          blob = new Blob([result], { 
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+          });
+        } else if (result instanceof Uint8Array) {
+          blob = new Blob([result], { 
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+          });
+        } else if (result && result.buffer) {
+          // Node.js Buffer-like object
+          blob = new Blob([new Uint8Array(result)], { 
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+          });
+        } else {
+          throw new Error('Unexpected result type: ' + Object.prototype.toString.call(result));
+        }
+
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'document.docx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        status.className = 'status success';
+        status.textContent = '✅ DOCX file generated and downloaded successfully!';
+      } catch (error) {
+        console.error('Error generating DOCX:', error);
+        status.className = 'status error';
+        status.textContent = '❌ Error: ' + error.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📄 Generate DOCX';
+      }
+    }
+  </script>
+</body>
+</html>
