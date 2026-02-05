@@ -175,6 +175,148 @@ This will generate two DOCX files in the `example/typescript` directory:
 - `basic-example.docx` - A simple document with minimal configuration
 - `advanced-example.docx` - A document with headers, footers, and advanced formatting options
 
+## Browser Standalone Build
+
+The library provides a standalone browser build that bundles all dependencies into a single file. This allows you to use the library directly in HTML pages without any build tools or module bundlers.
+
+### Build Outputs
+
+When you run `npm run build`, three distribution files are generated:
+
+| File | Format | Size | Dependencies | Use Case |
+|------|--------|------|--------------|----------|
+| `dist/html-to-docx.esm.js` | ES Module | ~1.6 MB | External | Modern bundlers (Webpack, Vite, Rollup) |
+| `dist/html-to-docx.umd.js` | UMD | ~1.6 MB | External | Node.js, AMD, or manual dependency management |
+| `dist/html-to-docx.browser.js` | IIFE | ~2.4 MB | **All bundled** | Direct browser usage, CDN, quick prototypes |
+
+### Build Commands
+
+```bash
+# Build all versions (ESM + UMD + Browser)
+npm run build
+
+# Build only the browser standalone version (development)
+npm run build:browser
+
+# Build only the browser standalone version (production, minified)
+npm run build:browser:prod
+```
+
+### Browser Usage
+
+Include the standalone browser build directly in your HTML:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HTML to DOCX Demo</title>
+</head>
+<body>
+  <!-- 
+    Polyfills for Node.js globals (required)
+    Note: While rollup-plugin-polyfill-node bundles most Node.js polyfills,
+    these runtime globals must be set before the library loads because
+    some dependencies check for them synchronously during initialization.
+  -->
+  <script>
+    if (typeof global === 'undefined') window.global = window;
+    if (typeof process === 'undefined') window.process = { env: {} };
+    if (typeof Buffer === 'undefined') {
+      window.Buffer = {
+        from: function(data, encoding) {
+          if (typeof data === 'string') {
+            // Handle base64 and utf-8 encoding
+            if (encoding === 'base64') {
+              var binary = atob(data);
+              var bytes = new Uint8Array(binary.length);
+              for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+              return bytes;
+            }
+            return new TextEncoder().encode(data);
+          }
+          return new Uint8Array(data);
+        },
+        isBuffer: function() { return false; }
+      };
+    }
+  </script>
+  
+  <!-- Include the standalone browser build -->
+  <script src="path/to/html-to-docx.browser.js"></script>
+  
+  <script>
+    async function generateDocument() {
+      const htmlContent = `
+        <h1>Hello World</h1>
+        <p>This is a <strong>test document</strong> generated in the browser.</p>
+      `;
+      
+      try {
+        const result = await HTMLToDOCX(htmlContent, null, {
+          title: 'My Document',
+          creator: 'Browser App'
+        });
+        
+        // Convert result to Blob for download
+        let blob;
+        if (result instanceof Blob) {
+          blob = result;
+        } else if (result instanceof ArrayBuffer || result instanceof Uint8Array) {
+          blob = new Blob([result], { 
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+          });
+        }
+        
+        // Trigger download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'document.docx';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error generating DOCX:', error);
+      }
+    }
+  </script>
+  
+  <button onclick="generateDocument()">Generate DOCX</button>
+</body>
+</html>
+```
+
+### Testing the Browser Build
+
+A test page is included to verify the browser build works correctly:
+
+```bash
+# Build and start the test server
+npm run test:browser
+```
+
+Then open http://localhost:8080/tests/test_browser.html in your browser.
+
+The test page allows you to:
+- Edit HTML content in a textarea
+- Click "Generate DOCX" to create and download a Word document
+- See status messages for success or errors
+
+### CDN Usage
+
+You can also host the browser build on a CDN for easy inclusion:
+
+```html
+<!-- Example: Self-hosted or CDN -->
+<script src="https://your-cdn.com/html-to-docx/1.18.1/html-to-docx.browser.js"></script>
+```
+
+### Limitations in Browser Environment
+
+- **Sharp (SVG conversion)**: The `sharp` image processing library is not available in browsers. SVG images will be embedded natively (requires Office 2019+).
+- **File System**: No direct file system access. Documents are returned as Blob/ArrayBuffer for download.
+- **Image URLs**: Remote images must be CORS-enabled or converted to base64 data URLs.
+
 ## Usage
 
 ```js
@@ -488,10 +630,6 @@ MIT
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
-
----
-
-**Note:** Currently optimized for Node.js environments. Browser support is planned for future releases.
 
 ---
 
