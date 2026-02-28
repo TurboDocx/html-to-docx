@@ -1926,8 +1926,8 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.top;
-      let borderColor = attributes.tableCellBorder.strokes.top;
-      let borderStrike = attributes.tableCellBorder.colors.top;
+      let borderColor =  attributes.tableCellBorder.colors.top;
+      let borderStrike = attributes.tableCellBorder.strokes.top;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-top') {
@@ -2010,8 +2010,8 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.bottom;
-      let borderColor = attributes.tableCellBorder.strokes.bottom;
-      let borderStrike = attributes.tableCellBorder.colors.bottom;
+      let borderColor = attributes.tableCellBorder.colors.bottom;
+      let borderStrike = attributes.tableCellBorder.strokes.bottom;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-bottom') {
@@ -2096,8 +2096,8 @@ const fixupTableCellBorder = (
       }
       indexes.sort((a, b) => a.index - b.index);
       let borderSize = attributes.tableCellBorder.left;
-      let borderColor = attributes.tableCellBorder.strokes.left;
-      let borderStrike = attributes.tableCellBorder.colors.left;
+      let borderColor = attributes.tableCellBorder.colors.left;
+      let borderStrike = attributes.tableCellBorder.strokes.left;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-left') {
@@ -2178,8 +2178,8 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.right;
-      let borderColor = attributes.tableCellBorder.strokes.right;
-      let borderStrike = attributes.tableCellBorder.colors.right;
+      let borderColor = attributes.tableCellBorder.colors.right;
+      let borderStrike = attributes.tableCellBorder.strokes.right;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-right') {
@@ -2686,7 +2686,7 @@ const buildTableCell = async (
     if (vNode.properties.style) {
       modifiedAttributes = {
         ...modifiedAttributes,
-        ...modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, attributes),
+        ...modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, modifiedAttributes),
       };
       fixupTableCellBorder(
         vNode,
@@ -2921,11 +2921,6 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       } else if (spanObjectKey === 'border-top-color') {
         cellProperties.tableCellBorder.colors = {
           ...cellProperties.tableCellBorder.colors,
-          top: fixupColorCode(spanObject[spanObjectKey]),
-        };
-      } else if (spanObjectKey === 'border-top-color') {
-        tableBorders.colors = {
-          ...tableBorders.colors,
           top: fixupColorCode(spanObject[spanObjectKey]),
         };
       } else if (spanObjectKey === 'border-style') {
@@ -3365,6 +3360,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
       strokes: setUpDirectionalBorderStroke(borderStrike),
       colors: setUpDirectionalBorderColor(borderColor),
     };
+    if (borderSize > 0) {
+      setUpDirectionalBorderSize(tableBorders, borderSize);
+      setUpDirectionalBorderSize(tableCellBorders, borderSize);
+    }
     // eslint-disable-next-line no-restricted-globals
     if (!isNaN(tableAttributes.border)) {
       modifiedAttributes.isTableBorderAttributeGiven = true;
