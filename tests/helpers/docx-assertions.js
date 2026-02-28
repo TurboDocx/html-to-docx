@@ -127,3 +127,47 @@ export function assertParagraphProperty(parsed, paragraphIndex, propertyName, ex
   const para = validateParagraphIndex(parsed, paragraphIndex, 'assertParagraphProperty');
   expect(para.properties[propertyName]).toBe(expectedValue);
 }
+
+/**
+ * Assert that a specific run in a paragraph has strikethrough formatting
+ * @param {Object} parsed - Parsed DOCX object from parseDOCX()
+ * @param {number} paragraphIndex - Zero-based paragraph index
+ * @param {number} runIndex - Zero-based run index within the paragraph
+ */
+export function assertRunHasStrike(parsed, paragraphIndex, runIndex = 0) {
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertRunHasStrike');
+
+  if (para.runs.length === 0) {
+    throw new Error(`assertRunHasStrike: Paragraph ${paragraphIndex} has no text runs`);
+  }
+
+  if (runIndex >= para.runs.length) {
+    throw new Error(
+      `assertRunHasStrike: Run index ${runIndex} out of range. Paragraph has ${para.runs.length} runs.`
+    );
+  }
+
+  expect(para.runs[runIndex].strike).toBe(true);
+}
+
+/**
+ * Assert that a specific run in a paragraph does NOT have strikethrough formatting
+ * @param {Object} parsed - Parsed DOCX object from parseDOCX()
+ * @param {number} paragraphIndex - Zero-based paragraph index
+ * @param {number} runIndex - Zero-based run index within the paragraph
+ */
+export function assertRunNoStrike(parsed, paragraphIndex, runIndex = 0) {
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertRunNoStrike');
+
+  if (para.runs.length === 0) {
+    throw new Error(`assertRunNoStrike: Paragraph ${paragraphIndex} has no text runs`);
+  }
+
+  if (runIndex >= para.runs.length) {
+    throw new Error(
+      `assertRunNoStrike: Run index ${runIndex} out of range. Paragraph has ${para.runs.length} runs.`
+    );
+  }
+
+  expect(para.runs[runIndex].strike).toBeFalsy();
+}

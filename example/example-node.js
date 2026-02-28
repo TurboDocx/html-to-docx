@@ -2031,6 +2031,15 @@ const htmlString = `<!DOCTYPE html>
                 alt="3cm width, 1in height"
             />
         </div>
+
+        <h1>StrikeThrough Tests</h1>
+        <p>This is a <del>strikethough</del> test.</p>
+        <p>This is a <s>strikethough</s> test.</p>
+        <p>This is a <strike>strikethough</strike> test.</p>
+        <p>This is a <span style="text-decoration: line-through;">strikethough</span> test.</p>
+        <p>This is a <em><del>strikethough</del></em> test.</p>
+        <p>This is a <b><del>strikethough</del></b> test.</p>
+        
     </body>
 </html>`;
 

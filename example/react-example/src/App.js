@@ -32,14 +32,14 @@ const htmlString = `<!DOCTYPE html>
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with color and font-family styles"
             />
-            
+
             <p>Testing images with mixed dimensional and non-dimensional styles:</p>
             <img
                 style="width: 100px; font-family: Arial; color: blue;"
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with mixed styles"
             />
-            
+
             <p>Testing images with various non-dimensional styles:</p>
             <img
                 style="text-align: center; background-color: yellow;"
@@ -50,6 +50,42 @@ const htmlString = `<!DOCTYPE html>
                 style="border: 2px solid red; margin: 10px;"
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with border and margin"
+            />
+
+            <!-- SVG Image Tests (New Feature) -->
+            <h3>SVG Image Support</h3>
+            <p>Testing SVG images (automatically converted to PNG for maximum compatibility):</p>
+
+            <p>Simple SVG circle:</p>
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNmMGYwZjAiLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzM0OThkYiIgc3Ryb2tlPSIjMmMzZTUwIiBzdHJva2Utd2lkdGg9IjIiLz4KPC9zdmc+"
+                alt="Blue circle SVG"
+                width="100"
+                height="100"
+            />
+
+            <p>SVG with different sizes:</p>
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj4KICA8cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiMyN2FlNjAiIHJ4PSI1Ii8+CiAgPHBhdGggZD0iTSAxNSAyNSBMIDIyIDMyIEwgMzUgMTgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg=="
+                alt="Checkmark icon"
+                width="30"
+                height="30"
+            />
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj4KICA8cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiMyN2FlNjAiIHJ4PSI1Ii8+CiAgPHBhdGggZD0iTSAxNSAyNSBMIDIyIDMyIEwgMzUgMTgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg=="
+                alt="Checkmark icon"
+                width="50"
+                height="50"
+            />
+
+            <p>Inline SVG icon: <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj4KICA8cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiMyN2FlNjAiIHJ4PSI1Ii8+CiAgPHBhdGggZD0iTSAxNSAyNSBMIDIyIDMyIEwgMzUgMTgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==" alt="Success" width="20" height="20" style="vertical-align: middle;" /> SVG works inline too!</p>
+
+            <p>SVG bar chart:</p>
+            <img
+                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMjAwIDE1MCI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNmZmZmZmYiLz4KICA8cmVjdCB4PSIyMCIgeT0iMTAwIiB3aWR0aD0iMzAiIGhlaWdodD0iNDAiIGZpbGw9IiMyZWNjNzEiLz4KICA8cmVjdCB4PSI2MCIgeT0iNzAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI3MCIgZmlsbD0iIzNjOThlNyIvPgogIDxyZWN0IHg9IjEwMCIgeT0iNTAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI5MCIgZmlsbD0iI2U3NGMzYyIvPgogIDxyZWN0IHg9IjE0MCIgeT0iMzAiIHdpZHRoPSIzMCIgaGVpZ2h0PSIxMTAiIGZpbGw9IiNmMzljMTIiLz4KICA8dGV4dCB4PSIxMDAiIHk9IjE1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMzMzIj5TYWxlcyBDaGFydDwvdGV4dD4KPC9zdmc+"
+                alt="Sales chart"
+                width="200"
+                height="150"
             />
         </div>
         <div>
@@ -1659,6 +1695,33 @@ const htmlString = `<!DOCTYPE html>
             <li style="font-family: arial, helvetica, sans-serif; font-size: 12pt; line-height: 1.15;"><span style="font-family: arial, helvetica, sans-serif; font-size: 12pt;">Heading 3</span></li>
         </ul>
         <div>
+            <p>One More test case</p>
+            <p style="margin: 0in; line-height: normal; font-size: 11pt; font-family: Calibri, sans-serif;"><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">PHASE ONE</span></strong><br /><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif; color: red;">CONFIDENTIAL <br />HOURS: 1 – 2</span></strong></p>
+            <p style="margin: 0in; line-height: normal; font-size: 11pt; font-family: Calibri, sans-serif;"><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif; color: red;">TIER: 1 </span></strong></p>
+            <p style="line-height: normal; margin: 0in 0in 10pt; font-size: 11pt; font-family: Calibri, sans-serif;"><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">Scheduled Work</span></strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">: Business Hours </span><br /><strong><span style="font-size: 10.0pt; font-family: Arial, sans-serif;">Location:</span></strong>
+                <span style="font-size: 10.0pt; font-family: Arial, sans-serif;"> Remote</span>
+            </p>
+            <ul style="margin-bottom: 0in; margin-top: 0px;">
+                <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Item 1k</span>
+                    <ul style="list-style-type: circle; margin-bottom: 0in; margin-top: 0px;">
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 1</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 2</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 3</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 4</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 5</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 6</span></li>
+                    </ul>
+                </li>
+                <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Item 2</span>
+                    <ul style="list-style-type: circle; margin-bottom: 0in; margin-top: 0px;">
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 1</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 0in 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 2</span></li>
+                        <li style="line-height: normal; margin: 0in 0in 10pt 0px; font-size: 11pt; font-family: Calibri, sans-serif;"><span style="font-size: 9.0pt; font-family: Arial, sans-serif;">Sub item 1</span></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <div>
             <p>Table with empty row that could corrupt</p>
                 <table style="border-collapse: collapse; width: 100%; margin-top: 20px;" cellspacing="0">
             <thead>
@@ -1775,7 +1838,7 @@ const htmlString = `<!DOCTYPE html>
                 </p>
             </div>
         </div>
-        
+
         <!-- Image edge case tests covering aspect ratio safety, MIME validation, and error handling -->
         <div>
             <p>Testing aspect ratio safety with zero/invalid dimensions:</p>
@@ -1789,7 +1852,7 @@ const htmlString = `<!DOCTYPE html>
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Test image with zero width"
             />
-            
+
             <p>Testing extreme aspect ratios:</p>
             <img
                 style="width: 500px; height: 1px;"
@@ -1801,14 +1864,14 @@ const htmlString = `<!DOCTYPE html>
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Very tall image"
             />
-            
+
             <p>Testing auto dimensions with CSS styles:</p>
             <img
                 style="width: auto; height: auto; font-family: serif;"
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Auto dimensions with non-dimensional styles"
             />
-            
+
             <p>Testing images in figures (lineRule attribute fix):</p>
             <figure>
                 <img
@@ -1818,14 +1881,14 @@ const htmlString = `<!DOCTYPE html>
                 />
                 <figcaption>Image with consistent lineRule processing</figcaption>
             </figure>
-            
+
             <p>Testing images with max-width/max-height constraints:</p>
             <img
                 style="max-width: 200px; max-height: 150px;"
                 src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
                 alt="Image with max constraints"
             />
-            
+
             <p>Testing images exceeding maximum document width (auto-scaling):</p>
             <img
                 style="width: 2000px; height: 1500px;"
@@ -1833,7 +1896,36 @@ const htmlString = `<!DOCTYPE html>
                 alt="Oversized image that should auto-scale"
             />
         </div>
-        
+        <!-- Test case for GitHub issue #88: tables with colspan and rowspan attributes -->
+        <table style="min-width: 100%;">
+          <colgroup>
+            <col style="min-width: 25px">
+            <col style="min-width: 25px">
+            <col style="min-width: 25px">
+          </colgroup>
+          <tbody>
+            <tr>
+              <th colspan="2" rowspan="1">
+                <p>testset</p>
+              </th>
+              <th colspan="1" rowspan="1">
+                <p>test</p>
+              </th>
+            </tr>
+            <tr>
+              <td colspan="1" rowspan="2">
+                <p>data1</p>
+              </td>
+              <td colspan="1" rowspan="1">
+                <p>data2</p>
+              </td>
+              <td colspan="1" rowspan="1">
+                <p>data3</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
         <!-- Test cases for PR #100 - TinyMCE image dimensions fix -->
         <!-- Test image: Porsche 992 Turbo S - Original size: 5,807 × 2,817 pixels, 8.35 MB JPEG -->
         <div class="page-break" style="page-break-after: always"></div>
@@ -1841,7 +1933,7 @@ const htmlString = `<!DOCTYPE html>
             <h2>Testing Image Width/Height Attribute Handling (Fix for TinyMCE dimensions)</h2>
             <p>These test cases verify that width and height HTML attributes are properly honored in DOCX generation:</p>
             <p><em>Test image original size: 5,807 × 2,817 pixels (8.35 MB JPEG)</em></p>
-            
+
             <p><strong>Test 1:</strong> Image with explicit width and height attributes (should render as 100x100):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
@@ -1849,21 +1941,21 @@ const htmlString = `<!DOCTYPE html>
                 height="100"
                 alt="100x100 dimensions test"
             />
-            
+
             <p><strong>Test 2:</strong> Image with only width attribute (height should maintain aspect ratio):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
                 width="150"
                 alt="Width only test"
             />
-            
+
             <p><strong>Test 3:</strong> Image with only height attribute (width should maintain aspect ratio):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
                 height="80"
                 alt="Height only test"
             />
-            
+
             <p><strong>Test 4:</strong> Image with width/height and additional styles (TinyMCE scenario):</p>
             <img
                 style="font-family: Calibri Light;"
@@ -1872,13 +1964,13 @@ const htmlString = `<!DOCTYPE html>
                 height="60"
                 alt="TinyMCE style with dimensions"
             />
-            
+
             <p><strong>Test 5:</strong> Image without dimensions (should use original image size - fallback behavior):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
                 alt="No dimensions - fallback test"
             />
-            
+
             <p><strong>Test 6:</strong> Larger image with custom dimensions (demonstrates actual resize):</p>
             <img
                 src="https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
@@ -1886,7 +1978,65 @@ const htmlString = `<!DOCTYPE html>
                 height="100"
                 alt="Large image resized to 200x100"
             />
+
+            <h3>Unit Support Tests</h3>
+            <p><strong>Test 7:</strong> Image with pixel units (explicit px):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="180px"
+                height="90px"
+                alt="180px x 90px image"
+            />
+
+            <p><strong>Test 8:</strong> Image with point units (pt):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="144pt"
+                height="72pt"
+                alt="144pt x 72pt image (192px x 96px equivalent)"
+            />
+
+            <p><strong>Test 9:</strong> Image with centimeter units (cm):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="4cm"
+                height="2cm"
+                alt="4cm x 2cm image"
+            />
+
+            <p><strong>Test 10:</strong> Image with inch units (in):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="1.5in"
+                height="0.75in"
+                alt="1.5in x 0.75in image"
+            />
+
+            <p><strong>Test 11:</strong> Image with percentage units (% of original size):</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="10%"
+                height="10%"
+                alt="10% x 10% of original size"
+            />
+
+            <p><strong>Test 12:</strong> Mixed units - width in cm, height in inches:</p>
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Porsche_992_Turbo_S_1X7A0413.jpg"
+                width="3cm"
+                height="1in"
+                alt="3cm width, 1in height"
+            />
         </div>
+
+        <h1>StrikeThrough Tests</h1>
+        <p>This is a <del>strikethough</del> test.</p>
+        <p>This is a <s>strikethough</s> test.</p>
+        <p>This is a <strike>strikethough</strike> test.</p>
+        <p>This is a <span style="text-decoration: line-through;">strikethough</span> test.</p>
+        <p>This is a <em><del>strikethough</del></em> test.</p>
+        <p>This is a <b><del>strikethough</del></b> test.</p>
+        
     </body>
 </html>`;
 
