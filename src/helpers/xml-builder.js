@@ -689,6 +689,15 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
     }
   }
 
+  // Handle HTML align attribute (e.g., <p align="center">, <div align="right">)
+  // CSS text-align takes precedence (already set above), align is fallback
+  if (!modifiedAttributes.textAlign && vNode && vNode.properties && vNode.properties.attributes) {
+    const htmlAlign = vNode.properties.attributes.align;
+    if (htmlAlign && ['left', 'right', 'center', 'justify'].includes(htmlAlign.toLowerCase())) {
+      modifiedAttributes.textAlign = htmlAlign.toLowerCase();
+    }
+  }
+
   // paragraph only
   if (options && options.isParagraph) {
     if (isVNode(vNode) && vNode.tagName === 'blockquote') {
@@ -3359,9 +3368,13 @@ const buildTableProperties = (attributes) => {
   const tableCellMarginFragment = buildTableCellMargins(160);
   tablePropertiesFragment.import(tableCellMarginFragment);
 
-  // by default, all tables are center aligned.
-  const alignmentFragment = buildHorizontalAlignment('center');
-  tablePropertiesFragment.import(alignmentFragment);
+  // Only add table position alignment if explicitly specified via align attribute
+  if (attributes && attributes.tableAlign) {
+    const alignmentFragment = buildHorizontalAlignment(attributes.tableAlign);
+    tablePropertiesFragment.import(alignmentFragment);
+    // eslint-disable-next-line no-param-reassign
+    delete attributes.tableAlign;
+  }
 
   tablePropertiesFragment.up();
 
@@ -3554,7 +3567,22 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             ...tableBorders.strokes,
             bottom: borderStyleParser(tableStyles[tableStyle]),
           };
+        } else if (tableStyle === 'text-align') {
+          // CSS text-align on tables affects cell content, not table position
+          // Pass it to modifiedAttributes so cells can inherit it
+          if (['left', 'right', 'center', 'justify'].includes(tableStyles[tableStyle])) {
+            modifiedAttributes.textAlign = tableStyles[tableStyle];
+          }
         }
+      }
+    }
+
+    // Handle HTML align attribute for table position (e.g., <table align="center">)
+    // This controls table position, NOT cell content alignment
+    if (tableAttributes.align) {
+      const alignValue = tableAttributes.align.toLowerCase();
+      if (['left', 'right', 'center', 'justify'].includes(alignValue)) {
+        modifiedAttributes.tableAlign = alignValue;
       }
     }
 
