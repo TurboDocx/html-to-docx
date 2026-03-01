@@ -3368,10 +3368,11 @@ const buildTableProperties = (attributes) => {
   const tableCellMarginFragment = buildTableCellMargins(160);
   tablePropertiesFragment.import(tableCellMarginFragment);
 
-  // Only add table position alignment if explicitly specified via align attribute
+  // Use align attribute if provided, otherwise default to center
+  const tableAlignment = (attributes && attributes.tableAlign) ? attributes.tableAlign : 'center';
+  const alignmentFragment = buildHorizontalAlignment(tableAlignment);
+  tablePropertiesFragment.import(alignmentFragment);
   if (attributes && attributes.tableAlign) {
-    const alignmentFragment = buildHorizontalAlignment(attributes.tableAlign);
-    tablePropertiesFragment.import(alignmentFragment);
     // eslint-disable-next-line no-param-reassign
     delete attributes.tableAlign;
   }
