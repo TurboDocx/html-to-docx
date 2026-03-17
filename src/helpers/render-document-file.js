@@ -193,22 +193,66 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
   if (!imageOptions) {
     imageOptions = docxDocumentInstance.imageProcessing || defaultDocumentOptions.imageProcessing;
   }
-  if (
-    vNode.tagName === 'div' &&
-    (vNode.properties.attributes.class === 'page-break' ||
-      (vNode.properties.style && vNode.properties.style['page-break-after']))
-  ) {
-    const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
-      .ele('@w', 'p')
-      .ele('@w', 'r')
-      .ele('@w', 'br')
-      .att('@w', 'type', 'page')
-      .up()
-      .up()
-      .up();
+  if (vNode.tagName === 'div') {
+    const divAttributes = vNode.properties.attributes || {};
 
-    xmlFragment.import(paragraphFragment);
-    return;
+    // Legacy backward compat: <div class="page-break"> — keep existing behavior exactly
+    if (divAttributes.class === 'page-break') {
+      const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+        .ele('@w', 'p')
+        .ele('@w', 'r')
+        .ele('@w', 'br')
+        .att('@w', 'type', 'page')
+        .up()
+        .up()
+        .up();
+      xmlFragment.import(paragraphFragment);
+      return;
+    }
+
+    const style = vNode.properties.style || {};
+    const hasBreakBefore = style['page-break-before'] === 'always';
+    // Accept any truthy value for backward compatibility
+    const hasBreakAfter = !!style['page-break-after'];
+
+    if (hasBreakBefore || hasBreakAfter) {
+      // page-break-before: insert empty paragraph with <w:pageBreakBefore/>
+      if (hasBreakBefore) {
+        const pbFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+          .ele('@w', 'p')
+          .ele('@w', 'pPr')
+          .ele('@w', 'pageBreakBefore')
+          .up()
+          .up()
+          .up();
+        xmlFragment.import(pbFragment);
+      }
+
+      // Process children normally (no content loss)
+      if (vNodeHasChildren(vNode)) {
+        // eslint-disable-next-line no-plusplus
+        for (let index = 0; index < vNode.children.length; index++) {
+          const childVNode = vNode.children[index];
+          // eslint-disable-next-line no-use-before-define
+          await convertVTreeToXML(docxDocumentInstance, childVNode, xmlFragment, imageOptions);
+        }
+      }
+
+      // page-break-after: append empty paragraph with break run
+      if (hasBreakAfter) {
+        const paFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+          .ele('@w', 'p')
+          .ele('@w', 'r')
+          .ele('@w', 'br')
+          .att('@w', 'type', 'page')
+          .up()
+          .up()
+          .up();
+        xmlFragment.import(paFragment);
+      }
+
+      return;
+    }
   }
 
   switch (vNode.tagName) {

@@ -436,7 +436,14 @@ full fledged examples can be found under `example/`
 
 ## Notes
 
-Currently page break can be implemented by having div with classname "page-break" or style "page-break-after" despite the values of the "page-break-after", and contents inside the div element will be ignored. `<div class="page-break" style="page-break-after: always;"></div>`
+Page breaks can be added using CSS `page-break-before: always` or `page-break-after` on any block element (`<p>`, `<h1>`–`<h6>`, `<div>`, etc.):
+```html
+<p style="page-break-before: always;">This paragraph starts on a new page</p>
+<p style="page-break-after: always;">A page break follows this paragraph</p>
+<div style="page-break-before: always;"><p>Content on new page</p></div>
+```
+`page-break-before` only triggers on the value `always`. `page-break-after` triggers on any value for backward compatibility.
+The legacy `<div class="page-break"></div>` pattern is still supported for backward compatibility (contents inside are ignored).
 
 
 CSS list-style-type for `<ol>` element are now supported. Just do something like this in the HTML:
