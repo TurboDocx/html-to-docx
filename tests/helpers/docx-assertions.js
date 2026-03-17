@@ -9,6 +9,7 @@
  */
 
 import { parseDOCX } from './docx-validator.js';
+import { PAGE_BREAK_BEFORE_REGEX, PAGE_BREAK_RUN_REGEX } from './constants.js';
 
 // Re-export parseDOCX for convenience
 export { parseDOCX };
@@ -170,4 +171,34 @@ export function assertRunNoStrike(parsed, paragraphIndex, runIndex = 0) {
   }
 
   expect(para.runs[runIndex].strike).toBeFalsy();
+}
+
+/**
+ * Assert that a specific paragraph has a pageBreakBefore property in its pPr
+ * @param {Object} parsed - Parsed DOCX object from parseDOCX()
+ * @param {number} paragraphIndex - Zero-based paragraph index
+ */
+export function assertParagraphHasPageBreakBefore(parsed, paragraphIndex) {
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertParagraphHasPageBreakBefore');
+  expect(para.xml).toMatch(PAGE_BREAK_BEFORE_REGEX);
+}
+
+/**
+ * Assert that a specific paragraph does NOT have a pageBreakBefore property
+ * @param {Object} parsed - Parsed DOCX object from parseDOCX()
+ * @param {number} paragraphIndex - Zero-based paragraph index
+ */
+export function assertParagraphNoPageBreakBefore(parsed, paragraphIndex) {
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertParagraphNoPageBreakBefore');
+  expect(para.xml).not.toMatch(PAGE_BREAK_BEFORE_REGEX);
+}
+
+/**
+ * Assert that a specific paragraph has a page break run (w:br w:type="page")
+ * @param {Object} parsed - Parsed DOCX object from parseDOCX()
+ * @param {number} paragraphIndex - Zero-based paragraph index
+ */
+export function assertParagraphHasPageBreakRun(parsed, paragraphIndex) {
+  const para = validateParagraphIndex(parsed, paragraphIndex, 'assertParagraphHasPageBreakRun');
+  expect(para.xml).toMatch(PAGE_BREAK_RUN_REGEX);
 }

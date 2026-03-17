@@ -120,3 +120,32 @@ export const COLOR_REGEX = /<w:color w:val="([^"]+)"/;
  * Example: <w:sz w:val="48"/> → captures "48" (24pt font)
  */
 export const FONT_SIZE_REGEX = /<w:sz w:val="([^"]+)"/;
+
+// =============================================================================
+// PAGE BREAK PATTERNS
+// =============================================================================
+
+/**
+ * Matches a pageBreakBefore element in paragraph properties.
+ *
+ * What it matches: <w:pageBreakBefore/> or <w:pageBreakBefore />
+ * Used by: page-break tests
+ */
+export const PAGE_BREAK_BEFORE_REGEX = /<w:pageBreakBefore\s*\/>/;
+
+/**
+ * Matches a page break run element.
+ *
+ * What it matches: <w:br w:type="page"/> inside a run
+ * Used by: page-break tests
+ */
+export const PAGE_BREAK_RUN_REGEX = /<w:br[^>]*w:type="page"[^>]*\/>/;
+
+/**
+ * Matches a page break run element wrapped in a w:r element.
+ * Stricter than PAGE_BREAK_RUN_REGEX — verifies the break is inside a run.
+ *
+ * What it matches: <w:r><w:br w:type="page"/></w:r>
+ * Used by: XML structure verification tests
+ */
+export const PAGE_BREAK_RUN_IN_R_REGEX = /<w:r>\s*<w:br[^>]*w:type="page"[^>]*\/>\s*<\/w:r>/;

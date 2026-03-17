@@ -676,6 +676,15 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         if (vNodeStyleValue.trim() !== '' && vNodeStyleValue !== 'none') {
           modifiedAttributes.textShadow = vNodeStyleValue;
         }
+      } else if (vNodeStyleKey === 'page-break-before') {
+        if (vNodeStyleValue === 'always') {
+          modifiedAttributes.pageBreakBefore = true;
+        }
+      } else if (vNodeStyleKey === 'page-break-after') {
+        // Accept any truthy value for backward compatibility
+        if (vNodeStyleValue) {
+          modifiedAttributes.pageBreakAfter = true;
+        }
       }
     }
   }
@@ -1307,6 +1316,17 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           paragraphPropertiesFragment.import(textDecorationFragment);
           // we don't delete attributes.textDecoration so that it could be inherited by children nodes.
           break;
+        // Note: pageBreakAfter is not handled here — OOXML has no paragraph property for it.
+        // It is handled in buildParagraph() as a trailing break run instead.
+        case 'pageBreakBefore':
+          // eslint-disable-next-line no-case-declarations
+          const pageBreakBeforeFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+            .ele('@w', 'pageBreakBefore')
+            .up();
+          paragraphPropertiesFragment.import(pageBreakBeforeFragment);
+          // eslint-disable-next-line no-param-reassign
+          delete attributes.pageBreakBefore;
+          break;
       }
     });
 
@@ -1741,6 +1761,16 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     } else {
       paragraphFragment.import(runFragments);
     }
+  }
+  if (modifiedAttributes.pageBreakAfter) {
+    const pageBreakRunFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'r')
+      .ele('@w', 'br')
+      .att('@w', 'type', 'page')
+      .up()
+      .up();
+    paragraphFragment.import(pageBreakRunFragment);
+    delete modifiedAttributes.pageBreakAfter;
   }
   paragraphFragment.up();
 
