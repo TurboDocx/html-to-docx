@@ -4,7 +4,6 @@ import commonjs from '@rollup/plugin-commonjs';
 import { terser } from 'rollup-plugin-terser';
 import cleaner from 'rollup-plugin-cleaner';
 import builtins from 'rollup-plugin-node-builtins';
-import nodePolyfills from 'rollup-plugin-polyfill-node';
 
 import * as meta from './package.json';
 
@@ -53,36 +52,52 @@ const libraryConfig = {
 };
 
 // Standalone browser build configuration (all dependencies bundled)
-const browserConfig = {
-  input: 'index.js',
-  // Only exclude sharp (Node.js native module, not supported in browser)
-  external: ['sharp'],
-  plugins: [
-    // Only clean when building browser-only (cleaner already runs in libraryConfig for full builds)
-    ...(browserOnly ? [cleaner({ targets: ['./dist/'] })] : []),
-    resolve({
-      browser: true,
-      preferBuiltins: false,
-    }),
-    json(),
-    commonjs(),
-    nodePolyfills(),
-    terser({
-      mangle: isProduction,
-      compress: isProduction,
-    }),
-  ],
-  output: {
-    file: 'dist/html-to-docx.browser.js',
-    format: 'iife',
-    name: 'HTMLToDOCX',
-    sourcemap: !isProduction,
-    banner,
-    // Provide empty implementation for sharp in browser environment
-    globals: {
-      sharp: '(() => null)',
-    },
-  },
-};
+// Requires optional dependency: rollup-plugin-polyfill-node
+let nodePolyfills;
+try {
+  nodePolyfills = require('rollup-plugin-polyfill-node');
+} catch {
+  // rollup-plugin-polyfill-node is optional — browser build skipped if not installed
+}
 
-export default browserOnly ? [browserConfig] : [libraryConfig, browserConfig];
+const browserConfig = nodePolyfills
+  ? {
+      input: 'index.js',
+      // Only exclude sharp (Node.js native module, not supported in browser)
+      external: ['sharp'],
+      plugins: [
+        // Only clean when building browser-only (cleaner already runs in libraryConfig for full builds)
+        ...(browserOnly ? [cleaner({ targets: ['./dist/'] })] : []),
+        resolve({
+          browser: true,
+          preferBuiltins: false,
+        }),
+        json(),
+        commonjs(),
+        nodePolyfills(),
+        terser({
+          mangle: isProduction,
+          compress: isProduction,
+        }),
+      ],
+      output: {
+        file: 'dist/html-to-docx.browser.js',
+        format: 'iife',
+        name: 'HTMLToDOCX',
+        sourcemap: !isProduction,
+        banner,
+        // Provide empty implementation for sharp in browser environment
+        globals: {
+          sharp: '(() => null)',
+        },
+      },
+    }
+  : null;
+
+const configs = [libraryConfig];
+if (browserConfig) configs.push(browserConfig);
+if (browserOnly && !browserConfig) {
+  console.warn('Warning: rollup-plugin-polyfill-node not installed, skipping browser build');
+}
+
+export default browserOnly ? (browserConfig ? [browserConfig] : configs) : configs;
