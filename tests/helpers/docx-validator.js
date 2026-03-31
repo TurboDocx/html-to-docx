@@ -154,6 +154,11 @@ export function extractRunProperties(paragraphXml) {
       runProps.italic = true;
     }
 
+    // Extract strikethrough
+    if (runXml.includes('<w:strike ') || runXml.includes('<w:strike/>')) {
+      runProps.strike = true;
+    }
+
     // Extract font size
     const sizeMatch = runXml.match(FONT_SIZE_REGEX);
     if (sizeMatch) {
