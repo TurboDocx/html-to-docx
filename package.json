@@ -121,6 +121,9 @@
     "url": "https://github.com/TurboDocx/html-to-docx/issues"
   },
   "homepage": "https://github.com/TurboDocx/html-to-docx#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/preset-env": "^7.28.3",
