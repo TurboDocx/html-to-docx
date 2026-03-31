@@ -18,6 +18,20 @@ import {
 } from './constants.js';
 
 /**
+ * Decode XML entities to their character equivalents.
+ * Raw XML text nodes encode special characters (e.g. &amp; for &).
+ * This decodes them so test assertions match what users see in Word.
+ */
+function decodeXMLEntities(text) {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/&amp;/g, '&');
+}
+
+/**
  * Unzip a DOCX file buffer and return the JSZip instance
  * @param {Buffer|Uint8Array} docxBuffer - The DOCX file as a buffer
  * @returns {Promise<JSZip>} JSZip instance with DOCX contents
@@ -78,7 +92,7 @@ export function extractText(paragraphXml) {
     texts.push(match[1]);
   }
 
-  return texts.join('');
+  return decodeXMLEntities(texts.join(''));
 }
 
 /**
@@ -165,10 +179,11 @@ export function extractRunProperties(paragraphXml) {
       runProps.fontSize = parseInt(sizeMatch[1], 10);
     }
 
-    // Extract text content
-    const textMatch = runXml.match(TEXT_REGEX);
+    // Extract text content (decode XML entities to match what users see in Word)
+    // Note: TEXT_REGEX is global, so use a non-global copy to get capture groups
+    const textMatch = runXml.match(/<w:t[^>]*>(.*?)<\/w:t>/);
     if (textMatch) {
-      runProps.text = textMatch[1];
+      runProps.text = decodeXMLEntities(textMatch[1]);
     }
 
     runs.push(runProps);
