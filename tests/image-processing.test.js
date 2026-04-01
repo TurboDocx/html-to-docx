@@ -204,6 +204,26 @@ describe('Image Processing', () => {
       // Should create document with text paragraphs, invalid image is skipped
       expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(2);
     });
+
+    test('should handle data URL images inside blockquotes', async () => {
+      axios.get.mockClear();
+
+      const dataUrl = `data:image/png;base64,${PNG_1x1_BASE64}`;
+      const htmlString = `<blockquote><img src="${dataUrl}" alt="quoted image" /></blockquote>`;
+
+      const docx = await HTMLtoDOCX(htmlString, null, { fontSize: 24 });
+      const parsed = await parseDOCX(docx);
+      const mediaFiles = Object.keys(parsed.zip.files).filter((fileName) =>
+        fileName.startsWith('word/media/')
+      );
+
+      expect(docx).toBeDefined();
+      expect(Buffer.isBuffer(docx)).toBe(true);
+      expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
+      expect(mediaFiles.length).toBeGreaterThan(0);
+      expect(parsed.xml).toContain('<w:drawing>');
+      expect(axios.get).not.toHaveBeenCalled();
+    });
   });
 
   describe('Image dimension handling with data URLs', () => {
