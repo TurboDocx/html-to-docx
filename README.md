@@ -8,6 +8,7 @@
 [![Type Script](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
 [![npm](https://img.shields.io/npm/dm/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
+[![Agent Skill](https://img.shields.io/badge/agent_skill-agentskills.io-7C3AED)](https://agentskills.io)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
 
@@ -41,6 +42,28 @@ Based on the original work and assisted by the original contributors of [private
 🎯 **Production Battle-Tested** - Used in production environments processing thousands of documents. Reliable, stable, and performant at scale.
 
 🛠️ **Developer Experience** - Full TypeScript support, comprehensive documentation, and extensive examples to get you up and running in minutes.
+
+## Install via AI Agent Skill
+
+Skip the boilerplate. If you use Claude Code, GitHub Copilot, Cursor, OpenCode, OpenAI Codex CLI, or Gemini CLI, you can install the `turbodocx-html-to-docx` [Agent Skill](https://agentskills.io) and have your AI agent install the package, detect your framework, and generate working integration code in one step:
+
+```bash
+npx skills add TurboDocx/quickstart
+```
+
+Then in your editor, invoke the skill:
+
+```
+/turbodocx-html-to-docx
+```
+
+The skill will:
+1. Install `@turbodocx/html-to-docx` and any required peer dependencies
+2. Detect your project structure (Express, Next.js, Fastify, NestJS, plain Node.js, etc.)
+3. Generate a helper module and a framework-appropriate route/handler that returns a `.docx` response
+4. Add example usage that matches your existing code patterns
+
+Source for the skill lives at [TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
 ## Installation
 
