@@ -42,15 +42,7 @@ Based on the original work and assisted by the original contributors of [private
 
 🛠️ **Developer Experience** - Full TypeScript support, comprehensive documentation, and extensive examples to get you up and running in minutes.
 
-## Installation
-
-Use the npm to install the project.
-
-```bash
-npm install @turbodocx/html-to-docx
-```
-
-### Install via Agent Skill (AI-assisted setup)
+## Install via AI Agent Skill
 
 Skip the boilerplate. If you use Claude Code, GitHub Copilot, Cursor, OpenCode, OpenAI Codex CLI, or Gemini CLI, you can install the `turbodocx-html-to-docx` [Agent Skill](https://agentskills.io) and have your AI agent install the package, detect your framework, and generate working integration code in one step:
 
@@ -71,6 +63,14 @@ The skill will:
 4. Add example usage that matches your existing code patterns
 
 Source for the skill lives at [TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
+
+## Installation
+
+Use the npm to install the project.
+
+```bash
+npm install @turbodocx/html-to-docx
+```
 
 ### TypeScript Support
 
