@@ -50,6 +50,30 @@ Use the npm to install the project.
 npm install @turbodocx/html-to-docx
 ```
 
+### Install via Agent Skill (AI-assisted setup)
+
+[![skills.sh](https://skills.sh/b/TurboDocx/quickstart)](https://skills.sh/TurboDocx/quickstart)
+
+Skip the boilerplate. If you use Claude Code, GitHub Copilot, Cursor, OpenAI Codex CLI, or Gemini CLI, you can install the `turbodocx-html-to-docx` [Agent Skill](https://agentskills.io) and have your AI agent install the package, detect your framework, and generate working integration code in one step:
+
+```bash
+npx skills add TurboDocx/quickstart --skill turbodocx-html-to-docx
+```
+
+Then in your editor, invoke the skill:
+
+```
+/turbodocx-html-to-docx
+```
+
+The skill will:
+1. Install `@turbodocx/html-to-docx` and any required peer dependencies
+2. Detect your project structure (Express, Next.js, Fastify, NestJS, plain Node.js, etc.)
+3. Generate a helper module and a framework-appropriate route/handler that returns a `.docx` response
+4. Add example usage that matches your existing code patterns
+
+Source for the skill lives at [TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
+
 ### TypeScript Support
 
 This package includes TypeScript typings. No additional installation is required to use it with TypeScript projects.
