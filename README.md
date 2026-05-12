@@ -52,8 +52,6 @@ npm install @turbodocx/html-to-docx
 
 ### Install via Agent Skill (AI-assisted setup)
 
-[![skills.sh](https://skills.sh/b/TurboDocx/quickstart)](https://skills.sh/TurboDocx/quickstart)
-
 Skip the boilerplate. If you use Claude Code, GitHub Copilot, Cursor, OpenCode, OpenAI Codex CLI, or Gemini CLI, you can install the `turbodocx-html-to-docx` [Agent Skill](https://agentskills.io) and have your AI agent install the package, detect your framework, and generate working integration code in one step:
 
 ```bash
