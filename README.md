@@ -47,7 +47,7 @@ Based on the original work and assisted by the original contributors of [private
 Skip the boilerplate. If you use Claude Code, GitHub Copilot, Cursor, OpenCode, OpenAI Codex CLI, or Gemini CLI, you can install the `turbodocx-html-to-docx` [Agent Skill](https://agentskills.io) and have your AI agent install the package, detect your framework, and generate working integration code in one step:
 
 ```bash
-npx skills add TurboDocx/quickstart --skill turbodocx-html-to-docx
+npx skills add TurboDocx/quickstart
 ```
 
 Then in your editor, invoke the skill:
