@@ -2039,7 +2039,41 @@ const htmlString = `<!DOCTYPE html>
         <p>This is a <span style="text-decoration: line-through;">strikethough</span> test.</p>
         <p>This is a <em><del>strikethough</del></em> test.</p>
         <p>This is a <b><del>strikethough</del></b> test.</p>
-        
+
+        <h1>Page Break Tests (PR #187)</h1>
+        <p>The following section demonstrates CSS page-break support. The next heading uses
+           <code>style="page-break-before: always"</code> and should start on a new page.</p>
+
+        <h1 style="page-break-before: always">page-break-before on a heading</h1>
+        <p>This heading was forced onto a new page via <code>page-break-before: always</code>.</p>
+
+        <p style="page-break-before: always">This paragraph also uses
+           <code>page-break-before: always</code> and starts its own page.</p>
+
+        <p style="page-break-after: always">This paragraph uses
+           <code>page-break-after: always</code> — content after it appears on the next page.</p>
+
+        <p>This sentence sits on a new page because of the preceding page-break-after.</p>
+
+        <h2>Legacy div.page-break (backward compatible)</h2>
+        <p>The original page-break marker still works:</p>
+        <div class="page-break"></div>
+        <p>This paragraph follows <code>&lt;div class="page-break"&gt;&lt;/div&gt;</code>.</p>
+
+        <h2>Divs with CSS page-break styles</h2>
+        <div style="page-break-before: always">
+            <p>This div uses <code>page-break-before: always</code>; its children render normally
+               but a page break is inserted before the div's content.</p>
+            <p>Multiple paragraphs inside the same div stay together on the new page.</p>
+        </div>
+
+        <div style="page-break-after: always">
+            <p>This div uses <code>page-break-after: always</code>; the break is emitted after the
+               div's last child.</p>
+        </div>
+
+        <p>Final paragraph — appears after the trailing page-break-after above.</p>
+
     </body>
 </html>`;
 
