@@ -5,7 +5,7 @@
 name: TurboDocx DOCX Diff Report
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
       - develop
