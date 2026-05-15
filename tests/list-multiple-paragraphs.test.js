@@ -678,8 +678,7 @@ describe('List items with multiple paragraphs - Issue #145', () => {
      * original document order, using the bucketing only to decide whether each
      * child is a continuation paragraph vs a sublist vs inline text.
      */
-    // eslint-disable-next-line jest/no-disabled-tests
-    test.skip('outer li prefix text renders BEFORE its nested list (currently broken)', async () => {
+    test('outer li prefix text renders BEFORE its nested list (currently broken)', async () => {
       const htmlString = `
         <ul>
           <li>
@@ -710,8 +709,7 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       expect(srilankanIdx).toBeLessThan(assamIdx);
     });
 
-    // eslint-disable-next-line jest/no-disabled-tests
-    test.skip('inner <ol> retains its list-style-type when the outer li also has text (currently broken)', async () => {
+    test('inner <ol> retains its list-style-type when the outer li also has text (currently broken)', async () => {
       const htmlString = `
         <ul>
           <li>
@@ -733,6 +731,58 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       expect(numberingXml).toMatch(/<w:numFmt w:val="lowerLetter"/);
       // data-start="2" must round-trip into <w:start w:val="2"/>.
       expect(numberingXml).toMatch(/<w:start w:val="2"/);
+    });
+
+    /**
+     * createNumbering must be called in document order (depth-first within each
+     * <li>'s subtree), matching pre-#148 behavior. If sibling <li>s' direct
+     * sublists get numbered before any of them is recursed into, the inner
+     * lower-alpha ol's abstractNumId lands AFTER the next sibling's outer ol —
+     * which is what produced the document.xml/numbering.xml structural diff
+     * during the PR #148 QA.
+     */
+    test('nested-first list ol receives a smaller abstractNumId than the next sibling li\'s outer ol', async () => {
+      const htmlString = `
+        <ul>
+          <li>Tea
+            <ol>
+              <li>Black tea
+                <ol style="list-style-type:lower-alpha;" data-start="2">
+                  <li>Srilankan</li>
+                </ol>
+              </li>
+            </ol>
+          </li>
+          <li>Milk
+            <ol>
+              <li>Cow Milk</li>
+            </ol>
+          </li>
+        </ul>
+      `;
+
+      const docx = await HTMLtoDOCX(htmlString);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(docx);
+      const numberingXml = await zip.file('word/numbering.xml').async('string');
+
+      // Extract every <w:abstractNum w:abstractNumId="N"> ... </w:abstractNum>
+      // and find which one carries the lower-alpha format and which carries
+      // decimal at the top of a non-Tea subtree (i.e. Milk's ol).
+      const abstractBlocks = [...numberingXml.matchAll(/<w:abstractNum w:abstractNumId="(\d+)">([\s\S]*?)<\/w:abstractNum>/g)];
+      const lowerLetterIds = abstractBlocks
+        .filter(([, , content]) => /<w:numFmt w:val="lowerLetter"/.test(content))
+        .map(([, id]) => parseInt(id, 10));
+      expect(lowerLetterIds.length).toBe(1);
+
+      // The lower-alpha abstractNumId must NOT be the highest. There must be
+      // a decimal abstractNum at a higher index (that's Milk's outer ol),
+      // proving the lower-alpha was allocated before we moved on to Milk.
+      const decimalIdsAfterLowerLetter = abstractBlocks
+        .filter(([, id, content]) => parseInt(id, 10) > lowerLetterIds[0] && /<w:numFmt w:val="decimal"/.test(content))
+        .map(([, id]) => parseInt(id, 10));
+
+      expect(decimalIdsAfterLowerLetter.length).toBeGreaterThanOrEqual(1);
     });
   });
 });
