@@ -2082,6 +2082,57 @@ const htmlString = `<!DOCTYPE html>
 
         <p>Final paragraph — appears after the trailing page-break-after above.</p>
 
+        <h1>Alignment Tests (PR #186 — HTML align attribute + table alignment)</h1>
+
+        <h2>Paragraph alignment via the HTML align attribute</h2>
+        <p align="left">Paragraph with align="left".</p>
+        <p align="center">Paragraph with align="center".</p>
+        <p align="right">Paragraph with align="right".</p>
+        <p align="justify">Paragraph with align="justify". Lorem ipsum dolor sit amet,
+           consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore
+           magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+
+        <h2>CSS text-align should take precedence over align attribute</h2>
+        <p align="left" style="text-align: right">align="left" but style="text-align: right" — should render RIGHT aligned.</p>
+        <p align="right" style="text-align: center">align="right" but style="text-align: center" — should render CENTER aligned.</p>
+
+        <h2>Div alignment via the HTML align attribute</h2>
+        <div align="center"><p>This paragraph is inside a div with align="center".</p></div>
+        <div align="right"><p>This paragraph is inside a div with align="right".</p></div>
+
+        <h2>Table positional alignment via the align attribute</h2>
+        <p>Left-aligned table:</p>
+        <table align="left" style="border-collapse:collapse;" border="1">
+            <tr><td>Row 1, cell 1</td><td>Row 1, cell 2</td></tr>
+            <tr><td>Row 2, cell 1</td><td>Row 2, cell 2</td></tr>
+        </table>
+        <p>Right-aligned table:</p>
+        <table align="right" style="border-collapse:collapse;" border="1">
+            <tr><td>Row 1, cell 1</td><td>Row 1, cell 2</td></tr>
+            <tr><td>Row 2, cell 1</td><td>Row 2, cell 2</td></tr>
+        </table>
+        <p>Table with align="right" plus style="text-align:center" on cells:</p>
+        <table align="right" style="border-collapse:collapse; text-align:center" border="1">
+            <tr><td>Row 1, cell 1</td><td>Row 1, cell 2</td></tr>
+            <tr><td>Row 2, cell 1</td><td>Row 2, cell 2</td></tr>
+        </table>
+
+        <h2>Table cell border overrides (regression coverage for fixupTableCellBorder swap fix)</h2>
+        <p>The PR fixes a bug where <code>borderColor</code> and <code>borderStrike</code> were
+           initialized from swapped fields when a cell overrode only one of color/style per side.</p>
+        <table style="border-collapse: collapse;" border="1">
+            <tr>
+                <td>Default border</td>
+                <td style="border-top-color: #ff0000;">Cell overriding only border-top-color (red)</td>
+                <td style="border-bottom-style: dashed;">Cell overriding only border-bottom-style (dashed)</td>
+            </tr>
+            <tr>
+                <td style="border-left-color: #0000ff;">Cell overriding only border-left-color (blue)</td>
+                <td style="border-right-style: dotted;">Cell overriding only border-right-style (dotted)</td>
+                <td>Default border</td>
+            </tr>
+        </table>
+
     </body>
 </html>`;
 
