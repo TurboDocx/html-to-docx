@@ -123,6 +123,14 @@ const htmlString = `<!DOCTYPE html>
         <blockquote>
             For 50 years, WWF has been protecting the future of nature. The world's leading conservation organization, WWF works in 100 countries and is supported by 1.2 million members in the United States and close to 5 million globally.
         </blockquote>
+        <!-- Blockquote containing an image (regression coverage for PR #190) -->
+        <blockquote>
+            <img
+                src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
+                alt="Red dot inside a blockquote"
+            />
+            Image rendered inside a blockquote — exercises the docxDocumentInstance pass-through in buildRun().
+        </blockquote>
         <p>
             <strong>
                 Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make
