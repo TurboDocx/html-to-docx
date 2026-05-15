@@ -689,6 +689,15 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
     }
   }
 
+  // Handle HTML align attribute (e.g., <p align="center">, <div align="right">)
+  // CSS text-align takes precedence (already set above), align is fallback
+  if (!modifiedAttributes.textAlign && vNode && vNode.properties && vNode.properties.attributes) {
+    const htmlAlign = vNode.properties.attributes.align;
+    if (htmlAlign && ['left', 'right', 'center', 'justify'].includes(htmlAlign.toLowerCase())) {
+      modifiedAttributes.textAlign = htmlAlign.toLowerCase();
+    }
+  }
+
   // paragraph only
   if (options && options.isParagraph) {
     if (isVNode(vNode) && vNode.tagName === 'blockquote') {
@@ -1956,8 +1965,8 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.top;
-      let borderColor = attributes.tableCellBorder.strokes.top;
-      let borderStrike = attributes.tableCellBorder.colors.top;
+      let borderColor =  attributes.tableCellBorder.colors.top;
+      let borderStrike = attributes.tableCellBorder.strokes.top;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-top') {
@@ -2040,8 +2049,8 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.bottom;
-      let borderColor = attributes.tableCellBorder.strokes.bottom;
-      let borderStrike = attributes.tableCellBorder.colors.bottom;
+      let borderColor = attributes.tableCellBorder.colors.bottom;
+      let borderStrike = attributes.tableCellBorder.strokes.bottom;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-bottom') {
@@ -2126,8 +2135,8 @@ const fixupTableCellBorder = (
       }
       indexes.sort((a, b) => a.index - b.index);
       let borderSize = attributes.tableCellBorder.left;
-      let borderColor = attributes.tableCellBorder.strokes.left;
-      let borderStrike = attributes.tableCellBorder.colors.left;
+      let borderColor = attributes.tableCellBorder.colors.left;
+      let borderStrike = attributes.tableCellBorder.strokes.left;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-left') {
@@ -2208,8 +2217,8 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.right;
-      let borderColor = attributes.tableCellBorder.strokes.right;
-      let borderStrike = attributes.tableCellBorder.colors.right;
+      let borderColor = attributes.tableCellBorder.colors.right;
+      let borderStrike = attributes.tableCellBorder.strokes.right;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-right') {
@@ -2716,7 +2725,7 @@ const buildTableCell = async (
     if (vNode.properties.style) {
       modifiedAttributes = {
         ...modifiedAttributes,
-        ...modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, attributes),
+        ...modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, modifiedAttributes),
       };
       fixupTableCellBorder(
         vNode,
@@ -2951,11 +2960,6 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       } else if (spanObjectKey === 'border-top-color') {
         cellProperties.tableCellBorder.colors = {
           ...cellProperties.tableCellBorder.colors,
-          top: fixupColorCode(spanObject[spanObjectKey]),
-        };
-      } else if (spanObjectKey === 'border-top-color') {
-        tableBorders.colors = {
-          ...tableBorders.colors,
           top: fixupColorCode(spanObject[spanObjectKey]),
         };
       } else if (spanObjectKey === 'border-style') {
@@ -3364,9 +3368,14 @@ const buildTableProperties = (attributes) => {
   const tableCellMarginFragment = buildTableCellMargins(160);
   tablePropertiesFragment.import(tableCellMarginFragment);
 
-  // by default, all tables are center aligned.
-  const alignmentFragment = buildHorizontalAlignment('center');
+  // Use align attribute if provided, otherwise default to center
+  const tableAlignment = (attributes && attributes.tableAlign) ? attributes.tableAlign : 'center';
+  const alignmentFragment = buildHorizontalAlignment(tableAlignment);
   tablePropertiesFragment.import(alignmentFragment);
+  if (attributes && attributes.tableAlign) {
+    // eslint-disable-next-line no-param-reassign
+    delete attributes.tableAlign;
+  }
 
   tablePropertiesFragment.up();
 
@@ -3395,6 +3404,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
       strokes: setUpDirectionalBorderStroke(borderStrike),
       colors: setUpDirectionalBorderColor(borderColor),
     };
+    if (borderSize > 0) {
+      setUpDirectionalBorderSize(tableBorders, borderSize);
+      setUpDirectionalBorderSize(tableCellBorders, borderSize);
+    }
     // eslint-disable-next-line no-restricted-globals
     if (!isNaN(tableAttributes.border)) {
       modifiedAttributes.isTableBorderAttributeGiven = true;
@@ -3555,7 +3568,22 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             ...tableBorders.strokes,
             bottom: borderStyleParser(tableStyles[tableStyle]),
           };
+        } else if (tableStyle === 'text-align') {
+          // CSS text-align on tables affects cell content, not table position
+          // Pass it to modifiedAttributes so cells can inherit it
+          if (['left', 'right', 'center', 'justify'].includes(tableStyles[tableStyle])) {
+            modifiedAttributes.textAlign = tableStyles[tableStyle];
+          }
         }
+      }
+    }
+
+    // Handle HTML align attribute for table position (e.g., <table align="center">)
+    // This controls table position, NOT cell content alignment
+    if (tableAttributes.align) {
+      const alignValue = tableAttributes.align.toLowerCase();
+      if (['left', 'right', 'center', 'justify'].includes(alignValue)) {
+        modifiedAttributes.tableAlign = alignValue;
       }
     }
 
