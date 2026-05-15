@@ -135,4 +135,173 @@ describe('Table cell border fixup (PR #186)', () => {
     const { xml } = await parseDOCX(buf);
     expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
   });
+
+  test('multi-row table — first-row top and last-row bottom both stay correct', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr><td style="border-top-width: 5px;">Row 1 wider top</td></tr>
+        <tr><td>Middle row</td></tr>
+        <tr><td style="border-bottom-width: 5px;">Row 3 wider bottom</td></tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('multi-column row — first-col left and last-col right both stay correct', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr>
+          <td style="border-left-width: 5px;">Col 1 wider left</td>
+          <td>Middle col</td>
+          <td style="border-right-width: 5px;">Col 3 wider right</td>
+        </tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('row-level style on <tr> propagates through fixup and keeps slots correct', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr style="border-top-width: 6px;">
+          <td>A</td>
+          <td>B</td>
+        </tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('border shorthand on a cell coexisting with a single-side override stays correct', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr>
+          <td style="border: 2px solid #008000; border-top-color: #ff8800;">A</td>
+          <td style="border: 2px solid #008000; border-bottom-style: dashed;">B</td>
+          <td style="border: 2px solid #008000; border-left-width: 5px;">C</td>
+        </tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('cell border-style: hidden produces a valid nil/hidden val and no swap on other sides', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr>
+          <td style="border-top-style: hidden; border-bottom-width: 5px;">A</td>
+        </tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('cell with rowspan and per-side width bump still keeps slots valid', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr>
+          <td rowspan="2" style="border-top-width: 5px; border-left-width: 5px;">Span</td>
+          <td>R1c2</td>
+        </tr>
+        <tr>
+          <td>R2c2</td>
+        </tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('cell with colspan and per-side width bump still keeps slots valid', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr>
+          <td colspan="2" style="border-bottom-width: 5px;">Spans two columns</td>
+        </tr>
+        <tr>
+          <td>R2c1</td>
+          <td>R2c2</td>
+        </tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('conflicting shorthand and per-side definitions on the same cell stay valid', async () => {
+    const html = `
+      <table border="1" style="border-collapse: collapse;">
+        <tr>
+          <td style="border: 1px solid red; border-top: 3px dashed blue;">Conflict 1</td>
+          <td style="border-top: 3px dashed blue; border: 1px solid red;">Conflict 2 (reverse order)</td>
+        </tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('empty table does not crash and produces no malformed borders', async () => {
+    const buf = await HTMLtoDOCX('<table border="1"></table>', {});
+    const { xml } = await parseDOCX(buf);
+    const borders = findCellBorders(xml);
+    // Either zero borders or each is valid — both are acceptable.
+    for (const tcBorders of borders) {
+      for (const side of ['top', 'bottom', 'left', 'right']) {
+        const parsed = parseSide(tcBorders, side);
+        if (parsed) expect(VALID_BORDER_STYLES.has(parsed.val)).toBe(true);
+      }
+    }
+  });
+
+  test('single-row single-cell tiny table still produces valid border slots', async () => {
+    const buf = await HTMLtoDOCX('<table border="1"><tr><td>only</td></tr></table>', {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
+
+  test('table with no border attribute and a per-side cell width bump stays valid', async () => {
+    // No table-level border — exercises path where tableCellBorder is initialized empty.
+    const html = `
+      <table style="border-collapse: collapse;">
+        <tr><td style="border-top-width: 4px;">A</td></tr>
+      </table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    const borders = findCellBorders(xml);
+    // If no borders are emitted that's fine; if any are, they must be valid.
+    for (const tcBorders of borders) {
+      for (const side of ['top', 'bottom', 'left', 'right']) {
+        const parsed = parseSide(tcBorders, side);
+        if (parsed) expect(VALID_BORDER_STYLES.has(parsed.val)).toBe(true);
+      }
+    }
+  });
+
+  test('deeply nested tables (3 levels) keep border slot invariants', async () => {
+    const html = `
+      <table border="1"><tr><td>
+        <table border="1"><tr><td>
+          <table border="1"><tr><td style="border-top-width: 4px;">Deep</td></tr></table>
+        </td></tr></table>
+      </td></tr></table>
+    `;
+    const buf = await HTMLtoDOCX(html, {});
+    const { xml } = await parseDOCX(buf);
+    expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
+  });
 });

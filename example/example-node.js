@@ -2133,6 +2133,62 @@ const htmlString = `<!DOCTYPE html>
             </tr>
         </table>
 
+        <h2>More alignment + border scenarios</h2>
+
+        <h3 align="center">Heading 3 with align="center"</h3>
+        <h4 align="right">Heading 4 with align="right"</h4>
+
+        <p>Cells bumping border-*-width (no color/style override) — exercises the fixup write-back path:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td style="border-top-width: 4px;">Wider top</td>
+                <td style="border-bottom-width: 4px;">Wider bottom</td>
+                <td style="border-left-width: 4px;">Wider left</td>
+                <td style="border-right-width: 4px;">Wider right</td>
+            </tr>
+            <tr>
+                <td style="border-top-width: 4px; border-bottom-width: 4px;">Wider top &amp; bottom</td>
+                <td style="border-left-width: 4px; border-right-width: 4px;">Wider left &amp; right</td>
+                <td style="border-top-width: 4px; border-left-width: 4px;">Wider top-left corner</td>
+                <td style="border-bottom-width: 4px; border-right-width: 4px;">Wider bottom-right corner</td>
+            </tr>
+        </table>
+
+        <p>Cell with border shorthand vs per-side override on the same cell:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td style="border: 2px solid #008000;">All sides green via shorthand</td>
+                <td style="border: 2px solid #008000; border-top-color: #ff8800;">Green shorthand + top overridden to orange</td>
+                <td style="border: 2px solid #008000; border-bottom-style: dashed;">Green shorthand + bottom-style dashed</td>
+            </tr>
+        </table>
+
+        <p>Row-level style applied to a tr (propagates to its cells):</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr style="border: 2px solid #800080;">
+                <td>Row with purple shorthand border</td>
+                <td>Another cell in the same row</td>
+            </tr>
+            <tr>
+                <td>Default row below</td>
+                <td>Another default-row cell</td>
+            </tr>
+        </table>
+
+        <p>Nested table alignment (outer aligned right, inner aligned left):</p>
+        <table align="right" border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>Outer cell</td>
+                <td>
+                    <table align="left" border="1" style="border-collapse: collapse;">
+                        <tr><td>Inner A</td><td>Inner B</td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <p align="center">A center-aligned paragraph wedged after the nested-table block to verify alignment state doesn't leak.</p>
+
     </body>
 </html>`;
 
