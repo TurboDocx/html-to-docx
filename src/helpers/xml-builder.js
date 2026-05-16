@@ -2862,7 +2862,7 @@ const buildTableCell = async (
           await buildList(childVNode, docxDocumentInstance, tableCellFragment);
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
-        // FIX for Issue #147: render nested table in table cell
+        // Issue #147: render nested <table> in a table cell.
         // eslint-disable-next-line no-use-before-define
         const nestedTableFragment = await buildTable(
           childVNode,
@@ -2873,6 +2873,15 @@ const buildTableCell = async (
           docxDocumentInstance
         );
         tableCellFragment.import(nestedTableFragment);
+        // OOXML requires every <w:tc> to end with a <w:p>. If the nested
+        // table is the cell's final child, Word marks the document as
+        // corrupted on open (LibreOffice is lenient). Append a sentinel
+        // empty paragraph so the structural invariant holds regardless
+        // of what follows in the source HTML.
+        const trailingParagraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+          .ele('@w', 'p')
+          .up();
+        tableCellFragment.import(trailingParagraphFragment);
       } else {
         const paragraphFragment = await buildParagraph(
           childVNode,

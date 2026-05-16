@@ -350,6 +350,67 @@ describe('Nested Tables - Issue #147', () => {
    * Edge-case stress suite — exercise the nested-table path with patterns
    * that previously broke or could surface latent issues.
    */
+  /**
+   * Microsoft Word strictly enforces OOXML's invariant that every <w:tc>
+   * ends with a <w:p>. LibreOffice is lenient. If a nested table is the
+   * last child of its containing cell with no trailing paragraph, Word
+   * reports the file as corrupted. This block pins the contract.
+   */
+  describe('OOXML structural validity (Word compatibility)', () => {
+    const JSZip = require('jszip');
+    async function getDocXml(html) {
+      const buf = await HTMLtoDOCX(html);
+      const zip = await JSZip.loadAsync(buf);
+      return zip.file('word/document.xml').async('string');
+    }
+
+    test('no cell ends directly with </w:tbl></w:tc> (Word would mark file corrupted)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1"><tr><td>inner</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const xml = await getDocXml(html);
+      // Tolerant of whitespace between tags.
+      const bad = (xml.match(/<\/w:tbl>\s*<\/w:tc>/g) || []).length;
+      expect(bad).toBe(0);
+    });
+
+    test('multiple cells each ending with nested tables — none violate the rule', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td><table border="1"><tr><td>A</td></tr></table></td>
+            <td><table border="1"><tr><td>B</td></tr></table></td>
+            <td><table border="1"><tr><td>C</td></tr></table></td>
+          </tr>
+        </table>
+      `;
+      const xml = await getDocXml(html);
+      const bad = (xml.match(/<\/w:tbl>\s*<\/w:tc>/g) || []).length;
+      expect(bad).toBe(0);
+    });
+
+    test('deeply nested tables — none of the cells violate the rule', async () => {
+      const html = `
+        <table border="1"><tr><td>
+          <table border="1"><tr><td>
+            <table border="1"><tr><td>
+              <table border="1"><tr><td>deep</td></tr></table>
+            </td></tr></table>
+          </td></tr></table>
+        </td></tr></table>
+      `;
+      const xml = await getDocXml(html);
+      const bad = (xml.match(/<\/w:tbl>\s*<\/w:tc>/g) || []).length;
+      expect(bad).toBe(0);
+    });
+  });
+
   describe('Edge cases — stress tests', () => {
     const JSZip = require('jszip');
     async function inspect(html) {
