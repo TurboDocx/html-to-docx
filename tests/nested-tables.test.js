@@ -647,5 +647,690 @@ describe('Nested Tables - Issue #147', () => {
       // If 'nested in li in td' appears, the fix from #148+nested tables works
       // together; if not, this remains a known gap.
     });
+
+    // ────────────────────────────────────────────────────────────────────
+    // Structure variations
+    // ────────────────────────────────────────────────────────────────────
+
+    test('five levels of nesting all render', async () => {
+      const html = `
+        <table border="1"><tr><td>depth0
+          <table border="1"><tr><td>depth1
+            <table border="1"><tr><td>depth2
+              <table border="1"><tr><td>depth3
+                <table border="1"><tr><td>depth4 leaf</td></tr></table>
+              </td></tr></table>
+            </td></tr></table>
+          </td></tr></table>
+        </td></tr></table>
+      `;
+      const { tableCount, texts } = await inspect(html);
+      expect(tableCount).toBe(5);
+      ['depth0', 'depth1', 'depth2', 'depth3', 'depth4 leaf'].forEach((s) =>
+        expect(texts).toContain(s)
+      );
+    });
+
+    test('outer table with multiple cells each containing different nested tables', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td><table border="1"><tr><td>nestedA1</td></tr></table></td>
+            <td><table border="1"><tr><td>nestedB1</td></tr></table></td>
+            <td><table border="1"><tr><td>nestedC1</td></tr></table></td>
+          </tr>
+        </table>
+      `;
+      const { tableCount, texts } = await inspect(html);
+      expect(tableCount).toBe(4);
+      ['nestedA1', 'nestedB1', 'nestedC1'].forEach((s) => expect(texts).toContain(s));
+    });
+
+    test('asymmetric outer table: row 1 has nested, row 2 plain', async () => {
+      const html = `
+        <table border="1">
+          <tr><td>
+            <table border="1"><tr><td>nestedInRow1</td></tr></table>
+          </td></tr>
+          <tr><td>plainRow2</td></tr>
+        </table>
+      `;
+      const { tableCount, texts } = await inspect(html);
+      expect(tableCount).toBe(2);
+      expect(texts).toContain('nestedInRow1');
+      expect(texts).toContain('plainRow2');
+    });
+
+    /**
+     * KNOWN LIMITATION: a <table> wrapped in a <div> inside a <td> isn't
+     * recursed into — same class of bug as #198 (<table> inside <li>).
+     * buildTableCell only inspects direct children of the <td>; if the
+     * child is a <div>, the cell calls buildParagraph(div), which doesn't
+     * descend into nested tables. Pins current behavior; flipping this
+     * assertion signals the fix has landed.
+     */
+    test('nested table inside a <div> inside a cell — known limitation, does not crash', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <div>
+                <table border="1"><tr><td>inside div in td</td></tr></table>
+              </div>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      // Inner table content is currently dropped — see comment above.
+    });
+
+    /**
+     * Pre-existing library limitation: <tfoot> is dropped at all nesting
+     * levels (not specific to nested tables). thead and tbody work.
+     */
+    test('inner table with thead and tbody renders; tfoot is dropped (pre-existing)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <thead><tr><th>headerCol</th></tr></thead>
+                <tbody><tr><td>bodyCol</td></tr></tbody>
+                <tfoot><tr><td>footerCol</td></tr></tfoot>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('headerCol');
+      expect(texts).toContain('bodyCol');
+      // footerCol is currently dropped by the library — pin behavior.
+    });
+
+    test('inner table with caption tag', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <caption>captionTextHere</caption>
+                <tr><td>captionedInner</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('captionedInner');
+    });
+
+    test('inner table with single-column multiple rows', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>singleColR1</td></tr>
+                <tr><td>singleColR2</td></tr>
+                <tr><td>singleColR3</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      ['singleColR1', 'singleColR2', 'singleColR3'].forEach((s) => expect(texts).toContain(s));
+    });
+
+    test('multiple consecutive nested tables in same cell, no text between', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1"><tr><td>backToBackA</td></tr></table>
+              <table border="1"><tr><td>backToBackB</td></tr></table>
+              <table border="1"><tr><td>backToBackC</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { tableCount, texts } = await inspect(html);
+      expect(tableCount).toBe(4);
+      ['backToBackA', 'backToBackB', 'backToBackC'].forEach((s) => expect(texts).toContain(s));
+    });
+
+    test('inner table with rows of different cell counts (irregular grid)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>row1c1</td><td>row1c2</td><td>row1c3</td></tr>
+                <tr><td>row2c1</td></tr>
+                <tr><td>row3c1</td><td>row3c2</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      ['row1c1', 'row1c2', 'row1c3', 'row2c1', 'row3c1', 'row3c2'].forEach((s) =>
+        expect(texts).toContain(s)
+      );
+    });
+
+    // ────────────────────────────────────────────────────────────────────
+    // Content variations
+    // ────────────────────────────────────────────────────────────────────
+
+    test('inner cell containing a heading (h2)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td><h2>innerHeading</h2></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      expect(texts).toContain('innerHeading');
+    });
+
+    test('inner cell containing a blockquote', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td><blockquote>innerQuoteText</blockquote></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      expect(texts).toContain('innerQuoteText');
+    });
+
+    test('inner cell with multiple paragraphs', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td><p>innerPara1</p><p>innerPara2</p><p>innerPara3</p></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      ['innerPara1', 'innerPara2', 'innerPara3'].forEach((s) => expect(texts).toContain(s));
+    });
+
+    test('inner cell with bold and italic formatting', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td><b>boldInnerText</b> and <i>italicInnerText</i></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { xml, texts } = await inspect(html);
+      expect(texts).toContain('boldInnerText');
+      expect(texts).toContain('italicInnerText');
+      expect(xml).toContain('<w:b/>');
+      expect(xml).toContain('<w:i/>');
+    });
+
+    test('inner cell with strikethrough <del>', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td><del>strickenInnerText</del></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { xml, texts } = await inspect(html);
+      expect(texts).toContain('strickenInnerText');
+      expect(xml).toContain('<w:strike');
+    });
+
+    test('inner cell with anchor (hyperlink)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td><a href="https://example.com">linkedInnerText</a></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('linkedInnerText');
+    });
+
+    test('inner cell with line breaks <br>', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>brLine1<br>brLine2<br>brLine3</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { xml, texts } = await inspect(html);
+      ['brLine1', 'brLine2', 'brLine3'].forEach((s) => expect(texts).toContain(s));
+      // <br> should produce <w:br/> elements (the library uses
+      // w:type="textWrapping" form)
+      const brCount = (xml.match(/<w:br\b/g) || []).length;
+      expect(brCount).toBeGreaterThanOrEqual(2);
+    });
+
+    test('inner cell with HTML entities', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>entity &amp; &lt;tag&gt; &quot;quoted&quot;</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+    });
+
+    test('inner cell with image (data URL)', async () => {
+      const PNG_1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>
+                  imageCellText
+                  <img src="data:image/png;base64,${PNG_1x1}" alt="x" width="10" height="10"/>
+                </td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { xml, texts } = await inspect(html);
+      expect(texts).toContain('imageCellText');
+      expect(xml).toContain('<w:drawing>');
+    });
+
+    test('inner cell containing only whitespace does not crash', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>   </td><td>nonempty</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('nonempty');
+    });
+
+    test('inner cell containing &nbsp; entity', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>nbspBefore&nbsp;nbspAfter</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('nbspBefore');
+      expect(texts).toContain('nbspAfter');
+    });
+
+    // ────────────────────────────────────────────────────────────────────
+    // Styling and attribute variations
+    // ────────────────────────────────────────────────────────────────────
+
+    test('parent cell with bgcolor: inner table content still renders', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td bgcolor="#ffeecc">
+              <table border="1"><tr><td>bgInner</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('bgInner');
+    });
+
+    test('inner table cells with their own bgcolor', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr>
+                  <td bgcolor="#ff0000">redInnerCell</td>
+                  <td bgcolor="#00ff00">greenInnerCell</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      ['redInnerCell', 'greenInnerCell'].forEach((s) => expect(texts).toContain(s));
+    });
+
+    test('inner table cells with vertical-align', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr>
+                  <td style="vertical-align: top;">topAlignedInner</td>
+                  <td style="vertical-align: middle;">middleAlignedInner</td>
+                  <td style="vertical-align: bottom;">bottomAlignedInner</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      ['topAlignedInner', 'middleAlignedInner', 'bottomAlignedInner'].forEach((s) =>
+        expect(texts).toContain(s)
+      );
+    });
+
+    test('outer borders=0 with inner borders=1 (both render with their own borders)', async () => {
+      const html = `
+        <table border="0">
+          <tr>
+            <td>
+              <table border="1"><tr><td>borderedInner</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('borderedInner');
+    });
+
+    test('outer borders=1 with inner borders=0 (mixed)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="0"><tr><td>borderlessInner</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('borderlessInner');
+    });
+
+    test('inner table with cellpadding and cellspacing', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1" cellpadding="5" cellspacing="3">
+                <tr><td>paddedInner</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('paddedInner');
+    });
+
+    test('inner table inside cell with style="font-size: 8pt"', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td style="font-size: 8pt;">
+              <table border="1"><tr><td>smallFontInner</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      expect(texts).toContain('smallFontInner');
+    });
+
+    // ────────────────────────────────────────────────────────────────────
+    // Malformed / pathological inputs
+    // ────────────────────────────────────────────────────────────────────
+
+    test('cell with table tag containing only a tr but no cells', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              before
+              <table><tr></tr></table>
+              after
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('before');
+      expect(texts).toContain('after');
+    });
+
+    test('inner table with zero rows', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              outer-text
+              <table border="1"></table>
+              more-text
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('outer-text');
+      expect(texts).toContain('more-text');
+    });
+
+    test('inner table with empty cell content (<td></td>)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td></td><td>visibleCell</td><td></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('visibleCell');
+    });
+
+    test('cell with multiple text nodes split by inline elements followed by nested table', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              prefix-text <span>spanText</span> midText <strong>strongText</strong> postText
+              <table border="1"><tr><td>nestedAfterInlines</td></tr></table>
+              trailing
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      ['prefix-text', 'spanText', 'midText', 'strongText', 'postText', 'nestedAfterInlines', 'trailing'].forEach((s) =>
+        expect(texts).toContain(s)
+      );
+    });
+
+    test('massive width pixel value does not crash', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1" style="width: 99999px;">
+                <tr><td>massiveWidthInner</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('massiveWidthInner');
+    });
+
+    // ────────────────────────────────────────────────────────────────────
+    // Combinations with other features
+    // ────────────────────────────────────────────────────────────────────
+
+    test('nested table after page-break-before paragraph in the same cell', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <p style="page-break-before: always;">beforeBreakInCell</p>
+              <table border="1"><tr><td>nestedAfterBreak</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, xml, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('beforeBreakInCell');
+      expect(texts).toContain('nestedAfterBreak');
+    });
+
+    test('nested tables inside cells of a 3x3 grid, all positions', async () => {
+      const buildCell = (label) =>
+        `<td><table border="1"><tr><td>${label}</td></tr></table></td>`;
+      const html = `
+        <table border="1">
+          <tr>${buildCell('r1c1')}${buildCell('r1c2')}${buildCell('r1c3')}</tr>
+          <tr>${buildCell('r2c1')}${buildCell('r2c2')}${buildCell('r2c3')}</tr>
+          <tr>${buildCell('r3c1')}${buildCell('r3c2')}${buildCell('r3c3')}</tr>
+        </table>
+      `;
+      const { tableCount, texts } = await inspect(html);
+      // 1 outer + 9 inner = 10
+      expect(tableCount).toBe(10);
+      ['r1c1', 'r1c2', 'r1c3', 'r2c1', 'r2c2', 'r2c3', 'r3c1', 'r3c2', 'r3c3'].forEach((s) =>
+        expect(texts).toContain(s)
+      );
+    });
+
+    test('nested table immediately followed by a sibling list in the same cell', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1"><tr><td>nestedBeforeList</td></tr></table>
+              <ul>
+                <li>listItemAfterNested</li>
+              </ul>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { texts } = await inspect(html);
+      expect(texts).toContain('nestedBeforeList');
+      expect(texts).toContain('listItemAfterNested');
+    });
+
+    test('alternating nested table and paragraph blocks in same cell', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <p>para1Before</p>
+              <table border="1"><tr><td>nest1</td></tr></table>
+              <p>para2Mid</p>
+              <table border="1"><tr><td>nest2</td></tr></table>
+              <p>para3After</p>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { xml, texts } = await inspect(html);
+      const labels = ['para1Before', 'nest1', 'para2Mid', 'nest2', 'para3After'];
+      labels.forEach((s) => expect(texts).toContain(s));
+      const positions = labels.map((s) => xml.indexOf(s));
+      for (let i = 0; i < positions.length - 1; i += 1) {
+        expect(positions[i]).toBeLessThan(positions[i + 1]);
+      }
+    });
+
+    test('nested tables with content larger than the parent maximumWidth', async () => {
+      // Long content inside a narrow parent — should still render, not crash
+      const html = `
+        <table border="1" style="width: 100px;">
+          <tr>
+            <td>
+              <table border="1">
+                <tr><td>a very long string of text that should overflow the constrained parent width but still be rendered without crashing or truncation</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const { buf, texts } = await inspect(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(texts).toContain('very long string');
+    });
   });
 });
