@@ -454,6 +454,24 @@ describe('Nested Tables - Issue #147', () => {
       expect(bad).toBe(0);
     });
 
+    test('separator paragraphs around nested tables use tight 1pt line height', async () => {
+      // Verifies the separator paragraphs don't produce a visible gap.
+      // Default <w:p> is ~14pt; we lock to <w:spacing line=20 lineRule=exact>
+      // (1pt). Anything larger means a regression to visible empty-line gaps.
+      const html = `
+        <table border="1">
+          <tr>
+            <td><table border="1"><tr><td>only content</td></tr></table></td>
+          </tr>
+        </table>
+      `;
+      const xml = await getDocXml(html);
+      // The separator should exist with the tight spacing.
+      const tight = (xml.match(/<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"\/>/g) || []).length;
+      // 1 leading + 1 trailing per nested table — here there is exactly one nested table.
+      expect(tight).toBeGreaterThanOrEqual(2);
+    });
+
     test('cell with leading text then nested table — does NOT add an extra leading <w:p>', async () => {
       // If the cell already has preceding content, we must not insert an
       // empty paragraph; it would create an unwanted gap.
