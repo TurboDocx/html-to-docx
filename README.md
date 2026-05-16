@@ -9,7 +9,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
 [![npm](https://img.shields.io/npm/dm/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
 [![Agent Skill](https://img.shields.io/badge/agent_skill-agentskills.io-7C3AED)](https://agentskills.io)
-[![skills.sh](https://img.shields.io/badge/skills.sh-turbodocx%2Fquickstart-0EA5E9)](https://www.skills.sh/turbodocx/quickstart)
+[![skills.sh](https://skills.sh/b/TurboDocx/quickstart)](https://skills.sh/TurboDocx/quickstart)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
 
