@@ -840,20 +840,27 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
             formattingFragmentAttributes.textTransform || tempAttributes.textTransform
           )
         );
-        // we don't need to pass the formattingFragmentAttributes to the buildRunProperties function
-        // since the attributes are already applied to the runPropertiesFragment
-        // if the children is text then we directly reach this if node
-        // if the node is a span, then those attributes are passed to the buildRunOrRuns function
-        // and the attributes are applied to the runPropertiesFragment
-        // if node is formatting node, then the attributes are stored in formattingFragmentAttributes
-        // and are applied to the text node as required
-        const tempRunPropertiesFragment = buildRunProperties({ ...attributes, ...tempAttributes });
+        // formattingFragmentAttributes carries inline <strong>/<em>/<u>/<del>
+        // overrides parsed from their `style` attributes (issue #200). Spreading
+        // it LAST lets the inline element's color/font/size/etc. beat the
+        // ancestor paragraph's color when both are present. The bold/italic
+        // semantic from the tag itself comes in via tempAttributes earlier in
+        // the spread.
+        const tempRunPropertiesFragment = buildRunProperties({
+          ...attributes,
+          ...tempAttributes,
+          ...formattingFragmentAttributes,
+        });
         tempRunFragment.import(tempRunPropertiesFragment);
         tempRunFragment.import(textFragment);
         runFragmentsArray.push(tempRunFragment);
 
-        // re initialize temp run fragments with new fragment
+        // re initialize temp run fragments with new fragment. formatting
+        // fragment attributes are reset alongside tempAttributes so sibling
+        // runs (e.g. the body text after </strong>) don't inherit the
+        // previous inline element's color.
         tempAttributes = cloneDeep(attributes);
+        formattingFragmentAttributes = {};
         tempRunFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'r');
       } else if (isVNode(tempVNode)) {
         if (
