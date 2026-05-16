@@ -205,6 +205,28 @@ const htmlString = `<!DOCTYPE html>
             </li>
         </ul>
         <br>
+
+        <!-- Multiple paragraphs in list items (Issue #145) -->
+        <h3>Lists with Multiple Paragraphs (Issue #145)</h3>
+        <p>Demonstrates proper handling of multiple paragraphs within list items:</p>
+        <ul>
+            <li>
+                <p>First paragraph of item 1 (with bullet)</p>
+                <p>Second paragraph of item 1 (indented, no bullet)</p>
+                <ul>
+                    <li>
+                        <p>Nested list paragraph 1 (with bullet)</p>
+                        <p>Nested list paragraph 2 (indented, no bullet)</p>
+                    </li>
+                </ul>
+                <p>Third paragraph of item 1 (after nested list, indented, no bullet)</p>
+            </li>
+            <li>
+                <p>Item 2 paragraph 1 (with bullet)</p>
+                <p>Item 2 paragraph 2 (indented, no bullet)</p>
+            </li>
+        </ul>
+        <br>
         <table>
             <tr>
                 <th>Country</th>
@@ -2188,6 +2210,76 @@ const htmlString = `<!DOCTYPE html>
         </table>
 
         <p align="center">A center-aligned paragraph wedged after the nested-table block to verify alignment state doesn't leak.</p>
+
+        <h1>List Item Block Content Tests (PR #148 — Issue #145)</h1>
+
+        <h2>Multiple &lt;p&gt; children per list item</h2>
+        <p>Each &lt;li&gt; below holds several &lt;p&gt; elements. Word semantics:
+           the first &lt;p&gt; carries the bullet; subsequent ones are continuation
+           paragraphs (same indent, no marker).</p>
+        <ul>
+            <li>
+                <p>Item A — first paragraph (bulleted).</p>
+                <p>Item A — second paragraph (continuation, no bullet).</p>
+                <p>Item A — third paragraph (continuation, no bullet).</p>
+            </li>
+            <li>
+                <p>Item B — first paragraph (bulleted).</p>
+                <p>Item B — second paragraph (continuation, no bullet).</p>
+            </li>
+        </ul>
+
+        <h2>Other block elements inside list items</h2>
+        <p>List items may also wrap headings, blockquotes, &lt;pre&gt;, etc.
+           These count as block continuations after the first content.</p>
+        <ul>
+            <li>
+                <p>First paragraph (bulleted).</p>
+                <h4>A heading inside the list item</h4>
+                <blockquote><p>A blockquote inside the list item.</p></blockquote>
+                <pre>preformatted block inside the list item</pre>
+            </li>
+        </ul>
+
+        <h2>Loose inline text + nested list (depth-first numbering)</h2>
+        <p>The text "Black tea" appears BEFORE the nested ordered list, and
+           the inner <code>list-style-type: lower-alpha</code> list gets its
+           own numbering allocation depth-first. This pins the regression
+           we just fixed (sibling lis no longer consume numbering slots
+           before deeper sublists).</p>
+        <ul>
+            <li>
+                Black tea
+                <ol style="list-style-type: lower-alpha;" data-start="2">
+                    <li>Srilankan</li>
+                    <li>Assam</li>
+                </ol>
+            </li>
+            <li>
+                Green tea
+                <ol>
+                    <li>Sencha</li>
+                </ol>
+            </li>
+        </ul>
+
+        <h2>Continuation paragraph after a sublist</h2>
+        <p>A &lt;p&gt; that follows a nested list inside the same &lt;li&gt;
+           must render as a continuation paragraph (indented, no marker),
+           not as a sibling list item.</p>
+        <ol>
+            <li>
+                <p>Top-level item 1 (numbered).</p>
+                <ul>
+                    <li>Sub-bullet A</li>
+                    <li>Sub-bullet B</li>
+                </ul>
+                <p>Top-level item 1 continuation paragraph (still part of item 1).</p>
+            </li>
+            <li>
+                <p>Top-level item 2 — independent of item 1's continuation.</p>
+            </li>
+        </ol>
 
     </body>
 </html>`;

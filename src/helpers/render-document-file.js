@@ -77,6 +77,81 @@ export const getImageCacheStats = (docxDocumentInstance) => {
   };
 };
 
+// Block-level tags whose children inside an <li> should each become their
+// own paragraph in the DOCX (issue #145).
+// Block-level (NOT phrasing content) per the HTML content-model spec. <code>
+// is intentionally excluded because it is phrasing content — the block form
+// is <pre><code>...</code></pre>, which is captured by <pre>.
+const LIST_ITEM_BLOCK_TAGS = [
+  'p',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'blockquote',
+  'pre',
+  'hr',
+  'table',
+  'dl',
+];
+
+/**
+ * Walk an <li>'s children in document order and tag each one with the role
+ * it should play in the rendered DOCX. Returns an ordered list, not buckets —
+ * the original source order must be preserved so a structure like
+ *   <li>Black tea<ol>...</ol></li>
+ * renders "Black tea" before the nested list, not after.
+ *
+ * Roles:
+ *   'block'   — an element from LIST_ITEM_BLOCK_TAGS. Each becomes a
+ *               separate paragraph; the first gets the bullet/number marker
+ *               and subsequent ones are continuation paragraphs (indented,
+ *               no marker), matching Microsoft Word's behavior.
+ *   'sublist' — a nested <ul>/<ol>. Pushed onto the queue at level+1 with
+ *               a fresh numberingId allocated from the sublist's own props.
+ *   'inline'  — anything else (text nodes, <span>, <strong>, <em>, etc.).
+ *               Adjacent inline items are folded into a single wrapper
+ *               paragraph by the caller so loose text + inline formatting
+ *               renders as one run-bearing paragraph rather than several.
+ *
+ * Divs are recursed into so structures like
+ *   <li><div><p>A</p><p>B</p></div></li>
+ * still surface both <p>s. The wrapping div itself contributes no role.
+ */
+const classifyListItemChildren = (liNode) => {
+  if (!isVNode(liNode) || !Array.isArray(liNode.children)) {
+    return [];
+  }
+
+  const ordered = [];
+
+  const processNode = (node) => {
+    if (!isVNode(node)) {
+      if (node && node.text) {
+        ordered.push({ kind: 'inline', node });
+      }
+      return;
+    }
+    const tagName = node.tagName.toLowerCase();
+    if (LIST_ITEM_BLOCK_TAGS.includes(tagName)) {
+      ordered.push({ kind: 'block', node });
+    } else if (['ul', 'ol'].includes(tagName)) {
+      ordered.push({ kind: 'sublist', node });
+    } else if (tagName === 'div') {
+      if (Array.isArray(node.children)) {
+        node.children.forEach(processNode);
+      }
+    } else {
+      ordered.push({ kind: 'inline', node });
+    }
+  };
+
+  liNode.children.forEach(processNode);
+  return ordered;
+};
+
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   const listElements = [];
 
@@ -91,16 +166,40 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   while (vNodeObjects.length) {
     const tempVNodeObject = vNodeObjects.shift();
 
+    // Lazy numbering allocation. Sublists are pushed with numberingId: null
+    // so createNumbering() is called here, when the sublist is actually
+    // processed — preserving depth-first allocation order. Eager allocation
+    // at push time caused sibling lis' direct sublists to consume numIds
+    // before their parent descended into deeper sublists.
+    if (
+      tempVNodeObject.numberingId === null &&
+      isVNode(tempVNodeObject.node) &&
+      ['ul', 'ol'].includes(tempVNodeObject.node.tagName)
+    ) {
+      tempVNodeObject.numberingId = docxDocumentInstance.createNumbering(
+        tempVNodeObject.node.tagName,
+        tempVNodeObject.node.properties
+      );
+    }
+
     const parentVNodeProperties = tempVNodeObject.node.properties;
 
     if (
       isVText(tempVNodeObject.node) ||
       (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
     ) {
+      // `isContinuation` tells buildParagraph whether to draw the bullet/number
+      // marker. The first paragraph inside an <li> gets the numbering element;
+      // any subsequent block elements in that same <li> (issue #145) are
+      // continuation paragraphs — same indentation, no marker. `indentLevel`
+      // carries the nesting depth so the continuation lines up under the bullet
+      // rather than sliding back to the margin.
       const paragraphFragment = await xmlBuilder.buildParagraph(
         tempVNodeObject.node,
         {
           numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
+          isContinuation: tempVNodeObject.isContinuation || false,
+          indentLevel: tempVNodeObject.indentLevel,
         },
         docxDocumentInstance
       );
@@ -129,7 +228,9 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
           if (
             accumulator.length > 0 &&
             isVNode(accumulator[accumulator.length - 1].node) &&
-            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p'
+            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p' &&
+            // Don't merge list items - they need to be processed independently (issue #145)
+            !(isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li')
           ) {
             accumulator[accumulator.length - 1].node.children.push(childVNode);
           } else {
@@ -143,39 +244,122 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 ...(childVNode?.properties?.style || {}),
               },
             };
-            const paragraphVNode = new VNode(
-              'p',
-              properties, // copy properties for styling purposes
-              // eslint-disable-next-line no-nested-ternary
-              isVText(childVNode)
-                ? [childVNode]
-                : // eslint-disable-next-line no-nested-ternary
-                isVNode(childVNode)
-                ? childVNode.tagName.toLowerCase() === 'li'
-                  ? [...childVNode.children]
-                  : [childVNode]
-                : []
-            );
 
-            childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+            // Issue #145 — multi-paragraph list items, with document order preserved.
+            //
+            // We walk the <li>'s children once via classifyListItemChildren()
+            // and emit accumulator entries in the SAME source order:
+            //   - The first piece of renderable content (block or inline run)
+            //     carries the bullet/number; everything after it is a
+            //     continuation paragraph (indented, no marker).
+            //   - Nested <ul>/<ol> get queued at level+1 with a fresh numberingId.
+            //   - Loose text / inline elements are folded into a single
+            //     wrapper paragraph so adjacent inline runs stay together.
+            //
+            // Preserving the original order matters because:
+            //   * a structure like <li>Black tea<ol>...</ol></li> must render
+            //     "Black tea" BEFORE the nested list items;
+            //   * createNumbering() is order-sensitive — running it for
+            //     sublists at the wrong point reshuffles numId values and
+            //     can drop styling on the surrounding list.
+            if (isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li') {
+              const items = classifyListItemChildren(childVNode);
 
-            const generatedNode = isVNode(childVNode)
-              ? // eslint-disable-next-line prettier/prettier, no-nested-ternary
-                childVNode.tagName.toLowerCase() === 'li'
-                ? childVNode
-                : childVNode.tagName.toLowerCase() !== 'p'
-                ? paragraphVNode
-                : childVNode
-              : // eslint-disable-next-line prettier/prettier
-                paragraphVNode;
+              let firstContentEmitted = false;
+              let inlineShell = null;
+              const flushInlineShell = () => {
+                if (inlineShell) {
+                  accumulator.push({
+                    node: inlineShell,
+                    level: tempVNodeObject.level,
+                    type: tempVNodeObject.type,
+                    numberingId: firstContentEmitted ? null : tempVNodeObject.numberingId,
+                    isContinuation: firstContentEmitted,
+                    indentLevel: tempVNodeObject.level,
+                  });
+                  firstContentEmitted = true;
+                  inlineShell = null;
+                }
+              };
 
-            accumulator.push({
-              // eslint-disable-next-line prettier/prettier, no-nested-ternary
-              node: generatedNode,
-              level: tempVNodeObject.level,
-              type: tempVNodeObject.type,
-              numberingId: tempVNodeObject.numberingId,
-            });
+              items.forEach((item) => {
+                if (item.kind === 'block') {
+                  flushInlineShell();
+                  const blockNode = item.node;
+                  blockNode.properties = {
+                    attributes: {
+                      ...properties.attributes,
+                      ...(blockNode?.properties?.attributes || {}),
+                    },
+                    style: {
+                      ...properties.style,
+                      ...(blockNode?.properties?.style || {}),
+                    },
+                    ...blockNode.properties,
+                  };
+                  accumulator.push({
+                    node: blockNode,
+                    level: tempVNodeObject.level,
+                    type: tempVNodeObject.type,
+                    numberingId: firstContentEmitted ? null : tempVNodeObject.numberingId,
+                    isContinuation: firstContentEmitted,
+                    indentLevel: tempVNodeObject.level,
+                  });
+                  firstContentEmitted = true;
+                } else if (item.kind === 'sublist') {
+                  flushInlineShell();
+                  // numberingId is left null so createNumbering() fires when
+                  // the sublist is popped (see lazy-allocate branch at top of
+                  // the loop). Allocating eagerly here broke depth-first
+                  // ordering — sibling lis' direct sublists would consume
+                  // numIds before any descended into nested lists.
+                  accumulator.push({
+                    node: item.node,
+                    level: tempVNodeObject.level + 1,
+                    type: item.node.tagName,
+                    numberingId: null,
+                  });
+                } else {
+                  // inline / text — accumulate into a shared wrapper paragraph.
+                  // Shallow clone of the <li>: only tagName + a fresh empty
+                  // children array are kept; properties are rebuilt below.
+                  // cloneDeep here was walking the entire li subtree just to
+                  // throw the cloned descendants away.
+                  if (!inlineShell) {
+                    inlineShell = {
+                      ...childVNode,
+                      children: [],
+                      properties: { ...properties, ...childVNode.properties },
+                    };
+                  }
+                  inlineShell.children.push(item.node);
+                }
+              });
+
+              flushInlineShell();
+            } else {
+              // Not an <li> tag: use original processing logic
+              const paragraphVNode = new VNode(
+                'p',
+                properties, // copy properties for styling purposes
+                isVText(childVNode) || isVNode(childVNode) ? [childVNode] : []
+              );
+
+              childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
+
+              const generatedNode = isVNode(childVNode)
+                ? childVNode.tagName.toLowerCase() !== 'p'
+                  ? paragraphVNode
+                  : childVNode
+                : paragraphVNode;
+
+              accumulator.push({
+                node: generatedNode,
+                level: tempVNodeObject.level,
+                type: tempVNodeObject.type,
+                numberingId: tempVNodeObject.numberingId,
+              });
+            }
           }
         }
 
@@ -483,7 +667,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     // Apply inherited properties from parent elements to child elements
     // Properties object contains CSS-style properties that should be inherited (e.g., alignment, fonts)
     // This enables proper formatting when content is injected into existing document structure
-    for (const child of vTree) {
+    vTree.forEach((child) => {
       // Validate properties object and ensure child.properties.style exists
       if (properties && typeof properties === 'object' && child.properties) {
         // Initialize style object if it doesn't exist
@@ -493,15 +677,13 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
         // Merge inherited properties with explicit child properties (child properties take precedence)
         child.properties.style = { ...properties, ...child.properties.style };
       }
-    }
-  } else {
+    });
+  } else if (properties && typeof properties === 'object' && vTree.properties) {
     // Handle single VTree node (not an array)
-    if (properties && typeof properties === 'object' && vTree.properties) {
-      if (!vTree.properties.style) {
-        vTree.properties.style = {};
-      }
-      vTree.properties.style = { ...properties, ...vTree.properties.style };
+    if (!vTree.properties.style) {
+      vTree.properties.style = {};
     }
+    vTree.properties.style = { ...properties, ...vTree.properties.style };
   }
 
   const xmlFragment = fragment({ namespaceAlias: { w: namespaces.w } });
