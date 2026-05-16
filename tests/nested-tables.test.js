@@ -409,6 +409,68 @@ describe('Nested Tables - Issue #147', () => {
       const bad = (xml.match(/<\/w:tbl>\s*<\/w:tc>/g) || []).length;
       expect(bad).toBe(0);
     });
+
+    /**
+     * Leading-paragraph rule: when a <w:tbl> is the FIRST child of a <w:tc>
+     * (no preceding <w:p>), the nested table's top border lays out flush
+     * against the cell's top edge. Both Word and LibreOffice render this as
+     * a single merged line ("border-collapse"-style) which makes the inner
+     * table look like it shares its top edge with the outer cell.
+     *
+     * Word's own UI works around this by emitting an empty paragraph before
+     * every nested table — match that convention.
+     */
+    test('no cell starts directly with </w:tcPr><w:tbl> (border-overlap visual artifact)', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              <table border="1"><tr><td>only content</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const xml = await getDocXml(html);
+      const bad = (xml.match(/<\/w:tcPr>\s*<w:tbl>/g) || []).length;
+      expect(bad).toBe(0);
+    });
+
+    test('asymmetric cells with nested tables all get leading <w:p>', async () => {
+      const html = `
+        <table border="1">
+          <tr>
+            <td><table border="1"><tr><td>A</td></tr></table></td>
+            <td>plain text</td>
+            <td><table border="1"><tr><td>B</td></tr></table></td>
+          </tr>
+        </table>
+      `;
+      const xml = await getDocXml(html);
+      const bad = (xml.match(/<\/w:tcPr>\s*<w:tbl>/g) || []).length;
+      expect(bad).toBe(0);
+    });
+
+    test('cell with leading text then nested table — does NOT add an extra leading <w:p>', async () => {
+      // If the cell already has preceding content, we must not insert an
+      // empty paragraph; it would create an unwanted gap.
+      const html = `
+        <table border="1">
+          <tr>
+            <td>
+              leading text here
+              <table border="1"><tr><td>after the text</td></tr></table>
+            </td>
+          </tr>
+        </table>
+      `;
+      const xml = await getDocXml(html);
+      // Count <w:p> elements between <w:tc> and <w:tbl> in the outer cell.
+      // The expectation: exactly 1 (the wrapped "leading text"), not 2.
+      const outerCell = xml.match(/<w:tc>[\s\S]*?<w:tbl>/);
+      expect(outerCell).not.toBeNull();
+      const paragraphsBefore = (outerCell[0].match(/<w:p\b/g) || []).length;
+      expect(paragraphsBefore).toBe(1);
+    });
   });
 
   describe('Edge cases — stress tests', () => {

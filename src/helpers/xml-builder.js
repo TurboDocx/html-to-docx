@@ -2825,6 +2825,12 @@ const buildTableCell = async (
   }
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
+  // Tracks whether any content (paragraph, list, table, image) has been
+  // imported into the cell yet. Used to decide whether to prepend a
+  // leading <w:p> before a nested table — without it, the inner table's
+  // top border lays out flush against the cell's top edge and Word
+  // renders the two borders as one merged line.
+  let cellHasContent = false;
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
@@ -2837,6 +2843,7 @@ const buildTableCell = async (
         );
         if (imageFragment) {
           tableCellFragment.import(imageFragment);
+          cellHasContent = true;
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'figure') {
         if (vNodeHasChildren(childVNode)) {
@@ -2852,6 +2859,7 @@ const buildTableCell = async (
               );
               if (imageFragment) {
                 tableCellFragment.import(imageFragment);
+                cellHasContent = true;
               }
             }
           }
@@ -2860,9 +2868,23 @@ const buildTableCell = async (
         // render list in table
         if (vNodeHasChildren(childVNode)) {
           await buildList(childVNode, docxDocumentInstance, tableCellFragment);
+          cellHasContent = true;
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
         // Issue #147: render nested <table> in a table cell.
+        //
+        // If the cell has no preceding content, prepend an empty <w:p> so
+        // the inner table's top border doesn't render flush against the
+        // cell's top edge. Word and LibreOffice collapse adjacent table
+        // borders into one heavier line, making it look like the borders
+        // overlap. This matches the convention Word itself uses when you
+        // author a nested table in the UI.
+        if (!cellHasContent) {
+          const leadingParagraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+            .ele('@w', 'p')
+            .up();
+          tableCellFragment.import(leadingParagraphFragment);
+        }
         // eslint-disable-next-line no-use-before-define
         const nestedTableFragment = await buildTable(
           childVNode,
@@ -2882,6 +2904,7 @@ const buildTableCell = async (
           .ele('@w', 'p')
           .up();
         tableCellFragment.import(trailingParagraphFragment);
+        cellHasContent = true;
       } else {
         const paragraphFragment = await buildParagraph(
           childVNode,
@@ -2890,6 +2913,7 @@ const buildTableCell = async (
         );
 
         tableCellFragment.import(paragraphFragment);
+        cellHasContent = true;
       }
     }
   } else {
