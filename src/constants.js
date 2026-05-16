@@ -1,6 +1,6 @@
 import { cloneDeep } from 'lodash';
 
-const applicationName = 'html-to-docx';
+const applicationName = 'Powered by TurboDocx html-to-docx';
 const defaultOrientation = 'portrait';
 const landscapeWidth = 15840;
 const landscapeHeight = 12240;
