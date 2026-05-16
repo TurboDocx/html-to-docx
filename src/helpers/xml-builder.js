@@ -289,14 +289,17 @@ const buildTextDecoration = (value) => {
       .up();
   }
 
-  // line has both 'underline' and 'line-through'
+  // line has both 'underline' and 'line-through' — emit <w:strike> first
+  // (spec slot 9) then <w:u> (slot 27) so the resulting <w:rPr> child
+  // sequence stays valid per ECMA-376 EG_RPrBase. Word silently drops
+  // out-of-order children.
   return fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'strike')
+    .att('@w', 'val', true)
+    .up()
     .ele('@w', 'u')
     .att('@w', 'val', value.style ? value.style : 'single')
     .att('@w', 'color', value.color ? value.color : '000000')
-    .up()
-    .ele('@w', 'strike')
-    .att('@w', 'val', true)
     .up();
 };
 
@@ -797,6 +800,52 @@ const rprAttributeSortIndex = (key) => {
   return idx === -1 ? RPR_ATTRIBUTE_ORDER.length : idx;
 };
 
+// ECMA-376 EG_RPrBase child element sequence — used as the post-sort key.
+// Sort buildRunProperties applies covers the attribute-iteration path; this
+// post-sort catches paths that import formatting fragments directly into
+// runPropertiesFragment (e.g. the phrasing-tag branch in buildRun, where
+// imports happen in HTML source order rather than spec slot order).
+const RPR_ELEMENT_ORDER = [
+  'rStyle', 'rFonts', 'b', 'bCs', 'i', 'iCs', 'caps', 'smallCaps',
+  'strike', 'dstrike', 'outline', 'shadow', 'emboss', 'imprint',
+  'noProof', 'snapToGrid', 'vanish', 'webHidden', 'color', 'spacing',
+  'w', 'kern', 'position', 'sz', 'szCs', 'highlight', 'u', 'effect',
+  'bdr', 'shd', 'fitText', 'vertAlign', 'rtl', 'cs', 'em', 'lang',
+  'eastAsianLayout', 'specVanish', 'oMath',
+];
+const rprElementSortIndex = (name) => {
+  const idx = RPR_ELEMENT_ORDER.indexOf(name);
+  return idx === -1 ? RPR_ELEMENT_ORDER.length : idx;
+};
+// Read every direct child element of <w:rPr> in source order, sort them
+// by spec slot, and return a fresh fragment with the sorted XML. Idempotent:
+// applying twice produces the same output.
+const sortRprChildren = (rprFragment) => {
+  const xmlString = rprFragment.end({ headless: true, prettyPrint: false });
+  const innerMatch = xmlString.match(/<w:rPr\b[^>]*>([\s\S]*)<\/w:rPr>/);
+  if (!innerMatch || !innerMatch[1].trim()) return rprFragment;
+  const inner = innerMatch[1];
+  // Match each child element: either self-closing <w:foo .../> or paired
+  // <w:foo>...</w:foo>. Children that nest other elements with the same
+  // namespace are matched greedily up to their own closing tag.
+  const childRe = /<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*\/>|<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>[\s\S]*?<\/w:\2>/g;
+  const children = [];
+  let m;
+  while ((m = childRe.exec(inner)) !== null) {
+    const name = m[1] || m[2];
+    children.push({ name, xml: m[0], originalIndex: children.length });
+  }
+  if (children.length <= 1) return rprFragment;
+  // Stable sort: equal slots preserve original order so multiple runs of
+  // (e.g.) <w:b/> never get scrambled.
+  children.sort((a, b) => {
+    const slotDiff = rprElementSortIndex(a.name) - rprElementSortIndex(b.name);
+    return slotDiff !== 0 ? slotDiff : a.originalIndex - b.originalIndex;
+  });
+  const sortedXml = `<w:rPr>${children.map((c) => c.xml).join('')}</w:rPr>`;
+  return fragment(sortedXml);
+};
+
 const buildRunProperties = (attributes) => {
   const runPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'rPr');
   if (attributes && attributes.constructor === Object) {
@@ -1037,7 +1086,10 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
     }
   }
 
-  runFragment.import(runPropertiesFragment);
+  // Sort <w:rPr> children to spec order before emission. Picks up any
+  // imports that happened in HTML source order rather than spec slot order
+  // (notably the phrasing-tag branch above).
+  runFragment.import(sortRprChildren(runPropertiesFragment));
   if (isVText(vNode)) {
     const textFragment = buildTextElement(transformText(vNode.text, attributes.textTransform));
     runFragment.import(textFragment);
