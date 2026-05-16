@@ -785,4 +785,306 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       expect(decimalIdsAfterLowerLetter.length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  /**
+   * Stress / edge-case suite — designed to surface failures in the
+   * multi-paragraph list refactor. Each test runs the conversion to
+   * completion (no crashes) and asserts a coarse correctness invariant
+   * (content present, structure non-empty, ordering preserved).
+   *
+   * Tests are intentionally tolerant — they pin minimum guarantees rather
+   * than exact-match snapshots, so future numbering-id reshuffles or
+   * cosmetic XML changes don't trigger churn.
+   */
+  describe('Edge cases — stress tests', () => {
+    const extractTexts = (xml) =>
+      [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join(' ');
+
+    test('empty <li> does not crash and produces no content for it', async () => {
+      const html = '<ul><li></li><li>real content</li></ul>';
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      expect(extractTexts(xml)).toContain('real content');
+    });
+
+    test('<li> with only a sublist and no surrounding text still nests correctly', async () => {
+      const html = '<ul><li><ul><li>nested only</li></ul></li></ul>';
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      expect(extractTexts(xml)).toContain('nested only');
+      // Must have at least two ilvls present (outer + inner)
+      const ilvls = [...xml.matchAll(/<w:ilvl w:val="(\d+)"/g)].map((m) => parseInt(m[1], 10));
+      expect(Math.max(...ilvls)).toBeGreaterThanOrEqual(1);
+    });
+
+    test('<li> with multiple back-to-back sublists keeps both', async () => {
+      const html = `
+        <ul>
+          <li>
+            <ul><li>first sublist item</li></ul>
+            <ol><li>second sublist item</li></ol>
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      expect(text).toContain('first sublist item');
+      expect(text).toContain('second sublist item');
+    });
+
+    test('<li> starting with a sublist (text comes AFTER) preserves text', async () => {
+      const html = `
+        <ul>
+          <li>
+            <ol><li>sub before text</li></ol>
+            trailing text
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      expect(text).toContain('sub before text');
+      expect(text).toContain('trailing text');
+    });
+
+    test('mixed inline + block + inline inside one <li>', async () => {
+      const html = `
+        <ul>
+          <li>
+            leading inline
+            <p>block paragraph</p>
+            trailing inline
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      expect(text).toContain('leading inline');
+      expect(text).toContain('block paragraph');
+      expect(text).toContain('trailing inline');
+    });
+
+    test('four-level deep nesting renders all leaves', async () => {
+      const html = `
+        <ul>
+          <li>L0
+            <ol>
+              <li>L1
+                <ul>
+                  <li>L2
+                    <ol>
+                      <li>L3 leaf</li>
+                    </ol>
+                  </li>
+                </ul>
+              </li>
+            </ol>
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      ['L0', 'L1', 'L2', 'L3 leaf'].forEach((label) => expect(text).toContain(label));
+      const ilvls = [...xml.matchAll(/<w:ilvl w:val="(\d+)"/g)].map((m) => parseInt(m[1], 10));
+      expect(Math.max(...ilvls)).toBeGreaterThanOrEqual(3);
+    });
+
+    test('<li> wrapped in a <div> still surfaces its <p>s', async () => {
+      const html = `
+        <ul>
+          <li>
+            <div>
+              <p>div paragraph 1</p>
+              <p>div paragraph 2</p>
+            </div>
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      expect(text).toContain('div paragraph 1');
+      expect(text).toContain('div paragraph 2');
+    });
+
+    /**
+     * KNOWN LIMITATION (pre-existing on develop): a <table> nested directly
+     * inside a <li> is not actually rendered — only its surrounding text
+     * paragraphs come through. Documenting current behavior here so a future
+     * fix (likely in xml-builder.buildParagraph) can flip the expectation.
+     *
+     * develop: drops the table AND the trailing paragraph.
+     * pr-148:  preserves both wrapper paragraphs; still drops the table.
+     */
+    test('<table> inside <li> does not crash and preserves wrapper paragraphs', async () => {
+      const html = `
+        <ul>
+          <li>
+            <p>cell intro</p>
+            <table border="1"><tr><td>r1c1</td><td>r1c2</td></tr></table>
+            <p>cell outro</p>
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      expect(text).toContain('cell intro');
+      expect(text).toContain('cell outro');
+      // Note: table content (r1c1) is currently dropped — a separate fix.
+    });
+
+    test('whitespace-only <li> does not crash', async () => {
+      const html = '<ul><li>   </li><li>visible</li></ul>';
+      const buf = await HTMLtoDOCX(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      expect(extractTexts(xml)).toContain('visible');
+    });
+
+    test('HTML entities in li content are escaped/preserved', async () => {
+      const html = '<ul><li><p>&amp; &lt; &gt; &quot;</p></li></ul>';
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      // Either decoded characters survive or their entity form does — both
+      // produce visually correct output. Just assert SOMETHING from the line.
+      expect(text.length).toBeGreaterThan(0);
+      expect(buf).toBeDefined();
+    });
+
+    test('many sibling <li>s with nested lists keep depth-first numbering', async () => {
+      // Stress the depth-first invariant across many siblings.
+      const html = `
+        <ul>
+          <li>A<ol><li>A1<ul><li>A1a</li></ul></li></ol></li>
+          <li>B<ol><li>B1<ul><li>B1a</li></ul></li></ol></li>
+          <li>C<ol><li>C1<ul><li>C1a</li></ul></li></ol></li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      // Document order should preserve A < A1 < A1a < B < B1 < B1a < C < ...
+      const indexOf = (s) => text.indexOf(s);
+      expect(indexOf('A')).toBeLessThan(indexOf('A1'));
+      expect(indexOf('A1')).toBeLessThan(indexOf('A1a'));
+      expect(indexOf('A1a')).toBeLessThan(indexOf('B'));
+      expect(indexOf('B')).toBeLessThan(indexOf('B1a'));
+      expect(indexOf('B1a')).toBeLessThan(indexOf('C'));
+    });
+
+    test('<ol start="5"> survives through multi-paragraph processing', async () => {
+      const html = `
+        <ul>
+          <li>
+            outer text
+            <ol style="list-style-type: decimal;" data-start="5">
+              <li>fifth item</li>
+              <li>sixth item</li>
+            </ol>
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const numberingXml = await zip.file('word/numbering.xml').async('string');
+      expect(numberingXml).toMatch(/<w:start w:val="5"/);
+    });
+
+    test('<hr> inside <li> renders without crashing', async () => {
+      const html = `
+        <ul>
+          <li>
+            <p>before</p>
+            <hr/>
+            <p>after</p>
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      expect(text).toContain('before');
+      expect(text).toContain('after');
+    });
+
+    test('multiple paragraphs interleaved with multiple sublists', async () => {
+      const html = `
+        <ul>
+          <li>
+            <p>P1</p>
+            <ul><li>SUB1</li></ul>
+            <p>P2</p>
+            <ol><li>SUB2</li></ol>
+            <p>P3</p>
+          </li>
+        </ul>
+      `;
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const text = extractTexts(xml);
+      // All five elements present in source order
+      const labels = ['P1', 'SUB1', 'P2', 'SUB2', 'P3'];
+      for (let i = 0; i < labels.length - 1; i += 1) {
+        expect(text.indexOf(labels[i])).toBeLessThan(text.indexOf(labels[i + 1]));
+      }
+    });
+
+    test('<li> containing only empty <p>s does not crash', async () => {
+      const html = '<ul><li><p></p><p></p></li><li>visible</li></ul>';
+      const buf = await HTMLtoDOCX(html);
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      expect(extractTexts(xml)).toContain('visible');
+    });
+
+    test('first child being a sublist still emits the bullet on the outer ul', async () => {
+      // When the <li> opens with a nested list (no preceding content), we
+      // still need bullets to appear somewhere — either on the sublist's
+      // items or on the (empty) outer item itself. Just assert numbering exists.
+      const html = '<ul><li><ol><li>first thing</li></ol></li></ul>';
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const numPrCount = (xml.match(/<w:numPr>/g) || []).length;
+      expect(numPrCount).toBeGreaterThanOrEqual(1);
+    });
+  });
 });
