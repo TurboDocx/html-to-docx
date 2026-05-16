@@ -2281,6 +2281,93 @@ const htmlString = `<!DOCTYPE html>
             </li>
         </ol>
 
+        <h1>Nested Table Tests (PR #150 — Issue #147)</h1>
+
+        <h2>Basic nested table inside a cell</h2>
+        <p>The outer table has a cell containing an &lt;h3&gt; and a nested table:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <h3>Inner heading</h3>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td>Nested cell value</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Three-level deep nesting</h2>
+        <p>Outer → middle → inner, all rendered:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>Outer L0
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td>Middle L1
+                                <table border="1" style="border-collapse: collapse;">
+                                    <tr><td>Inner L2 leaf</td></tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Multiple nested tables in the same cell with text between</h2>
+        <p>Source order must be preserved: prefix, first nested, middle text, second nested, suffix.</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    prefix text
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>first inner</td></tr>
+                    </table>
+                    middle text between two nested tables
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>second inner</td></tr>
+                    </table>
+                    suffix text
+                </td>
+            </tr>
+        </table>
+
+        <h2>Nested table inside a header cell (&lt;th&gt;)</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <th>Header with nested table:
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>nested in th</td></tr>
+                    </table>
+                </th>
+            </tr>
+            <tr>
+                <td>regular body cell</td>
+            </tr>
+        </table>
+
+        <h2>Nested table with colspan/rowspan inside</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td colspan="2">inner spans two columns</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2">inner spans two rows</td>
+                            <td>r2c2</td>
+                        </tr>
+                        <tr>
+                            <td>r3c2</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
     </body>
 </html>`;
 
