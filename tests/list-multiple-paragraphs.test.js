@@ -1074,6 +1074,29 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       expect(extractTexts(xml)).toContain('visible');
     });
 
+    test('<code> inline element inside <li> is NOT split into its own paragraph', async () => {
+      // <code> is phrasing content per HTML spec — the block-level pattern is
+      // <pre><code>. Listing 'code' as a block-level tag in classifyListItemChildren
+      // caused <li>foo <code>bar</code> baz</li> to render as three separate
+      // paragraphs instead of one run-bearing paragraph.
+      const html = '<ul><li>foo <code>bar</code> baz</li></ul>';
+      const buf = await HTMLtoDOCX(html);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file('word/document.xml').async('string');
+      const bodyMatch = xml.match(/<w:body>([\s\S]*?)<\/w:body>/);
+      expect(bodyMatch).not.toBeNull();
+      // Filter out the sectPr-bearing trailing paragraph
+      const paras = [...bodyMatch[1].matchAll(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g)]
+        .map((m) => m[0])
+        .filter((p) => !p.includes('<w:sectPr'));
+      expect(paras.length).toBe(1);
+      const onlyPara = paras[0];
+      expect(onlyPara).toContain('foo');
+      expect(onlyPara).toContain('bar');
+      expect(onlyPara).toContain('baz');
+    });
+
     test('first child being a sublist still emits the bullet on the outer ul', async () => {
       // When the <li> opens with a nested list (no preceding content), we
       // still need bullets to appear somewhere — either on the sublist's

@@ -79,6 +79,9 @@ export const getImageCacheStats = (docxDocumentInstance) => {
 
 // Block-level tags whose children inside an <li> should each become their
 // own paragraph in the DOCX (issue #145).
+// Block-level (NOT phrasing content) per the HTML content-model spec. <code>
+// is intentionally excluded because it is phrasing content — the block form
+// is <pre><code>...</code></pre>, which is captured by <pre>.
 const LIST_ITEM_BLOCK_TAGS = [
   'p',
   'h1',
@@ -89,7 +92,6 @@ const LIST_ITEM_BLOCK_TAGS = [
   'h6',
   'blockquote',
   'pre',
-  'code',
   'hr',
   'table',
   'dl',
@@ -164,11 +166,16 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   while (vNodeObjects.length) {
     const tempVNodeObject = vNodeObjects.shift();
 
-    // Lazy numbering allocation. classifyListItemChildren pushes sublists with
-    // numberingId: null and deferredNumbering: true so that createNumbering()
-    // is only called when this branch executes — preserving depth-first
-    // allocation order (matching the pre-PR-#148 behavior).
-    if (tempVNodeObject.deferredNumbering && tempVNodeObject.numberingId === null) {
+    // Lazy numbering allocation. Sublists are pushed with numberingId: null
+    // so createNumbering() is called here, when the sublist is actually
+    // processed — preserving depth-first allocation order. Eager allocation
+    // at push time caused sibling lis' direct sublists to consume numIds
+    // before their parent descended into deeper sublists.
+    if (
+      tempVNodeObject.numberingId === null &&
+      isVNode(tempVNodeObject.node) &&
+      ['ul', 'ol'].includes(tempVNodeObject.node.tagName)
+    ) {
       tempVNodeObject.numberingId = docxDocumentInstance.createNumbering(
         tempVNodeObject.node.tagName,
         tempVNodeObject.node.properties
@@ -258,10 +265,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
             if (isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li') {
               const items = classifyListItemChildren(childVNode);
 
-              // Track whether any content has been emitted for this li yet —
-              // only the first piece carries the bullet/number marker.
               let firstContentEmitted = false;
-              // Buffer for runs of inline content so they share one paragraph.
               let inlineShell = null;
               const flushInlineShell = () => {
                 if (inlineShell) {
@@ -282,7 +286,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 if (item.kind === 'block') {
                   flushInlineShell();
                   const blockNode = item.node;
-                  const blockProperties = {
+                  blockNode.properties = {
                     attributes: {
                       ...properties.attributes,
                       ...(blockNode?.properties?.attributes || {}),
@@ -291,9 +295,6 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                       ...properties.style,
                       ...(blockNode?.properties?.style || {}),
                     },
-                  };
-                  blockNode.properties = {
-                    ...cloneDeep(blockProperties),
                     ...blockNode.properties,
                   };
                   accumulator.push({
@@ -307,28 +308,28 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                   firstContentEmitted = true;
                 } else if (item.kind === 'sublist') {
                   flushInlineShell();
-                  // Defer createNumbering until this sublist is popped from
-                  // the queue (see the deferredNumbering branch on shift below).
-                  // Eager allocation here was causing sibling lis' direct
-                  // sublists to grab numIds before the current li's deeper
-                  // sublists, breaking depth-first ordering in numbering.xml.
+                  // numberingId is left null so createNumbering() fires when
+                  // the sublist is popped (see lazy-allocate branch at top of
+                  // the loop). Allocating eagerly here broke depth-first
+                  // ordering — sibling lis' direct sublists would consume
+                  // numIds before any descended into nested lists.
                   accumulator.push({
                     node: item.node,
                     level: tempVNodeObject.level + 1,
                     type: item.node.tagName,
                     numberingId: null,
-                    deferredNumbering: true,
                   });
-                  // sublists don't consume the bullet slot — the outer li may
-                  // still have its first block of content render with a marker.
                 } else {
-                  // inline / text — accumulate into a shared wrapper paragraph
+                  // inline / text — accumulate into a shared wrapper paragraph.
+                  // Shallow clone of the <li>: only tagName + a fresh empty
+                  // children array are kept; properties are rebuilt below.
+                  // cloneDeep here was walking the entire li subtree just to
+                  // throw the cloned descendants away.
                   if (!inlineShell) {
-                    inlineShell = cloneDeep(childVNode);
-                    inlineShell.children = [];
-                    inlineShell.properties = {
-                      ...cloneDeep(properties),
-                      ...childVNode.properties,
+                    inlineShell = {
+                      ...childVNode,
+                      children: [],
+                      properties: { ...properties, ...childVNode.properties },
                     };
                   }
                   inlineShell.children.push(item.node);
@@ -341,8 +342,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
               const paragraphVNode = new VNode(
                 'p',
                 properties, // copy properties for styling purposes
-                // eslint-disable-next-line no-nested-ternary
-                isVText(childVNode) ? [childVNode] : isVNode(childVNode) ? [childVNode] : []
+                isVText(childVNode) || isVNode(childVNode) ? [childVNode] : []
               );
 
               childVNode.properties = { ...cloneDeep(properties), ...childVNode.properties };
