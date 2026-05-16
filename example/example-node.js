@@ -2606,6 +2606,35 @@ const htmlString = `<!DOCTYPE html>
            <em>italicInherited</em>
         </p>
 
+        <h1>OOXML rPr child-order tests (Word strictness)</h1>
+        <p>Word silently drops <code>&lt;w:rPr&gt;</code> children that appear out of the
+           ECMA-376 EG_RPrBase sequence; LibreOffice tolerates the violation. This section
+           exercises deeply-nested formatting combinations that previously emitted children
+           in the wrong order — the most visible failure mode was a dark-themed table header
+           whose white text rendered as default black in Word.</p>
+
+        <h2>Word-stress: white text on dark-blue table header (legal/proposal pattern)</h2>
+        <table style="border-collapse: collapse;" cellspacing="0">
+            <tbody>
+                <tr>
+                    <td style="background-color: #2f5496; vertical-align: top; width: 155px; border: 1px solid black;">
+                        <p><span style="font-size: 11pt;"><span style="font-family: Calibri,sans-serif;"><span style="font-size: 12.0pt;"><span style="color: white;">Project Phase</span></span></span></span></p>
+                    </td>
+                    <td style="background-color: #2f5496; border-bottom: 1px solid black; border-left: none; border-right: 1px solid black; border-top: 1px solid black; vertical-align: top; width: 396px;">
+                        <p><span style="font-size: 11pt;"><span style="font-family: Calibri,sans-serif;"><span style="font-size: 12.0pt;"><span style="color: white;">Activities in Scope</span></span></span></span></p>
+                    </td>
+                    <td style="background-color: #2f5496; border-bottom: 1px solid black; border-left: none; border-right: 1px solid black; border-top: 1px solid black; vertical-align: top; width: 120px;">
+                        <p><span style="font-size: 11pt;"><span style="font-family: Calibri,sans-serif;"><span style="font-size: 12.0pt;"><span style="color: white;">Estimated Hours</span></span></span></span></p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Mixed rPr children — every supported attribute in one run</h2>
+        <p style="font-family: Times New Roman, serif; font-size: 14pt; color: #ff0000;">
+           <strong><em><u><del>kitchen-sink</del></u></em></strong>
+        </p>
+
     </body>
 </html>`;
 

@@ -762,10 +762,48 @@ const buildFormatting = (htmlTag, options) => {
   return null;
 };
 
+// Order of HTML/JS attribute keys that map to <w:rPr> children, sorted to
+// match the ECMA-376 EG_RPrBase sequence (§17.3.2.27). Word silently drops
+// elements that appear out of sequence; LibreOffice tolerates the violation.
+// Keys not in this list sort to the end (no-op for non-rPr attributes such
+// as `type`, `maximumWidth`, etc. that pass through buildRunProperties).
+const RPR_ATTRIBUTE_ORDER = [
+  'hyperlink', //          → <w:rStyle>    (slot 1)
+  'font', //               → <w:rFonts>    (slot 2)
+  'pre', //                → <w:rFonts ...Courier> (slot 2)
+  'strong', //             → <w:b>         (slot 3)
+  'b', //                  → <w:b>         (slot 3)
+  'em', //                 → <w:i>         (slot 5)
+  'i', //                  → <w:i>         (slot 5)
+  'strike', //             → <w:strike>    (slot 9)
+  'del', //                → <w:strike>    (slot 9)
+  's', //                  → <w:strike>    (slot 9)
+  'textShadow', //         → <w:shadow>    (slot 12)
+  'color', //              → <w:color>     (slot 19)
+  'fontSize', //           → <w:sz>        (slot 24)
+  'mark', //               → <w:highlight> (slot 26)
+  'code', //               → <w:highlight> (slot 26)
+  'highlightColor', //     → <w:highlight> (slot 26)
+  'ins', //                → <w:u>         (slot 27)
+  'u', //                  → <w:u>         (slot 27)
+  'textDecoration', //     → <w:u>/<w:strike> — placed at u (slot 27)
+  'backgroundColor', //    → <w:shd>       (slot 30)
+  'sub', //                → <w:vertAlign> (slot 32)
+  'sup', //                → <w:vertAlign> (slot 32)
+];
+
+const rprAttributeSortIndex = (key) => {
+  const idx = RPR_ATTRIBUTE_ORDER.indexOf(key);
+  return idx === -1 ? RPR_ATTRIBUTE_ORDER.length : idx;
+};
+
 const buildRunProperties = (attributes) => {
   const runPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'rPr');
   if (attributes && attributes.constructor === Object) {
-    Object.keys(attributes).forEach((key) => {
+    const orderedKeys = Object.keys(attributes).sort(
+      (a, b) => rprAttributeSortIndex(a) - rprAttributeSortIndex(b)
+    );
+    orderedKeys.forEach((key) => {
       const options = {};
       if (key === 'color' || key === 'backgroundColor' || key === 'highlightColor') {
         options.color = attributes[key];
