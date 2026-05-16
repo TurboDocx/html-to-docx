@@ -2873,15 +2873,27 @@ const buildTableCell = async (
       } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
         // Issue #147: render nested <table> in a table cell.
         //
-        // If the cell has no preceding content, prepend an empty <w:p> so
-        // the inner table's top border doesn't render flush against the
-        // cell's top edge. Word and LibreOffice collapse adjacent table
-        // borders into one heavier line, making it look like the borders
-        // overlap. This matches the convention Word itself uses when you
-        // author a nested table in the UI.
+        // If the cell has no preceding content, prepend a near-zero-height
+        // <w:p> so the inner table's top border doesn't render flush
+        // against the cell's top edge. Word and LibreOffice collapse
+        // adjacent table borders into one heavier line, making it look
+        // like the borders overlap.
+        //
+        // The spacing is locked to 20 twips (1pt) of fixed line height
+        // with no before/after spacing — visually a hairline gap, just
+        // enough to keep the two borders distinct. A default <w:p> would
+        // produce ~14pt of unwanted whitespace above the nested table.
         if (!cellHasContent) {
           const leadingParagraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
             .ele('@w', 'p')
+            .ele('@w', 'pPr')
+            .ele('@w', 'spacing')
+            .att('@w', 'before', '0')
+            .att('@w', 'after', '0')
+            .att('@w', 'line', '20')
+            .att('@w', 'lineRule', 'exact')
+            .up()
+            .up()
             .up();
           tableCellFragment.import(leadingParagraphFragment);
         }
@@ -2898,10 +2910,19 @@ const buildTableCell = async (
         // OOXML requires every <w:tc> to end with a <w:p>. If the nested
         // table is the cell's final child, Word marks the document as
         // corrupted on open (LibreOffice is lenient). Append a sentinel
-        // empty paragraph so the structural invariant holds regardless
-        // of what follows in the source HTML.
+        // paragraph at the same near-zero-height as the leading one so
+        // the structural invariant holds without introducing visible
+        // trailing space below the nested table.
         const trailingParagraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
           .ele('@w', 'p')
+          .ele('@w', 'pPr')
+          .ele('@w', 'spacing')
+          .att('@w', 'before', '0')
+          .att('@w', 'after', '0')
+          .att('@w', 'line', '20')
+          .att('@w', 'lineRule', 'exact')
+          .up()
+          .up()
           .up();
         tableCellFragment.import(trailingParagraphFragment);
         cellHasContent = true;

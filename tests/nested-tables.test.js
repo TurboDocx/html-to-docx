@@ -55,7 +55,9 @@ describe('Nested Tables - Issue #147', () => {
       const parsed = await parseDOCX(docx);
 
       expect(parsed.paragraphs.length).toBeGreaterThanOrEqual(1);
-      expect(parsed.paragraphs[0].text).toContain('Nested content');
+      // Any paragraph in the doc carries the inner text (the leading
+      // separator paragraph that prevents border-overlap is empty).
+      expect(parsed.paragraphs.map((p) => p.text).join(' ')).toContain('Nested content');
     });
   });
 
@@ -138,7 +140,9 @@ describe('Nested Tables - Issue #147', () => {
       const docx = await HTMLtoDOCX(htmlString);
       const parsed = await parseDOCX(docx);
 
-      expect(parsed.paragraphs[0].text).toContain('Nested with border');
+      // Any paragraph in the doc carries the inner text (the leading
+      // separator paragraph that prevents border-overlap is empty).
+      expect(parsed.paragraphs.map((p) => p.text).join(' ')).toContain('Nested with border');
 
       // Both tables should have borders
       expect(parsed.xml).toContain('<w:tblBorders');
