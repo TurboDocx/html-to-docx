@@ -2606,6 +2606,119 @@ const htmlString = `<!DOCTYPE html>
            <em>italicInherited</em>
         </p>
 
+        <h1>OOXML rPr child-order tests (Word strictness)</h1>
+        <p>Word silently drops <code>&lt;w:rPr&gt;</code> children that appear out of the
+           ECMA-376 EG_RPrBase sequence; LibreOffice tolerates the violation. This section
+           exercises deeply-nested formatting combinations that previously emitted children
+           in the wrong order — the most visible failure mode was a dark-themed table header
+           whose white text rendered as default black in Word.</p>
+
+        <h2>Word-stress: white text on dark-blue table header (legal/proposal pattern)</h2>
+        <table style="border-collapse: collapse;" cellspacing="0">
+            <tbody>
+                <tr>
+                    <td style="background-color: #2f5496; vertical-align: top; width: 155px; border: 1px solid black;">
+                        <p><span style="font-size: 11pt;"><span style="font-family: Calibri,sans-serif;"><span style="font-size: 12.0pt;"><span style="color: white;">Project Phase</span></span></span></span></p>
+                    </td>
+                    <td style="background-color: #2f5496; border-bottom: 1px solid black; border-left: none; border-right: 1px solid black; border-top: 1px solid black; vertical-align: top; width: 396px;">
+                        <p><span style="font-size: 11pt;"><span style="font-family: Calibri,sans-serif;"><span style="font-size: 12.0pt;"><span style="color: white;">Activities in Scope</span></span></span></span></p>
+                    </td>
+                    <td style="background-color: #2f5496; border-bottom: 1px solid black; border-left: none; border-right: 1px solid black; border-top: 1px solid black; vertical-align: top; width: 120px;">
+                        <p><span style="font-size: 11pt;"><span style="font-family: Calibri,sans-serif;"><span style="font-size: 12.0pt;"><span style="color: white;">Estimated Hours</span></span></span></span></p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Mixed rPr children — every supported attribute in one run</h2>
+        <p style="font-family: Times New Roman, serif; font-size: 14pt; color: #ff0000;">
+           <strong><em><u><del>kitchen-sink</del></u></em></strong>
+        </p>
+
+        <h2>Inverse: light text on dark cell (alternate brand palette)</h2>
+        <table style="border-collapse: collapse;" cellspacing="0">
+            <tbody>
+                <tr>
+                    <td style="background-color: #000000; border: 1px solid black; vertical-align: top; width: 250px;">
+                        <p><span style="font-family: Arial, sans-serif;"><span style="font-size: 12pt;"><span style="color: #f0f0f0;">Charcoal cell, near-white text</span></span></span></p>
+                    </td>
+                    <td style="background-color: #1a472a; border: 1px solid black; vertical-align: top; width: 250px;">
+                        <p><span style="font-family: Arial, sans-serif;"><span style="font-size: 12pt;"><span style="color: #cce0cc;">Forest-green cell, mint text</span></span></span></p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Subscript and superscript with explicit color and size</h2>
+        <p style="font-family: Calibri, sans-serif; color: #003366; font-size: 14pt;">
+           Water formula: H<sub>2</sub>O.
+           Einstein's relation: E = mc<sup>2</sup>.
+           Footnote anchor<sup>1</sup>.
+        </p>
+
+        <h2>Highlighted text with explicit font and size</h2>
+        <p style="font-family: Verdana, sans-serif; font-size: 11pt;">
+           A search query like <mark>important keyword</mark> mid-sentence,
+           plus a hand-coded highlight via
+           <span style="background-color: #ffff00;">background-color span</span>.
+        </p>
+
+        <h2>Hyperlink combined with bold + color</h2>
+        <p style="font-family: Calibri, sans-serif; font-size: 12pt;">
+           Visit <a href="https://turbodocx.com"><strong style="color: #2f5496;">TurboDocx</strong></a>
+           for more information.
+        </p>
+
+        <h2>Paragraph with many sibling formatted runs</h2>
+        <p style="font-family: Calibri, sans-serif; font-size: 11pt; color: #333333;">
+           Plain text,
+           <strong style="color: #ff0000;">bold red</strong>,
+           <em style="color: #00aa00;">italic green</em>,
+           <u style="color: #0000ff;">underlined blue</u>,
+           <del style="color: #ff8800;">stricken orange</del>,
+           <span style="font-size: 16pt;">larger</span>,
+           <span style="font-family: Courier New, monospace;">monospace</span>,
+           and a <mark>highlight</mark> — all in one paragraph.
+        </p>
+
+        <h2>Nested table cell colors (dark > medium > light)</h2>
+        <table style="border-collapse: collapse;" cellspacing="0">
+            <tbody>
+                <tr>
+                    <td style="background-color: #2f5496; border: 1px solid black; vertical-align: top;">
+                        <p><span style="font-family: Calibri, sans-serif;"><span style="font-size: 12pt;"><span style="color: #ffffff;">Dark header (white)</span></span></span></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: #8ea9db; border: 1px solid black; vertical-align: top;">
+                        <p><span style="font-family: Calibri, sans-serif;"><span style="font-size: 11pt;"><span style="color: #000000;">Medium subheader (black)</span></span></span></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: #e7e6e6; border: 1px solid black; vertical-align: top;">
+                        <p><span style="font-family: Calibri, sans-serif;"><span style="font-size: 11pt;"><span style="color: #444444;">Light body row (dark grey)</span></span></span></p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Long deeply-nested span chain (stress for accumulator)</h2>
+        <p>
+           <span style="font-family: Calibri, sans-serif;">
+             <span style="font-size: 10pt;">
+               <span style="color: #000000;">
+                 <span style="font-size: 12pt;">
+                   <span style="background-color: #fff0c0;">
+                     <span style="color: #663300;">
+                       Final innermost color and background wins.
+                     </span>
+                   </span>
+                 </span>
+               </span>
+             </span>
+           </span>
+        </p>
+
     </body>
 </html>`;
 
