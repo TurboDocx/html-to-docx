@@ -2592,6 +2592,25 @@ const fixupTableCellBorder = (
  * @param {number} parentWidth Width of the parent element
  * @returns
  */
+// Hairline (1pt) line height used for the sentinel paragraphs we insert
+// around nested tables. Defaults to 20 twips with an exact line rule so
+// Word/LibreOffice render a thin separator (just enough to keep adjacent
+// table borders from collapsing) instead of a full ~14pt blank line.
+const NESTED_TABLE_SENTINEL_LINE_TWIPS = 20;
+
+const buildNestedTableSentinelParagraph = () =>
+  fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'p')
+    .ele('@w', 'pPr')
+    .ele('@w', 'spacing')
+    .att('@w', 'before', '0')
+    .att('@w', 'after', '0')
+    .att('@w', 'line', String(NESTED_TABLE_SENTINEL_LINE_TWIPS))
+    .att('@w', 'lineRule', 'exact')
+    .up()
+    .up()
+    .up();
+
 const buildTableCell = async (
   vNode,
   attributes,
@@ -2825,12 +2844,14 @@ const buildTableCell = async (
   }
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
-  // Tracks whether any content (paragraph, list, table, image) has been
-  // imported into the cell yet. Used to decide whether to prepend a
-  // leading <w:p> before a nested table — without it, the inner table's
-  // top border lays out flush against the cell's top edge and Word
-  // renders the two borders as one merged line.
+  // Track the last imported content so we know whether the cell needs a
+  // trailing sentinel <w:p> (OOXML requires every <w:tc> to end with a
+  // <w:p>; Word marks the file corrupted otherwise) and whether the next
+  // nested <w:tbl> needs a leading sentinel (without one, the inner
+  // table's top border lays out flush against the cell's top edge and
+  // Word/LibreOffice collapse the two borders into one heavier line).
   let cellHasContent = false;
+  let lastImportWasTable = false;
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
@@ -2844,6 +2865,7 @@ const buildTableCell = async (
         if (imageFragment) {
           tableCellFragment.import(imageFragment);
           cellHasContent = true;
+          lastImportWasTable = false;
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'figure') {
         if (vNodeHasChildren(childVNode)) {
@@ -2860,6 +2882,7 @@ const buildTableCell = async (
               if (imageFragment) {
                 tableCellFragment.import(imageFragment);
                 cellHasContent = true;
+                lastImportWasTable = false;
               }
             }
           }
@@ -2869,33 +2892,14 @@ const buildTableCell = async (
         if (vNodeHasChildren(childVNode)) {
           await buildList(childVNode, docxDocumentInstance, tableCellFragment);
           cellHasContent = true;
+          lastImportWasTable = false;
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
         // Issue #147: render nested <table> in a table cell.
-        //
-        // If the cell has no preceding content, prepend a near-zero-height
-        // <w:p> so the inner table's top border doesn't render flush
-        // against the cell's top edge. Word and LibreOffice collapse
-        // adjacent table borders into one heavier line, making it look
-        // like the borders overlap.
-        //
-        // The spacing is locked to 20 twips (1pt) of fixed line height
-        // with no before/after spacing — visually a hairline gap, just
-        // enough to keep the two borders distinct. A default <w:p> would
-        // produce ~14pt of unwanted whitespace above the nested table.
         if (!cellHasContent) {
-          const leadingParagraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
-            .ele('@w', 'p')
-            .ele('@w', 'pPr')
-            .ele('@w', 'spacing')
-            .att('@w', 'before', '0')
-            .att('@w', 'after', '0')
-            .att('@w', 'line', '20')
-            .att('@w', 'lineRule', 'exact')
-            .up()
-            .up()
-            .up();
-          tableCellFragment.import(leadingParagraphFragment);
+          // Prepend a hairline <w:p> so the inner table's top border
+          // doesn't collapse against the cell's top edge.
+          tableCellFragment.import(buildNestedTableSentinelParagraph());
         }
         // eslint-disable-next-line no-use-before-define
         const nestedTableFragment = await buildTable(
@@ -2907,25 +2911,8 @@ const buildTableCell = async (
           docxDocumentInstance
         );
         tableCellFragment.import(nestedTableFragment);
-        // OOXML requires every <w:tc> to end with a <w:p>. If the nested
-        // table is the cell's final child, Word marks the document as
-        // corrupted on open (LibreOffice is lenient). Append a sentinel
-        // paragraph at the same near-zero-height as the leading one so
-        // the structural invariant holds without introducing visible
-        // trailing space below the nested table.
-        const trailingParagraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
-          .ele('@w', 'p')
-          .ele('@w', 'pPr')
-          .ele('@w', 'spacing')
-          .att('@w', 'before', '0')
-          .att('@w', 'after', '0')
-          .att('@w', 'line', '20')
-          .att('@w', 'lineRule', 'exact')
-          .up()
-          .up()
-          .up();
-        tableCellFragment.import(trailingParagraphFragment);
         cellHasContent = true;
+        lastImportWasTable = true;
       } else {
         const paragraphFragment = await buildParagraph(
           childVNode,
@@ -2935,7 +2922,17 @@ const buildTableCell = async (
 
         tableCellFragment.import(paragraphFragment);
         cellHasContent = true;
+        lastImportWasTable = false;
       }
+    }
+    // If the cell's final imported content was a nested table, append the
+    // hairline sentinel so the cell ends with <w:p> (OOXML requirement;
+    // Word reports the document as corrupted otherwise). When the last
+    // child is already a paragraph or list-paragraph, no sentinel is
+    // needed — this avoids a redundant blank line between nested tables
+    // and following paragraphs in the same cell.
+    if (lastImportWasTable) {
+      tableCellFragment.import(buildNestedTableSentinelParagraph());
     }
   } else {
     // TODO: Figure out why building with buildParagraph() isn't working
