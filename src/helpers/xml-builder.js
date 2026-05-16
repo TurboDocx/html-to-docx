@@ -2592,6 +2592,25 @@ const fixupTableCellBorder = (
  * @param {number} parentWidth Width of the parent element
  * @returns
  */
+// Hairline (1pt) line height used for the sentinel paragraphs we insert
+// around nested tables. Defaults to 20 twips with an exact line rule so
+// Word/LibreOffice render a thin separator (just enough to keep adjacent
+// table borders from collapsing) instead of a full ~14pt blank line.
+const NESTED_TABLE_SENTINEL_LINE_TWIPS = 20;
+
+const buildNestedTableSentinelParagraph = () =>
+  fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'p')
+    .ele('@w', 'pPr')
+    .ele('@w', 'spacing')
+    .att('@w', 'before', '0')
+    .att('@w', 'after', '0')
+    .att('@w', 'line', String(NESTED_TABLE_SENTINEL_LINE_TWIPS))
+    .att('@w', 'lineRule', 'exact')
+    .up()
+    .up()
+    .up();
+
 const buildTableCell = async (
   vNode,
   attributes,
@@ -2825,6 +2844,14 @@ const buildTableCell = async (
   }
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
+  // Track the last imported content so we know whether the cell needs a
+  // trailing sentinel <w:p> (OOXML requires every <w:tc> to end with a
+  // <w:p>; Word marks the file corrupted otherwise) and whether the next
+  // nested <w:tbl> needs a leading sentinel (without one, the inner
+  // table's top border lays out flush against the cell's top edge and
+  // Word/LibreOffice collapse the two borders into one heavier line).
+  let cellHasContent = false;
+  let lastImportWasTable = false;
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
@@ -2837,6 +2864,8 @@ const buildTableCell = async (
         );
         if (imageFragment) {
           tableCellFragment.import(imageFragment);
+          cellHasContent = true;
+          lastImportWasTable = false;
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'figure') {
         if (vNodeHasChildren(childVNode)) {
@@ -2852,6 +2881,8 @@ const buildTableCell = async (
               );
               if (imageFragment) {
                 tableCellFragment.import(imageFragment);
+                cellHasContent = true;
+                lastImportWasTable = false;
               }
             }
           }
@@ -2860,7 +2891,28 @@ const buildTableCell = async (
         // render list in table
         if (vNodeHasChildren(childVNode)) {
           await buildList(childVNode, docxDocumentInstance, tableCellFragment);
+          cellHasContent = true;
+          lastImportWasTable = false;
         }
+      } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
+        // Issue #147: render nested <table> in a table cell.
+        if (!cellHasContent) {
+          // Prepend a hairline <w:p> so the inner table's top border
+          // doesn't collapse against the cell's top edge.
+          tableCellFragment.import(buildNestedTableSentinelParagraph());
+        }
+        // eslint-disable-next-line no-use-before-define
+        const nestedTableFragment = await buildTable(
+          childVNode,
+          {
+            ...modifiedAttributes,
+            maximumWidth: modifiedAttributes.maximumWidth || parentWidth,
+          },
+          docxDocumentInstance
+        );
+        tableCellFragment.import(nestedTableFragment);
+        cellHasContent = true;
+        lastImportWasTable = true;
       } else {
         const paragraphFragment = await buildParagraph(
           childVNode,
@@ -2869,7 +2921,18 @@ const buildTableCell = async (
         );
 
         tableCellFragment.import(paragraphFragment);
+        cellHasContent = true;
+        lastImportWasTable = false;
       }
+    }
+    // If the cell's final imported content was a nested table, append the
+    // hairline sentinel so the cell ends with <w:p> (OOXML requirement;
+    // Word reports the document as corrupted otherwise). When the last
+    // child is already a paragraph or list-paragraph, no sentinel is
+    // needed — this avoids a redundant blank line between nested tables
+    // and following paragraphs in the same cell.
+    if (lastImportWasTable) {
+      tableCellFragment.import(buildNestedTableSentinelParagraph());
     }
   } else {
     // TODO: Figure out why building with buildParagraph() isn't working

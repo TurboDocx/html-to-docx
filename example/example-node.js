@@ -2281,6 +2281,289 @@ const htmlString = `<!DOCTYPE html>
             </li>
         </ol>
 
+        <h1>Nested Table Tests (PR #150 — Issue #147)</h1>
+
+        <h2>Basic nested table inside a cell</h2>
+        <p>The outer table has a cell containing an &lt;h3&gt; and a nested table:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <h3>Inner heading</h3>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td>Nested cell value</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Three-level deep nesting</h2>
+        <p>Outer → middle → inner, all rendered:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>Outer L0
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td>Middle L1
+                                <table border="1" style="border-collapse: collapse;">
+                                    <tr><td>Inner L2 leaf</td></tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Multiple nested tables in the same cell with text between</h2>
+        <p>Source order must be preserved: prefix, first nested, middle text, second nested, suffix.</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    prefix text
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>first inner</td></tr>
+                    </table>
+                    middle text between two nested tables
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>second inner</td></tr>
+                    </table>
+                    suffix text
+                </td>
+            </tr>
+        </table>
+
+        <h2>Nested table inside a header cell (&lt;th&gt;)</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <th>Header with nested table:
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>nested in th</td></tr>
+                    </table>
+                </th>
+            </tr>
+            <tr>
+                <td>regular body cell</td>
+            </tr>
+        </table>
+
+        <h2>Nested table with colspan/rowspan inside</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td colspan="2">inner spans two columns</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2">inner spans two rows</td>
+                            <td>r2c2</td>
+                        </tr>
+                        <tr>
+                            <td>r3c2</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Five-level deep nesting</h2>
+        <p>Sanity check for arbitrary depth — outer down to a leaf five tables deep:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>D0
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>D1
+                            <table border="1" style="border-collapse: collapse;">
+                                <tr><td>D2
+                                    <table border="1" style="border-collapse: collapse;">
+                                        <tr><td>D3
+                                            <table border="1" style="border-collapse: collapse;">
+                                                <tr><td>D4 leaf</td></tr>
+                                            </table>
+                                        </td></tr>
+                                    </table>
+                                </td></tr>
+                            </table>
+                        </td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Nested table with formatted inner content</h2>
+        <p>Inner cells exercise <strong>bold</strong>, <em>italic</em>, <del>strikethrough</del>, and a
+           <a href="https://turbodocx.com">hyperlink</a>:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td><strong>Bold inner</strong></td>
+                            <td><em>Italic inner</em></td>
+                            <td><del>Stricken inner</del></td>
+                            <td><a href="https://turbodocx.com">Linked inner</a></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Nested table with image inside an inner cell</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <p>Cell containing a nested table whose inner cell holds an inline image:</p>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td>
+                                <img src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==" alt="red dot" />
+                                Image in nested cell
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Nested table with cell background colors</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td bgcolor="#ffeecc">Cream</td>
+                            <td bgcolor="#cceeff">Sky blue</td>
+                            <td bgcolor="#ccffcc">Mint</td>
+                        </tr>
+                        <tr>
+                            <td bgcolor="#ffcccc">Pink</td>
+                            <td bgcolor="#eeccff">Lavender</td>
+                            <td bgcolor="#ffeecc">Cream again</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Nested table with vertical-align variations</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td style="height: 100px;">
+                    <table border="1" style="border-collapse: collapse; width: 100%;">
+                        <tr style="height: 80px;">
+                            <td style="vertical-align: top;">Top-aligned inner cell</td>
+                            <td style="vertical-align: middle;">Middle-aligned inner cell</td>
+                            <td style="vertical-align: bottom;">Bottom-aligned inner cell</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Multiple cells in same row, each with a different nested table</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <p>Country list:</p>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>USA</td></tr>
+                        <tr><td>Canada</td></tr>
+                        <tr><td>Mexico</td></tr>
+                    </table>
+                </td>
+                <td>
+                    <p>Sales by quarter:</p>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><th>Q1</th><th>Q2</th></tr>
+                        <tr><td>100</td><td>150</td></tr>
+                    </table>
+                </td>
+                <td>
+                    <p>Status flags:</p>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td bgcolor="#ccffcc">OK</td></tr>
+                        <tr><td bgcolor="#ffcccc">FAIL</td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Asymmetric outer table: some cells have nested tables, others don't</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>Plain leaf cell</td>
+                <td>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>Nested in cell 2</td></tr>
+                    </table>
+                </td>
+                <td>Another plain leaf</td>
+            </tr>
+            <tr>
+                <td>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>Nested in row 2 cell 1</td></tr>
+                    </table>
+                </td>
+                <td>Plain middle</td>
+                <td>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr><td>Nested in row 2 cell 3</td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Nested table inside a header cell (&lt;th&gt;)</h2>
+        <p>Word's table-header cells can also host nested tables:</p>
+        <table border="1" style="border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th>
+                        Metric
+                        <table border="1" style="border-collapse: collapse;">
+                            <tr><th>sub-A</th><th>sub-B</th></tr>
+                        </table>
+                    </th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Throughput</td>
+                    <td>42</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Nested table with mixed text and block content around it</h2>
+        <table border="1" style="border-collapse: collapse;">
+            <tr>
+                <td>
+                    <h3>Section heading</h3>
+                    <p>An introductory paragraph before the nested table.</p>
+                    <ul>
+                        <li>Pre-list item 1</li>
+                        <li>Pre-list item 2</li>
+                    </ul>
+                    <table border="1" style="border-collapse: collapse;">
+                        <tr>
+                            <td>A1</td>
+                            <td>B1</td>
+                        </tr>
+                        <tr>
+                            <td>A2</td>
+                            <td>B2</td>
+                        </tr>
+                    </table>
+                    <p>A trailing paragraph after the nested table.</p>
+                    <blockquote>And a blockquote at the end of the cell.</blockquote>
+                </td>
+            </tr>
+        </table>
+
     </body>
 </html>`;
 
