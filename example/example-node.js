@@ -2564,6 +2564,48 @@ const htmlString = `<!DOCTYPE html>
             </tr>
         </table>
 
+        <h1>Inline Color Override Tests (PR #201 — Issue #200)</h1>
+        <p>Inline <code>style="color: …"</code> on phrasing-content elements
+           (&lt;strong&gt;, &lt;em&gt;, &lt;u&gt;, etc.) must override the ancestor block's
+           color — previously the child's color was silently dropped.</p>
+
+        <h2>Legal-document highlight pattern</h2>
+        <p style="font-size: 14pt; color: #000000; line-height: 1.5;">
+           <strong style="color: #4477c6;">WHEREFORE, </strong>based on the foregoing, the Defendant
+           respectfully requests that this Honorable Court enter an order precluding the State from
+           introducing any evidence or testimony regarding alleged past sales.
+        </p>
+
+        <h2>Each inline element with its own color</h2>
+        <p style="color: #000000;">
+           plain
+           <strong style="color: #ff0000;">strongRed</strong>
+           plain
+           <em style="color: #008000;">emGreen</em>
+           plain
+           <u style="color: #0000ff;">uBlue</u>
+           plain
+           <del style="color: #ff8800;">delOrange</del>
+           plain
+           <span style="color: #aa00ff;">spanPurple</span>
+           plain
+        </p>
+
+        <h2>Nested inline elements — innermost color wins</h2>
+        <p style="color: #000000;">
+           <strong style="color: #ff8800;">
+             outerOrange
+             <em style="color: #aa00ff;">innerPurple</em>
+             trailingOrange
+           </strong>
+        </p>
+
+        <h2>Inline elements with no own color inherit ancestor</h2>
+        <p style="color: #4477c6;">
+           <strong>boldInherited</strong>
+           <em>italicInherited</em>
+        </p>
+
     </body>
 </html>`;
 
