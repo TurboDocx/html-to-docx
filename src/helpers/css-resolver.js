@@ -39,26 +39,33 @@ import { removeElement, textContent } from 'domutils';
 function computeSpecificity(selectorNode) {
   const specificity = [0, 0, 0];
 
-  csstree.walk(selectorNode, (node) => {
-    switch (node.type) {
-      case 'IdSelector':
-        specificity[0] += 1;
-        break;
-      case 'ClassSelector':
-      case 'AttributeSelector':
-      case 'PseudoClassSelector':
-        specificity[1] += 1;
-        break;
-      case 'TypeSelector':
-        if (node.name !== '*') specificity[2] += 1;
-        break;
-      case 'PseudoElementSelector':
-        specificity[2] += 1;
-        break;
-      default:
-        break;
-    }
-  });
+  // Iterate the selector's direct components only. Deliberately NOT a deep walk:
+  // descending into a functional pseudo-class argument (e.g. `:where(p)`,
+  // `:not(.x)`) would double-count the inner selector and inflate specificity.
+  // Each compound part and combinator of a complex selector is a direct child
+  // of the Selector node, so one level covers `div .a#b` correctly.
+  if (selectorNode.children) {
+    selectorNode.children.forEach((node) => {
+      switch (node.type) {
+        case 'IdSelector':
+          specificity[0] += 1;
+          break;
+        case 'ClassSelector':
+        case 'AttributeSelector':
+        case 'PseudoClassSelector':
+          specificity[1] += 1;
+          break;
+        case 'TypeSelector':
+          if (node.name !== '*') specificity[2] += 1;
+          break;
+        case 'PseudoElementSelector':
+          specificity[2] += 1;
+          break;
+        default:
+          break;
+      }
+    });
+  }
 
   return specificity;
 }
@@ -136,31 +143,34 @@ function collectRules(cssText) {
   const rules = [];
   let order = 0;
 
-  csstree.walk(ast, {
-    visit: 'Rule',
-    enter(rule) {
-      // Only plain style rules (a SelectorList prelude). Skip at-rules etc.
-      if (!rule.prelude || rule.prelude.type !== 'SelectorList') return;
+  // Iterate only the stylesheet's TOP-LEVEL rules. We intentionally do not walk
+  // into at-rules: a rule nested in `@media`, `@supports`, `@container`, etc. is
+  // conditional, so applying it unconditionally would be wrong. At-rules are
+  // documented as unsupported and are therefore ignored here.
+  if (!ast.children) return rules;
 
-      const declarations = serializeDeclarations(rule.block);
-      if (!declarations) return;
+  ast.children.forEach((node) => {
+    // Only plain style rules (a SelectorList prelude). Skip Atrule nodes etc.
+    if (node.type !== 'Rule' || !node.prelude || node.prelude.type !== 'SelectorList') return;
 
-      const selectors = [];
-      rule.prelude.children.forEach((selectorNode) => {
-        let text;
-        try {
-          text = csstree.generate(selectorNode);
-        } catch (error) {
-          return;
-        }
-        selectors.push({ text, specificity: computeSpecificity(selectorNode) });
-      });
+    const declarations = serializeDeclarations(node.block);
+    if (!declarations) return;
 
-      if (selectors.length) {
-        rules.push({ selectors, declarations, order });
-        order += 1;
+    const selectors = [];
+    node.prelude.children.forEach((selectorNode) => {
+      let text;
+      try {
+        text = csstree.generate(selectorNode);
+      } catch (error) {
+        return;
       }
-    },
+      selectors.push({ text, specificity: computeSpecificity(selectorNode) });
+    });
+
+    if (selectors.length) {
+      rules.push({ selectors, declarations, order });
+      order += 1;
+    }
   });
 
   return rules;

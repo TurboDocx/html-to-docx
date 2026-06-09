@@ -167,6 +167,30 @@ describe('CSS resolver - robustness', () => {
     const vtree = convertHTML({ css: '' }, '<p>hi</p>');
     expect(styleOf(findNode(vtree, 'p'))).toEqual({});
   });
+
+  test('@media (and other at-rules) are ignored, not applied unconditionally', () => {
+    // at-rules are documented as unsupported -> their nested rules must NOT be
+    // baked in as always-on styles.
+    const css = '@media print { p { color: red; } }';
+    const vtree = convertHTML({ css }, '<p>x</p>');
+    expect(styleOf(findNode(vtree, 'p')).color).toBeUndefined();
+  });
+
+  test('a top-level rule still applies when an at-rule precedes it', () => {
+    const css = '@media print { p { color: red; } } p { color: blue; }';
+    const vtree = convertHTML({ css }, '<p>x</p>');
+    expect(styleOf(findNode(vtree, 'p')).color).toBe('blue');
+  });
+});
+
+describe('CSS resolver - functional pseudo-class specificity', () => {
+  test('a functional pseudo-class argument does not inflate specificity', () => {
+    // p.a has specificity (0,1,1). :where(p) must not be counted as (0,1,1)
+    // by walking into its argument, otherwise it would tie and win on order.
+    const css = 'p.a { color: blue; } :where(p) { color: red; }';
+    const vtree = convertHTML({ css }, '<p class="a">x</p>');
+    expect(styleOf(findNode(vtree, 'p')).color).toBe('blue');
+  });
 });
 
 describe('CSS resolver - module API (applyStylesheet / extractAndStripStyleTags)', () => {
