@@ -80,6 +80,27 @@ describe('CSS stylesheet support - end to end', () => {
     expect(footerXml).toMatch(/<jc\b[^>]*val="center"/);
   });
 
+  test('richer CSS properties from a stylesheet render (font, size, background)', async () => {
+    // Guards the property list documented in the README / example.
+    const html = '<table><tr><th class="hd">Region</th></tr></table>';
+    const css = `
+      .hd {
+        font-family: 'Georgia';
+        font-size: 14pt;
+        color: #ffffff;
+        background-color: #1a3c7a;
+      }
+    `;
+
+    const buffer = await HTMLtoDOCX(html, null, { css, deterministicIds: true });
+    const { xml } = await parseDOCX(buffer);
+
+    expect(xml).toContain('Georgia'); // font-family -> w:rFonts
+    expect(xml).toMatch(/<w:sz w:val="28"/); // 14pt -> 28 half-points
+    expect(xml).toMatch(/<w:shd[^>]*w:fill="1a3c7a"/); // background-color -> w:shd
+    expect(xml).toContain('<w:color w:val="ffffff"'); // color
+  });
+
   test('no css option leaves output unchanged (backward compatible)', async () => {
     const html = '<p>Plain</p>';
     const buffer = await HTMLtoDOCX(html, null, { deterministicIds: true });
