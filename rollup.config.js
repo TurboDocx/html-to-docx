@@ -15,7 +15,21 @@ const banner = `// ${meta.homepage} v${meta.version} Copyright ${new Date().getF
 // Node.js / Library build configuration (ESM and UMD)
 const libraryConfig = {
   input: 'index.js',
-  external: ['color-name', 'jszip', 'xmlbuilder2', 'html-entities', 'lru-cache', 'htmlparser2', 'sharp'],
+  external: [
+    'color-name',
+    'jszip',
+    'xmlbuilder2',
+    'html-entities',
+    'lru-cache',
+    'htmlparser2',
+    'sharp',
+    // CSS stylesheet resolver deps. Externalized (like htmlparser2 et al.) so
+    // they are required from node_modules at runtime — css-tree loads JSON data
+    // files (data/patch.json, mdn-data) that cannot be inlined into the bundle.
+    'css-select',
+    'css-tree',
+    'domutils',
+  ],
   plugins: [
     resolve(),
     json(),
@@ -45,6 +59,9 @@ const libraryConfig = {
         jszip: 'JSZip',
         xmlbuilder2: 'xmlbuilder2',
         'html-entities': 'htmlEntities',
+        'css-select': 'cssSelect',
+        'css-tree': 'csstree',
+        domutils: 'domutils',
       },
       banner,
     },
