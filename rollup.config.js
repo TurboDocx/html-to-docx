@@ -12,6 +12,24 @@ const browserOnly = process.env.BUILD_TARGET === 'browser';
 
 const banner = `// ${meta.homepage} v${meta.version} Copyright ${new Date().getFullYear()} ${meta.author}`;
 
+// Replace the optional native `sharp` dependency with a null stub in browser
+// builds. The IIFE build stubs sharp via output.globals, but that only works for
+// iife/umd formats; an ESM output needs a real module to import, so we resolve
+// `sharp` to a virtual module that exports null. SVG rasterization (the only
+// sharp consumer) then throws its existing "Sharp is not installed" error if
+// actually invoked, while basic generation works untouched.
+const stubSharpForBrowser = () => ({
+  name: 'stub-sharp-for-browser',
+  resolveId(source) {
+    if (source === 'sharp') return '\0sharp-stub';
+    return null;
+  },
+  load(id) {
+    if (id === '\0sharp-stub') return 'export default null;';
+    return null;
+  },
+});
+
 // Node.js / Library build configuration (ESM and UMD)
 const libraryConfig = {
   input: 'index.js',
@@ -84,6 +102,35 @@ const browserConfig = {
   },
 };
 
-const configs = [libraryConfig, browserConfig];
+// Browser ESM build: same self-contained, polyfilled bundle as the IIFE, but
+// emitted as an ES module with a real default export. This is what bundlers
+// (Next.js, Vite, webpack) resolve via the package `exports` "browser"
+// condition, so `import HTMLtoDOCX from '@turbodocx/html-to-docx'` works with no
+// extra configuration. `sharp` is replaced by a null stub (see above).
+const browserEsmConfig = {
+  input: 'index.js',
+  plugins: [
+    stubSharpForBrowser(),
+    resolve({
+      browser: true,
+      preferBuiltins: false,
+    }),
+    json(),
+    commonjs(),
+    nodePolyfills(),
+    terser({
+      mangle: isProduction,
+      compress: isProduction,
+    }),
+  ],
+  output: {
+    file: 'dist/html-to-docx.browser.esm.js',
+    format: 'es',
+    sourcemap: !isProduction,
+    banner,
+  },
+};
 
-export default browserOnly ? [browserConfig] : configs;
+const configs = [libraryConfig, browserConfig, browserEsmConfig];
+
+export default browserOnly ? [browserConfig, browserEsmConfig] : configs;

@@ -200,13 +200,25 @@ The library provides a standalone browser build that bundles all dependencies in
 
 ### Build Outputs
 
-When you run `npm run build`, three distribution files are generated:
+When you run `npm run build`, four distribution files are generated:
 
 | File | Format | Size | Dependencies | Use Case |
 |------|--------|------|--------------|----------|
-| `dist/html-to-docx.esm.js` | ES Module | ~1.6 MB | External | Modern bundlers (Webpack, Vite, Rollup) |
-| `dist/html-to-docx.umd.js` | UMD | ~1.6 MB | External | Node.js, AMD, or manual dependency management |
-| `dist/html-to-docx.browser.js` | IIFE | ~2.4 MB | **All bundled** | Direct browser usage, CDN, quick prototypes |
+| `dist/html-to-docx.esm.js` | ES Module | ~1.6 MB | External | Node.js ESM, server-side bundling |
+| `dist/html-to-docx.umd.js` | UMD | ~1.6 MB | External | Node.js `require`, AMD |
+| `dist/html-to-docx.browser.esm.js` | ES Module | ~1.6 MB | **All bundled** | Browser bundlers (Next.js, Vite, webpack) |
+| `dist/html-to-docx.browser.js` | IIFE | ~1.6 MB | **All bundled** | Direct browser usage via `<script>`, CDN |
+
+The package `exports` map points each environment at the right file
+automatically, so consumers don't choose manually:
+
+- **Browser bundlers** (Next.js/Turbopack, Vite, webpack) resolve the `browser`
+  condition to `html-to-docx.browser.esm.js` — a self-contained ESM build with
+  Node polyfills bundled in. `import HTMLtoDOCX from "@turbodocx/html-to-docx"`
+  works with **no extra configuration**. See
+  [`example/nextjs-example`](example/nextjs-example) for a complete app.
+- **Node.js** resolves `import` → `esm.js` and `require` → `umd.js`.
+- **`<script>` tags / CDNs** use `html-to-docx.browser.js` (IIFE) directly by URL.
 
 ### Build Commands
 
@@ -342,7 +354,8 @@ You can also host the browser build on a CDN for easy inclusion:
 await HTMLtoDOCX(htmlString, headerHTMLString, documentOptions, footerHTMLString)
 ```
 
-full fledged examples can be found under `example/`
+Full examples can be found under `example/`, including a complete
+[Next.js app](example/nextjs-example) that generates a `.docx` in the browser.
 
 ### Parameters
 
