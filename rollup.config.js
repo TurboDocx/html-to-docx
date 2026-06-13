@@ -28,6 +28,20 @@ const stubSharpForBrowser = () => ({
     if (id === '\0sharp-stub') return 'export default null;';
     return null;
   },
+  // `sharp` is loaded via `require('sharp')` inside a try/catch in an ES module
+  // (src/utils/image.js). @rollup/plugin-commonjs leaves try/catch requires in
+  // mixed ES modules untransformed (default `ignoreTryCatch`), so `resolveId`
+  // above never sees `sharp` and the bare `require('sharp')` survives into the
+  // bundle. A downstream bundler (Next.js/webpack) then statically resolves it
+  // and pulls in sharp's Node-native deps (detect-libc -> child_process),
+  // breaking the browser build. Neutralize the require in our own source so no
+  // `sharp` specifier remains for any consumer to follow.
+  transform(code, id) {
+    if (id.includes('node_modules') || !/require\(\s*(['"])sharp\1\s*\)/.test(code)) {
+      return null;
+    }
+    return { code: code.replace(/require\(\s*(['"])sharp\1\s*\)/g, 'null'), map: null };
+  },
 });
 
 // Node.js / Library build configuration (ESM and UMD)
