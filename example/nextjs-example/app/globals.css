@@ -31,6 +31,31 @@ h1 {
   margin: 1.5rem 0;
 }
 
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.tab {
+  align-self: auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.tab.active {
+  opacity: 1;
+  border-bottom-color: #4f46e5;
+}
+
 textarea {
   width: 100%;
   box-sizing: border-box;

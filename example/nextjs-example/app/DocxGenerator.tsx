@@ -2,22 +2,27 @@
 
 import { useState } from "react";
 
+import { EXAMPLES } from "./examples";
+
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-const DEFAULT_HTML = `<h1>Hello from the browser</h1>
-<p>This <strong>.docx</strong> was generated entirely client-side with
-<code>@turbodocx/html-to-docx</code> &mdash; no server round-trip.</p>
-<ul>
-  <li>Pure JavaScript, no headless browser or binaries</li>
-  <li>Returns a <code>Blob</code> in the browser</li>
-  <li>Downloaded with <code>URL.createObjectURL</code></li>
-</ul>`;
-
 export default function DocxGenerator() {
-  const [html, setHtml] = useState(DEFAULT_HTML);
+  const [activeId, setActiveId] = useState(EXAMPLES[0].id);
+  const [html, setHtml] = useState(EXAMPLES[0].html);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const active = EXAMPLES.find((e) => e.id === activeId) ?? EXAMPLES[0];
+
+  // Switching tabs loads that example's markup into the editable textarea.
+  function selectExample(id: string) {
+    const example = EXAMPLES.find((e) => e.id === id);
+    if (!example) return;
+    setActiveId(example.id);
+    setHtml(example.html);
+    setError(null);
+  }
 
   async function handleGenerate() {
     setBusy(true);
@@ -29,15 +34,13 @@ export default function DocxGenerator() {
 
       // In the browser the library resolves to a Blob; coerce defensively
       // so this also works if a build ever returns an ArrayBuffer/Buffer.
-      const result = await HTMLtoDOCX(html, undefined, {
-        title: "TurboDocx Next.js Example",
-      });
+      const result = await HTMLtoDOCX(html, undefined, { title: active.title });
       const blob =
         result instanceof Blob
           ? result
           : new Blob([result as BlobPart], { type: DOCX_MIME });
 
-      downloadBlob(blob, "document.docx");
+      downloadBlob(blob, active.filename);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -47,16 +50,31 @@ export default function DocxGenerator() {
 
   return (
     <section className="card">
+      <div className="tabs" role="tablist" aria-label="Example">
+        {EXAMPLES.map((example) => (
+          <button
+            key={example.id}
+            role="tab"
+            type="button"
+            aria-selected={example.id === activeId}
+            className={`tab${example.id === activeId ? " active" : ""}`}
+            onClick={() => selectExample(example.id)}
+          >
+            {example.label}
+          </button>
+        ))}
+      </div>
+
       <label htmlFor="html-input">HTML source</label>
       <textarea
         id="html-input"
         value={html}
         onChange={(e) => setHtml(e.target.value)}
-        rows={10}
+        rows={16}
         spellCheck={false}
       />
       <button onClick={handleGenerate} disabled={busy}>
-        {busy ? "Generating…" : "Generate & download .docx"}
+        {busy ? "Generating…" : `Generate & download ${active.filename}`}
       </button>
       {error && <p className="error">Error: {error}</p>}
     </section>
