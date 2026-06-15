@@ -8,8 +8,8 @@
 [![Type Script](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)](https://typescript.org)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/NYKwz4BcpX)
 [![npm](https://img.shields.io/npm/dm/@turbodocx/html-to-docx)](https://www.npmjs.com/package/@turbodocx/html-to-docx)
-[![Agent Skill](https://img.shields.io/badge/agent_skill-agentskills.io-7C3AED)](https://agentskills.io)
-[![skills.sh](https://skills.sh/b/TurboDocx/quickstart)](https://skills.sh/TurboDocx/quickstart)
+[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-agentskills.io-8A2BE2)](https://agentskills.io)
+[![Quickstart Skill](https://skills.sh/b/TurboDocx/quickstart)](https://github.com/TurboDocx/quickstart)
 [![X](https://img.shields.io/badge/X-@TurboDocx-1DA1F2?logo=x&logoColor=white)](https://twitter.com/TurboDocx)
 [![Embed TurboDocx in Your App in Minutes](https://img.shields.io/badge/Embed%20TurboDocx%20in%20Your%20App%20in%20Minutes-8A2BE2)](https://www.turbodocx.com/use-cases/embedded-api?utm_source=github&utm_medium=repo&utm_campaign=open_source)
 
@@ -44,27 +44,22 @@ Based on the original work and assisted by the original contributors of [private
 
 🛠️ **Developer Experience** - Full TypeScript support, comprehensive documentation, and extensive examples to get you up and running in minutes.
 
-## Install via AI Agent Skill
+## ⚡ Skip the boilerplate — let an agent scaffold it for you
 
-Skip the boilerplate. If you use Claude Code, GitHub Copilot, Cursor, OpenCode, OpenAI Codex CLI, or Gemini CLI, you can install the `turbodocx-html-to-docx` [Agent Skill](https://agentskills.io) and have your AI agent install the package, detect your framework, and generate working integration code in one step:
+Have an AI coding agent (Claude Code, Cursor, Copilot, Codex, Gemini CLI, OpenCode) install `@turbodocx/html-to-docx`, generate a helper module, and write a working framework-appropriate route handler in one step:
 
 ```bash
 npx skills add TurboDocx/quickstart
 ```
 
-Then in your editor, invoke the skill:
+Then run `/turbodocx-html-to-docx` inside your agent. The skill will:
 
-```
-/turbodocx-html-to-docx
-```
-
-The skill will:
 1. Install `@turbodocx/html-to-docx` and any required peer dependencies
 2. Detect your project structure (Express, Next.js, Fastify, NestJS, plain Node.js, etc.)
 3. Generate a helper module and a framework-appropriate route/handler that returns a `.docx` response
-4. Add example usage that matches your existing code patterns
+4. Add example usage matching your existing code patterns
 
-Source for the skill lives at [TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
+Source: [github.com/TurboDocx/quickstart](https://github.com/TurboDocx/quickstart).
 
 ## Installation
 
@@ -205,13 +200,25 @@ The library provides a standalone browser build that bundles all dependencies in
 
 ### Build Outputs
 
-When you run `npm run build`, three distribution files are generated:
+When you run `npm run build`, four distribution files are generated:
 
 | File | Format | Size | Dependencies | Use Case |
 |------|--------|------|--------------|----------|
-| `dist/html-to-docx.esm.js` | ES Module | ~1.6 MB | External | Modern bundlers (Webpack, Vite, Rollup) |
-| `dist/html-to-docx.umd.js` | UMD | ~1.6 MB | External | Node.js, AMD, or manual dependency management |
-| `dist/html-to-docx.browser.js` | IIFE | ~2.4 MB | **All bundled** | Direct browser usage, CDN, quick prototypes |
+| `dist/html-to-docx.esm.js` | ES Module | ~1.6 MB | External | Node.js ESM, server-side bundling |
+| `dist/html-to-docx.umd.js` | UMD | ~1.6 MB | External | Node.js `require`, AMD |
+| `dist/html-to-docx.browser.esm.js` | ES Module | ~1.6 MB | **All bundled** | Browser bundlers (Next.js, Vite, webpack) |
+| `dist/html-to-docx.browser.js` | IIFE | ~1.6 MB | **All bundled** | Direct browser usage via `<script>`, CDN |
+
+The package `exports` map points each environment at the right file
+automatically, so consumers don't choose manually:
+
+- **Browser bundlers** (Next.js/Turbopack, Vite, webpack) resolve the `browser`
+  condition to `html-to-docx.browser.esm.js` — a self-contained ESM build with
+  Node polyfills bundled in. `import HTMLtoDOCX from "@turbodocx/html-to-docx"`
+  works with **no extra configuration**. See
+  [`example/nextjs-example`](example/nextjs-example) for a complete app.
+- **Node.js** resolves `import` → `esm.js` and `require` → `umd.js`.
+- **`<script>` tags / CDNs** use `html-to-docx.browser.js` (IIFE) directly by URL.
 
 ### Build Commands
 
@@ -347,7 +354,8 @@ You can also host the browser build on a CDN for easy inclusion:
 await HTMLtoDOCX(htmlString, headerHTMLString, documentOptions, footerHTMLString)
 ```
 
-full fledged examples can be found under `example/`
+Full examples can be found under `example/`, including a complete
+[Next.js app](example/nextjs-example) that generates a `.docx` in the browser.
 
 ### Parameters
 

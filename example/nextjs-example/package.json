@@ -1,0 +1,23 @@
+{
+  "name": "html-to-docx-nextjs-example",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Minimal Next.js (App Router) example showing how to generate a .docx in the browser with @turbodocx/html-to-docx",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@turbodocx/html-to-docx": "file:../..",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}
