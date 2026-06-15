@@ -1,6 +1,6 @@
 import axios from 'axios';
 import mimeTypes from 'mime-types';
-import sizeOf from 'image-size';
+import { sync as sizeOf } from 'probe-image-size';
 
 import { isValidUrl } from './url';
 import * as xmlBuilder from '../helpers/xml-builder';
