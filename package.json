@@ -42,9 +42,24 @@
     "rtl",
     "right to left"
   ],
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "node": {
+        "import": "./dist/html-to-docx.esm.js",
+        "require": "./dist/html-to-docx.umd.js"
+      },
+      "browser": "./dist/html-to-docx.browser.esm.js",
+      "import": "./dist/html-to-docx.esm.js",
+      "require": "./dist/html-to-docx.umd.js",
+      "default": "./dist/html-to-docx.esm.js"
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "main": "dist/html-to-docx.umd.js",
   "module": "dist/html-to-docx.esm.js",
-  "browser": "dist/html-to-docx.browser.js",
+  "browser": "dist/html-to-docx.browser.esm.js",
   "types": "index.d.ts",
   "files": [
     "dist",
