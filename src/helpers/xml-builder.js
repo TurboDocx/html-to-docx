@@ -7,7 +7,7 @@
 import { fragment } from 'xmlbuilder2';
 import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
-import sizeOf from 'image-size';
+import { sync as sizeOf } from 'probe-image-size';
 import { isVNode, isVText } from '../vdom/index';
 import { parseDataUrl, downloadAndCacheImage, buildImage } from '../utils/image';
 

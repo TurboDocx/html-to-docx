@@ -132,7 +132,8 @@
     "demomacro",
     "29217321",
     "FultonG",
-    "odex21"
+    "odex21",
+    "elefevre"
   ],
   "license": "MIT",
   "bugs": {
@@ -178,8 +179,8 @@
     "html-entities": "^2.3.3",
     "html-minifier-terser": "^7.2.0",
     "htmlparser2": "^10.0.0",
-    "image-size": "^2.0.2",
     "jszip": "^3.7.1",
+    "probe-image-size": "^7.2.3",
     "lodash": "^4.17.21",
     "lru-cache": "^10.4.3",
     "mime-types": "^2.1.35",
