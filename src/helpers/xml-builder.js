@@ -3836,6 +3836,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   // multiple grids can cause issue with table rendering
   let isTableGridBuilt = false;
   const rowSpanMap = new Map();
+  // <tfoot> rows are deferred and rendered after all other sections so the
+  // footer always sits at the bottom of the table, regardless of its position
+  // in the source (matching HTML rendering semantics).
+  const tfootVNodes = [];
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
@@ -3853,7 +3857,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
                 modifiedAttributes
               );
               tableFragment.import(tableGridFragment);
-              isTableGridBuilt = false;
+              isTableGridBuilt = true;
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,
@@ -3891,6 +3895,9 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             }
           }
         }
+      } else if (childVNode.tagName === 'tfoot') {
+        // Defer: collected here, rendered after the loop so it lands at the bottom.
+        tfootVNodes.push(childVNode);
       } else if (childVNode.tagName === 'tr') {
         if (index === 0) {
           const tableGridFragment = buildTableGridFromTableRow(childVNode, modifiedAttributes);
@@ -3907,6 +3914,57 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
           tableFragment.import(tableRowFragment);
         }
       }
+    }
+  }
+  // Render deferred <tfoot> rows at the bottom of the table. A footer is a new
+  // row group, so it uses its own rowSpanMap (a rowspan cannot cross a
+  // thead/tbody/tfoot boundary).
+  //
+  // Border position must be computed against the whole rendered table, not the
+  // tfoot's internal index: when the table already has rows (thead/tbody/tr),
+  // a tfoot row is never the table's first row, so only the very last tfoot row
+  // is 'last'. After the F-01 fix `isTableGridBuilt` is true iff such preceding
+  // rows exist, so it doubles as the "has preceding rows" signal here.
+  const tfootRowSpanMap = new Map();
+  const hasPrecedingRows = isTableGridBuilt;
+  const tfootRows = [];
+  for (let tfootIndex = 0; tfootIndex < tfootVNodes.length; tfootIndex++) {
+    const tfootVNode = tfootVNodes[tfootIndex];
+    if (vNodeHasChildren(tfootVNode)) {
+      for (let iteratorIndex = 0; iteratorIndex < tfootVNode.children.length; iteratorIndex++) {
+        const grandChildVNode = tfootVNode.children[iteratorIndex];
+        if (grandChildVNode.tagName === 'tr') {
+          tfootRows.push(grandChildVNode);
+        }
+      }
+    }
+  }
+  for (let rowIndex = 0; rowIndex < tfootRows.length; rowIndex++) {
+    const grandChildVNode = tfootRows[rowIndex];
+    if (!isTableGridBuilt) {
+      const tableGridFragment = buildTableGridFromTableRow(grandChildVNode, modifiedAttributes);
+      tableFragment.import(tableGridFragment);
+      isTableGridBuilt = true;
+    }
+    const isLastTfootRow = rowIndex === tfootRows.length - 1;
+    let rowIndexEquivalent;
+    if (hasPrecedingRows) {
+      // There are preceding rows, so a tfoot row is never the table's first row;
+      // only the very last tfoot row carries the table's bottom border.
+      rowIndexEquivalent = isLastTfootRow ? 'last' : 'middle';
+    } else {
+      // tfoot is the only row group: normal first/last semantics apply.
+      rowIndexEquivalent = setBorderIndexEquivalent(rowIndex, tfootRows.length);
+    }
+    const tableRowFragment = await buildTableRow(
+      grandChildVNode,
+      modifiedAttributes,
+      tfootRowSpanMap,
+      docxDocumentInstance,
+      rowIndexEquivalent
+    );
+    if (tableRowFragment) {
+      tableFragment.import(tableRowFragment);
     }
   }
   tableFragment.up();
