@@ -1,0 +1,5 @@
+# Every issue must carry the Change Request structure (SOC 2 change record), so the
+# form is required — no blank issues. All the free-form context you'd normally write
+# (## Summary / ## Scope / repro steps / ## PRs / "Part of #<n>" / checklists) goes in
+# the form's "Details" field, which is plain markdown. You get both: structure + context.
+blank_issues_enabled: false

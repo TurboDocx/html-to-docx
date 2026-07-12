@@ -27,10 +27,10 @@ body:
     validations:
       required: true
   - type: textarea
-    id: description
+    id: details
     attributes:
-      label: Description & rationale
-      description: What is changing and why.
+      label: Details — description & full context
+      description: 'What is changing and why. Put the full write-up here: summary, repro steps, scope, anything. Markdown works — this is your free-form space.'
     validations:
       required: true
   - type: checkboxes
