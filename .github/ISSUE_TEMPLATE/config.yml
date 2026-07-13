@@ -1,0 +1,8 @@
+# Public OSS repo — blank issues are ENABLED so outside contributors aren't forced
+# through a form. Hard rule for maintainers/agents (see AGENTS.md): any change we make
+# must still have a Change Request recorded somewhere before it merges.
+blank_issues_enabled: true
+contact_links:
+  - name: Change Request (required for any change we merge)
+    url: https://github.com/TurboDocx/html-to-docx/issues/new?template=change-request.yml
+    about: Recording a change? Use the Change Request form — a change ticket is required before merge.

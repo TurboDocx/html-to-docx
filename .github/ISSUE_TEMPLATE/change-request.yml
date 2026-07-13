@@ -1,0 +1,56 @@
+name: Change Request
+description: Propose and record a change
+title: "type(scope): short description"
+labels: ["change"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing! Trivial changes (dependency bumps, docs, typo fixes) can go
+        straight to a PR. Use this to record a more substantial change; the PR closes it with
+        `Closes #<this issue>`.
+  - type: dropdown
+    id: change-type
+    attributes:
+      label: Change type
+      options:
+        - Standard — small / low-risk
+        - Planned — a feature or non-trivial fix
+        - Emergency — urgent fix
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk / impact
+      options: ["Low", "Medium", "High"]
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details — description & full context
+      description: 'What is changing and why. Put the full write-up here: summary, repro steps, scope, anything. Markdown works — this is your free-form space.'
+    validations:
+      required: true
+  - type: checkboxes
+    id: testing
+    attributes:
+      label: Testing & validation
+      options:
+        - label: CI passes on the PR
+        - label: Tests added/updated for the change
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback plan
+      placeholder: "Usually: revert the merge commit. For a published release, ship a patch revert."
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking change?
+      options:
+        - "No"
+        - "Yes — note the upgrade/migration impact for consumers"
+    validations:
+      required: true
