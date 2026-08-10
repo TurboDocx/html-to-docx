@@ -28,6 +28,9 @@ jobs:
   publish-npm:
     needs: build  # Wait for tests to pass before publishing
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # Needed by actions/checkout
+      id-token: write # Needed to mint the OIDC token npm uses to sign the provenance attestation
     steps:
       - uses: actions/checkout@v5
 
@@ -43,6 +46,7 @@ jobs:
       - run: npm run build:prod
 
       # Publish to npm with public access (scoped packages are private by default)
-      - run: npm publish --access public
+      # --provenance attaches a signed SLSA build attestation linking the tarball to this workflow run
+      - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{secrets.npm_token}}  # Use npm token from GitHub secrets
