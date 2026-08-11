@@ -7,7 +7,9 @@
 import { fragment } from 'xmlbuilder2';
 import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
-import sizeOf from 'image-size';
+// `probe-image-size/sync` (not the package root) keeps `needle` — and with it
+// http/https/zlib/iconv-lite — out of the bundle; we only ever probe Buffers.
+import sizeOf from 'probe-image-size/sync';
 import { isVNode, isVText } from '../vdom/index';
 import { parseDataUrl, downloadAndCacheImage, buildImage } from '../utils/image';
 

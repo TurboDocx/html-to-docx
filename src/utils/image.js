@@ -1,6 +1,8 @@
 import axios from 'axios';
 import mimeTypes from 'mime-types';
-import sizeOf from 'image-size';
+// `probe-image-size/sync` (not the package root) keeps `needle` — and with it
+// http/https/zlib/iconv-lite — out of the bundle; we only ever probe Buffers.
+import sizeOf from 'probe-image-size/sync';
 
 import { isValidUrl } from './url';
 import * as xmlBuilder from '../helpers/xml-builder';
