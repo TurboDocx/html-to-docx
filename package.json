@@ -188,8 +188,10 @@
   },
   "overrides": {
     "bl": "^1.2.3",
-    "semver": "^7.6.0",
     "form-data": "^4.0.6",
+    "js-yaml@3": "^3.15.1",
+    "js-yaml@4": "^4.3.1",
+    "semver": "^7.6.0",
     "sharp": {
       "semver": "^7.6.0"
     }
