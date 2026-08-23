@@ -27,10 +27,15 @@ async function main() {
     process.exit(1);
   }
 
-  const baselinePath = args[0];
-  const currentPath = args[1];
+  const baselinePath = path.resolve(args[0]);
+  const currentPath = path.resolve(args[1]);
   const outputIndex = args.indexOf('--output');
-  const outputPath = outputIndex !== -1 ? args[outputIndex + 1] : null;
+  const outputPath = outputIndex !== -1 ? path.resolve(args[outputIndex + 1]) : null;
+
+  if (outputPath && !outputPath.startsWith(process.cwd() + path.sep)) {
+    console.error('Output path must be within the current working directory');
+    process.exit(1);
+  }
 
   if (!fs.existsSync(baselinePath)) {
     console.error(`Baseline file not found: ${baselinePath}`);

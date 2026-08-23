@@ -1,6 +1,8 @@
 import axios from 'axios';
 import mimeTypes from 'mime-types';
-import sizeOf from 'image-size';
+// `probe-image-size/sync` (not the package root) keeps `needle` — and with it
+// http/https/zlib/iconv-lite — out of the bundle; we only ever probe Buffers.
+import sizeOf from 'probe-image-size/sync';
 
 import { isValidUrl } from './url';
 import * as xmlBuilder from '../helpers/xml-builder';
@@ -139,6 +141,34 @@ export function isSVG(mimeTypeOrExtension) {
 function convertSVGUnitToPixels(value, unit) {
   const factor = SVG_UNIT_TO_PIXEL_CONVERSIONS[unit] || 1;
   return Math.round(value * factor);
+}
+
+/**
+ * Measures an image buffer and returns its dimensions in pixels.
+ *
+ * `probe-image-size` reports the raw declared number alongside the unit it was
+ * written in (`wUnits`/`hUnits`), so an SVG declared `width="72pt"` comes back as
+ * `72` rather than the 96 pixels it actually occupies. `image-size` used to do that
+ * conversion internally and every caller still treats the result as pixels, so
+ * normalize here instead of at each call site.
+ *
+ * Raster formats always report `px`, so they pass through untouched.
+ *
+ * @param {Buffer} imageBuffer - The raw image bytes
+ * @returns {Object|null} Measurement with `width`/`height` in pixels, or null if unrecognised
+ */
+export function measureImage(imageBuffer) {
+  const measured = sizeOf(imageBuffer);
+
+  if (!measured) {
+    return null;
+  }
+
+  return {
+    ...measured,
+    width: convertSVGUnitToPixels(measured.width, measured.wUnits || 'px'),
+    height: convertSVGUnitToPixels(measured.height, measured.hUnits || 'px'),
+  };
 }
 
 /**
@@ -483,7 +513,7 @@ export const buildImage = async (
         internalRelationship
       );
 
-      // Add validation before calling sizeOf
+      // Add validation before measuring
       if (!imageBuffer || imageBuffer.length === 0) {
         // eslint-disable-next-line no-console
         console.error(`[ERROR] buildImage: Empty image buffer for ${vNode.properties.src}`);
@@ -502,8 +532,8 @@ export const buildImage = async (
 
       let imageProperties;
 
-      // For SVG files, use dimensions from vNode properties instead of sizeOf
-      // (sizeOf doesn't work on SVG XML content)
+      // For SVG files, prefer the dimensions declared on the vNode over the measured
+      // intrinsic size — the author's width/height attributes are the intent
       if (response.isSVG) {
         imageProperties = {
           width: vNode.properties.width || 100,
@@ -511,7 +541,7 @@ export const buildImage = async (
         };
       } else {
         try {
-          imageProperties = sizeOf(imageBuffer);
+          imageProperties = measureImage(imageBuffer);
           if (!imageProperties || !imageProperties.width || !imageProperties.height) {
             // eslint-disable-next-line no-console
             console.error(
@@ -523,7 +553,7 @@ export const buildImage = async (
         } catch (sizeError) {
           // eslint-disable-next-line no-console
           console.error(
-            `[ERROR] buildImage: sizeOf failed for ${vNode.properties.src}:`,
+            `[ERROR] buildImage: failed to measure ${vNode.properties.src}:`,
             sizeError.message
           );
           return null;

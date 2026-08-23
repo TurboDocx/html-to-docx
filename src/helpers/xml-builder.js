@@ -7,9 +7,8 @@
 import { fragment } from 'xmlbuilder2';
 import colorNames from 'color-name';
 import { cloneDeep } from 'lodash';
-import sizeOf from 'image-size';
 import { isVNode, isVText } from '../vdom/index';
-import { parseDataUrl, downloadAndCacheImage, buildImage } from '../utils/image';
+import { parseDataUrl, downloadAndCacheImage, buildImage, measureImage } from '../utils/image';
 
 import namespaces from '../namespaces';
 import {
@@ -1139,7 +1138,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 
         const imageBuffer = Buffer.from(response.fileContent, 'base64');
 
-        // Validate buffer before calling sizeOf
+        // Validate buffer before measuring
         if (!imageBuffer || imageBuffer.length === 0) {
           console.warn(`[BUILDRUN] Empty image buffer for: ${imageSource}`);
           return runFragment;
@@ -1154,7 +1153,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 
         let imageProperties;
         try {
-          imageProperties = sizeOf(imageBuffer);
+          imageProperties = measureImage(imageBuffer);
           if (!imageProperties || !imageProperties.width || !imageProperties.height) {
             console.warn(`[BUILDRUN] Invalid image properties for: ${imageSource}`);
             return runFragment;
@@ -1714,7 +1713,7 @@ const processImageSource = async (docxDocumentInstance, vNode, imageSource, logC
 
   const imageBuffer = Buffer.from(decodeURIComponent(base64String), 'base64');
 
-  // Validate buffer before calling sizeOf
+  // Validate buffer before measuring
   if (!imageBuffer || imageBuffer.length === 0) {
     console.warn(`[${logContext}] Empty image buffer for: ${imageSource}`);
     return null;
@@ -1722,7 +1721,7 @@ const processImageSource = async (docxDocumentInstance, vNode, imageSource, logC
 
   let imageProperties;
   try {
-    imageProperties = sizeOf(imageBuffer);
+    imageProperties = measureImage(imageBuffer);
     if (!imageProperties || !imageProperties.width || !imageProperties.height) {
       console.warn(`[${logContext}] Invalid image properties for: ${imageSource}`);
       return null;
