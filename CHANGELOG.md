@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.22.1](https://github.com/turbodocx/html-to-docx/compare/v1.22.0...v1.22.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **security:** close runtime Dependabot advisories (form-data, postcss) ([#214](https://github.com/turbodocx/html-to-docx/issues/214)) ([7b58683](https://github.com/turbodocx/html-to-docx/commit/7b58683908fec16f705d041d1b4753ed95b914dc))
+
 ## [1.22.0](https://github.com/turbodocx/html-to-docx/compare/v1.21.0...v1.22.0) (2026-06-15)
 
 ## [1.21.0](https://github.com/turbodocx/html-to-docx/compare/v1.20.1...v1.21.0) (2026-05-16)
