@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.22.2](https://github.com/TurboDocx/html-to-docx/compare/v1.22.1...v1.22.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* **build:** correct repository.url owner casing (TurboDocx) for npm provenance ([e57fdad](https://github.com/TurboDocx/html-to-docx/commit/e57fdadf2be1d9a99650bacb13ac2701fd845b25))
+
 ### [1.22.1](https://github.com/turbodocx/html-to-docx/compare/v1.22.0...v1.22.1) (2026-08-23)
 
 
