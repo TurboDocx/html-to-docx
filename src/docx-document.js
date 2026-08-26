@@ -140,6 +140,7 @@ class DocxDocument {
   constructor(properties) {
     this.zip = properties.zip;
     this.htmlString = properties.htmlString;
+    this.css = properties.css || null;
     this.orientation = properties.orientation;
     this.pageSize = properties.pageSize || defaultDocumentOptions.pageSize;
     this.deterministicIds = properties.deterministicIds || false;

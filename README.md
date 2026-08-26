@@ -419,6 +419,7 @@ Full examples can be found under `example/`, including a complete
     - `keepNext` <?[Boolean]> keep with next paragraph. Defaults to `true`
     - `outlineLevel` <?[Number]> outline level (0-5)
   - `decodeUnicode` <?[Boolean]> flag to enable unicode decoding of header, body and footer. Defaults to `false`.
+  - `css` <?[String]> a CSS stylesheet applied to the content, header, and footer HTML. Selectors (type, class, id, descendant, grouped, etc.) are resolved with standard specificity and folded into each element's style; an element's own inline `style` always wins. Embedded `<style>` tags in the HTML are honored too. See [CSS Stylesheet Support](#css-stylesheet-support). Defaults to `null`.
   - `lang` <?[String]> language localization code for spell checker to work properly. Defaults to `en-US`.
   - `direction` <?[String]> text direction for RTL (right-to-left) languages. Set to `'rtl'` for Arabic, Hebrew, etc. Defaults to `'ltr'`.
   - `preProcessing` <?[Object]>
@@ -442,6 +443,56 @@ Full examples can be found under `example/`, including a complete
 ### Returns
 
 <[Promise]<[Buffer]|[Blob]>>
+
+## CSS Stylesheet Support
+
+Instead of putting a `style="..."` attribute on every element, you can attach a
+CSS stylesheet via the `css` document option. Selectors are matched against your
+HTML and resolved into the document, so you can style by tag, class, or id and
+keep your markup clean.
+
+```js
+const HTMLtoDOCX = require('@turbodocx/html-to-docx');
+
+const html = `
+  <h1 class="title">Quarterly Report</h1>
+  <p class="lead">Styled entirely from the stylesheet.</p>
+  <p>A regular paragraph.</p>
+  <p class="lead" style="color: #006600;">Inline color wins here.</p>
+`;
+
+const css = `
+  h1, h2        { text-align: center; }
+  .title        { color: #1a3c7a; font-size: 28pt; }
+  p             { color: #222222; font-size: 12pt; }
+  .lead         { color: #1a73e8; font-size: 14pt; }
+`;
+
+const buffer = await HTMLtoDOCX(html, null, { css });
+```
+
+How it resolves:
+
+- **Selectors:** type (`p`), class (`.lead`), id (`#intro`), descendant
+  (`div span`), and grouped (`h1, h2`) selectors are supported.
+- **Specificity & cascade:** rules are applied by standard CSS specificity
+  (id > class/attribute > type), with source order breaking ties.
+- **Inline wins:** an element's own inline `style` attribute always overrides a
+  matching stylesheet rule, so existing inline styles keep working unchanged.
+- **Embedded `<style>` tags:** `<style>` blocks inside your HTML are honored and
+  removed from the output, so their CSS text never renders as document content.
+- **Applies everywhere:** the stylesheet is applied to the content, header, and
+  footer HTML.
+- **Supported properties:** any CSS property this library already understands
+  from inline styles (color, `text-align`, `font-size`, `font-family`,
+  width/height, borders, background, text-decoration, and so on). Properties the
+  library does not consume are ignored.
+
+Not supported in this version: `!important`, at-rules such as `@media` and
+`@font-face`, and external `<link rel="stylesheet">` files (pass the CSS text
+via the `css` option instead).
+
+A runnable example lives in [`example/example-css-stylesheet.js`](example/example-css-stylesheet.js).
 
 ## Notes
 
