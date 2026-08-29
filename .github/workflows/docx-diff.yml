@@ -77,15 +77,15 @@ jobs:
         id: diff
         working-directory: current
         run: |
-          node scripts/diff-docx.js ../baseline.docx ../current.docx --output ../diff-report.md || echo "diff_failed=true" >> $GITHUB_OUTPUT
+          node scripts/diff-docx.js ../baseline.docx ../current.docx --output diff-report.md || echo "diff_failed=true" >> $GITHUB_OUTPUT
 
       - name: Read TurboDocx diff report
         id: report
         run: |
-          if [ -f diff-report.md ]; then
+          if [ -f current/diff-report.md ]; then
             {
               echo 'report<<EOF'
-              cat diff-report.md
+              cat current/diff-report.md
               echo EOF
             } >> $GITHUB_OUTPUT
           fi
@@ -96,7 +96,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('diff-report.md', 'utf8');
+            const report = fs.readFileSync('current/diff-report.md', 'utf8');
 
             // Find existing comment
             const comments = await github.rest.issues.listComments({
@@ -138,7 +138,7 @@ jobs:
           path: |
             baseline.docx
             current.docx
-            diff-report.md
+            current/diff-report.md
           retention-days: 30
 
       - name: Verify DOCX regression test results
