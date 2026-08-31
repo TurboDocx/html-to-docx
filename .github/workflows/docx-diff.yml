@@ -5,7 +5,7 @@
 name: TurboDocx DOCX Diff Report
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - main
       - develop
@@ -14,7 +14,7 @@ jobs:
   docx-diff:
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write  # Needed to post PR comments
+      pull-requests: write # Needed to post PR comments
       contents: read
 
     steps:
@@ -53,6 +53,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           path: current
+          persist-credentials: false
 
       - name: Setup Node.js for current
         uses: actions/setup-node@v5
@@ -75,9 +76,8 @@ jobs:
 
       - name: Run TurboDocx DOCX diff analysis
         id: diff
-        working-directory: current
         run: |
-          node scripts/diff-docx.js ../baseline.docx ../current.docx --output ../diff-report.md || echo "diff_failed=true" >> $GITHUB_OUTPUT
+          node current/scripts/diff-docx.js baseline.docx current.docx --output diff-report.md || echo "diff_failed=true" >> $GITHUB_OUTPUT
 
       - name: Read TurboDocx diff report
         id: report
@@ -91,7 +91,7 @@ jobs:
           fi
 
       - name: Post TurboDocx DOCX diff report as PR comment
-        if: steps.report.outputs.report != ''
+        if: steps.report.outputs.report != '' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v8
         with:
           script: |
