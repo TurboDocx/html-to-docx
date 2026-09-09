@@ -30,11 +30,29 @@ async function main() {
   const baselinePath = path.resolve(args[0]);
   const currentPath = path.resolve(args[1]);
   const outputIndex = args.indexOf('--output');
-  const outputPath = outputIndex !== -1 ? path.resolve(args[outputIndex + 1]) : null;
+  const outputArg = outputIndex !== -1 ? args[outputIndex + 1] : undefined;
 
-  if (outputPath && !outputPath.startsWith(process.cwd() + path.sep)) {
-    console.error('Output path must be within the current working directory');
+  if (outputIndex !== -1 && !outputArg) {
+    console.error('--output requires a file path');
     process.exit(1);
+  }
+
+  const outputPath = outputArg ? path.resolve(outputArg) : null;
+
+  // Containment guard: resolve symlinks on the target's parent directory so a
+  // symlinked --output cannot write outside the current working directory.
+  if (outputPath) {
+    const realCwd = fs.realpathSync(process.cwd());
+    let realParent;
+    try {
+      realParent = fs.realpathSync(path.dirname(outputPath));
+    } catch {
+      realParent = path.dirname(outputPath);
+    }
+    if (realParent !== realCwd && !realParent.startsWith(realCwd + path.sep)) {
+      console.error('Output path must be within the current working directory');
+      process.exit(1);
+    }
   }
 
   if (!fs.existsSync(baselinePath)) {
