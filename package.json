@@ -189,6 +189,9 @@
   },
   "overrides": {
     "bl": "^1.2.3",
+    "fast-uri": "3.1.6",
+    "browserslist": "4.28.7",
+    "baseline-browser-mapping": "2.11.0",
     "form-data": "^4.0.6",
     "js-yaml@3": "^3.15.1",
     "js-yaml@4": "^4.3.1",
