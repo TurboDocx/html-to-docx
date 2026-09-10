@@ -85,9 +85,6 @@ jobs:
         run: |
           node current/scripts/diff-docx.js baseline.docx current.docx --output diff-report.md || echo "diff_failed=true" >> $GITHUB_OUTPUT
 
-      - name: Record PR number for the comment workflow
-        run: echo "${{ github.event.pull_request.number }}" > pr-number.txt
-
       - name: Upload TurboDocx DOCX diff report as artifact
         if: always()
         uses: actions/upload-artifact@v5
@@ -97,7 +94,6 @@ jobs:
             baseline.docx
             current.docx
             diff-report.md
-            pr-number.txt
           retention-days: 30
           if-no-files-found: warn
 

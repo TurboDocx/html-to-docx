@@ -39,8 +39,9 @@ async function main() {
 
   const outputPath = outputArg ? path.resolve(outputArg) : null;
 
-  // Containment guard: resolve symlinks on the target's parent directory so a
-  // symlinked --output cannot write outside the current working directory.
+  // Containment guard: the report must be written inside the working directory.
+  // Resolve symlinks on the parent dir AND refuse a symlinked target file, so a
+  // symlink — in the path or as the file itself — cannot redirect the write out of cwd.
   if (outputPath) {
     const realCwd = fs.realpathSync(process.cwd());
     let realParent;
@@ -49,7 +50,17 @@ async function main() {
     } catch {
       realParent = path.dirname(outputPath);
     }
-    if (realParent !== realCwd && !realParent.startsWith(realCwd + path.sep)) {
+    let targetIsSymlink = false;
+    try {
+      targetIsSymlink = fs.lstatSync(outputPath).isSymbolicLink();
+    } catch {
+      // Target doesn't exist yet — nothing to follow.
+    }
+    const resolved = path.join(realParent, path.basename(outputPath));
+    if (
+      targetIsSymlink ||
+      (resolved !== realCwd && !resolved.startsWith(realCwd + path.sep))
+    ) {
       console.error('Output path must be within the current working directory');
       process.exit(1);
     }

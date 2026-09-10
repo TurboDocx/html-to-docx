@@ -4,6 +4,11 @@
 # `pull-requests: write` but NEVER checks out PR code — it only downloads the report
 # artifact from the triggering run and posts a comment. Keep it that way: do not add
 # a repo/PR-code checkout or run any PR-authored code here.
+#
+# The target PR is resolved TRUSTED-SIDE from the build run's head SHA — never from
+# the artifact, which the untrusted build could tamper with to redirect the comment
+# at an arbitrary PR. Only the comment *body* (the diff of the PR's own code) comes
+# from the artifact, and it lands solely on that PR — bounded, not a redirect vector.
 
 name: TurboDocx DOCX Diff Comment
 
@@ -45,17 +50,20 @@ jobs:
               return;
             }
 
-            let prNumber;
-            try {
-              prNumber = parseInt(fs.readFileSync('report/pr-number.txt', 'utf8').trim(), 10);
-            } catch (e) {
-              core.info('No pr-number.txt in the artifact — cannot locate the PR.');
+            // Resolve the target PR trusted-side from the build run's head commit,
+            // NOT from the artifact (which the untrusted build could have spoofed).
+            const headSha = context.payload.workflow_run.head_sha;
+            const assoc = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: headSha,
+            });
+            const pr = assoc.data.find(p => p.state === 'open') || assoc.data[0];
+            if (!pr) {
+              core.info(`No PR associated with ${headSha} — nothing to comment.`);
               return;
             }
-            if (!prNumber) {
-              core.info('PR number missing/zero — skipping comment.');
-              return;
-            }
+            const prNumber = pr.number;
 
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
