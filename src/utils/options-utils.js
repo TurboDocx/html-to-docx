@@ -62,22 +62,24 @@ const normalizeUnits = (dimensioningObject, defaultDimensionsProperty) => {
  */
 
 const createDocumentOptionsAndMergeWithDefaults = (documentOptions) => {
+  const userDocumentOptions = documentOptions ?? {};
+
   // Start with a shallow copy of the user-provided options to avoid mutating the original object
-  const normalizedDocumentOptions = { ...documentOptions };
+  const normalizedDocumentOptions = { ...userDocumentOptions };
 
   // Iterate over each key in the user-provided options
-  Object.keys(documentOptions).forEach((key) => {
+  Object.keys(userDocumentOptions).forEach((key) => {
     switch (key) {
       case 'pageSize':
       case 'margins':
         normalizedDocumentOptions[key] = normalizeUnits(
-          documentOptions[key],
+          userDocumentOptions[key],
           defaultDocumentOptions[key]
         );
         break;
       case 'fontSize':
       case 'complexScriptFontSize':
-        normalizedDocumentOptions[key] = fixupFontSize(documentOptions[key]);
+        normalizedDocumentOptions[key] = fixupFontSize(userDocumentOptions[key]);
         break;
       // If there are other keys that require normalization, handle them here
       default:
