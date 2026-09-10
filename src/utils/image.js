@@ -135,7 +135,7 @@ export function isSVG(mimeTypeOrExtension) {
  * Reference: https://www.w3.org/TR/SVG/coords.html#Units
  *
  * @param {number} value - The numeric value
- * @param {string} unit - The unit (px, cm, mm, in, pt, pc, em, rem, %)
+ * @param {string} unit - The unit (px, cm, mm, in, pt, pc, em, ex, rem, %)
  * @returns {number} Value in pixels
  */
 function convertSVGUnitToPixels(value, unit) {

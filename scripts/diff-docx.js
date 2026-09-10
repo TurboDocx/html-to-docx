@@ -30,11 +30,40 @@ async function main() {
   const baselinePath = path.resolve(args[0]);
   const currentPath = path.resolve(args[1]);
   const outputIndex = args.indexOf('--output');
-  const outputPath = outputIndex !== -1 ? path.resolve(args[outputIndex + 1]) : null;
+  const outputArg = outputIndex !== -1 ? args[outputIndex + 1] : undefined;
 
-  if (outputPath && !outputPath.startsWith(process.cwd() + path.sep)) {
-    console.error('Output path must be within the current working directory');
+  if (outputIndex !== -1 && !outputArg) {
+    console.error('--output requires a file path');
     process.exit(1);
+  }
+
+  const outputPath = outputArg ? path.resolve(outputArg) : null;
+
+  // Containment guard: the report must be written inside the working directory.
+  // Resolve symlinks on the parent dir AND refuse a symlinked target file, so a
+  // symlink — in the path or as the file itself — cannot redirect the write out of cwd.
+  if (outputPath) {
+    const realCwd = fs.realpathSync(process.cwd());
+    let realParent;
+    try {
+      realParent = fs.realpathSync(path.dirname(outputPath));
+    } catch {
+      realParent = path.dirname(outputPath);
+    }
+    let targetIsSymlink = false;
+    try {
+      targetIsSymlink = fs.lstatSync(outputPath).isSymbolicLink();
+    } catch {
+      // Target doesn't exist yet — nothing to follow.
+    }
+    const resolved = path.join(realParent, path.basename(outputPath));
+    if (
+      targetIsSymlink ||
+      (resolved !== realCwd && !resolved.startsWith(realCwd + path.sep))
+    ) {
+      console.error('Output path must be within the current working directory');
+      process.exit(1);
+    }
   }
 
   if (!fs.existsSync(baselinePath)) {
