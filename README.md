@@ -26,6 +26,7 @@ Based on the original work and assisted by the original contributors of [private
 | sdk | [![GitHub](https://img.shields.io/github/stars/turbodocx/sdk?style=social)](https://github.com/TurboDocx/sdk) | Official TurboDocx SDK for seamless API integration |
 | next-plugin-llms | [![GitHub](https://img.shields.io/github/stars/turbodocx/next-plugin-llms?style=social)](https://github.com/TurboDocx/next-plugin-llms) | Next.js plugin for automatic llms.txt generation |
 | n8n-nodes-turbodocx | [![npm](https://img.shields.io/npm/v/@turbodocx/n8n-nodes-turbodocx?logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/@turbodocx/n8n-nodes-turbodocx) [![GitHub](https://img.shields.io/github/stars/turbodocx/n8n-nodes-turbodocx?style=social)](https://github.com/turbodocx/n8n-nodes-turbodocx) | n8n community node for TurboDocx API & TurboSign |
+| TurboQuote | [![Website](https://img.shields.io/badge/Website-TurboDocx-8A2BE2)](https://www.turbodocx.com) | Sales quotes, proposals, and CPQ workflows with built-in e-signature |
 <!-- | turbodocx | [![npm](https://img.shields.io/npm/v/turbodocx?logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/turbodocx) | TurboDocx Node.js SDK | -->
 <!-- | turbodocx-python | [![PyPI](https://img.shields.io/pypi/v/turbodocx?logo=python&logoColor=white&label=pypi)](https://pypi.org/project/turbodocx/) | TurboDocx Python SDK | -->
 <!-- | turbodocx-ruby | [![Gem](https://img.shields.io/gem/v/turbodocx?logo=ruby&logoColor=white&label=gem)](https://rubygems.org/gems/turbodocx) | TurboDocx Ruby SDK | -->
