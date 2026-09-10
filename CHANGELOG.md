@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.23.0](https://github.com/TurboDocx/html-to-docx/compare/v1.22.2...v1.23.0) (2026-09-10)
+
+
+### Bug Fixes
+
+* **image:** convert SVG `ex` units to pixels (1ex = 0.5em) instead of silently treating them as px ([#241](https://github.com/TurboDocx/html-to-docx/pull/241))
+
+
+### Chores
+
+* **deps:** security bumps for fast-uri, browserslist, and baseline-browser-mapping ([#238](https://github.com/TurboDocx/html-to-docx/pull/238))
+* **ci:** split docx-diff into an untrusted `pull_request` build plus a trusted `workflow_run` comment, and harden the diff output-path guard
+
 ### [1.22.2](https://github.com/TurboDocx/html-to-docx/compare/v1.22.1...v1.22.2) (2026-08-24)
 
 
