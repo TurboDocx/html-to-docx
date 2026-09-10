@@ -27,7 +27,10 @@ describe('measureImage', () => {
 
   describe('SVG dimensions are normalised to pixels', () => {
     // Expected pixel dimensions for a 72 x 36 SVG declared in each unit, at 96 DPI:
-    // 1pt = 4/3px, 1pc = 16px, 1in = 96px, 1cm = 37.795px, em/rem assume a 16px root.
+    // 1pt = 4/3px, 1pc = 16px, 1in = 96px, 1cm = 37.795px, em/rem assume a 16px root,
+    // 1ex = 0.5em = 8px (half the assumed em). `ex` is the last unit probe-image-size
+    // can emit (its regex is in|mm|cm|pt|pc|px|em|ex); without a table entry it fell
+    // back to px and silently rendered ex-sized SVGs ~8x too small.
     const unitCases = [
       { unit: 'no unit', suffix: '', width: 72, height: 36 },
       { unit: 'px', suffix: 'px', width: 72, height: 36 },
@@ -38,6 +41,7 @@ describe('measureImage', () => {
       { unit: 'in', suffix: 'in', width: 6912, height: 3456 },
       { unit: 'em', suffix: 'em', width: 1152, height: 576 },
       { unit: 'rem', suffix: 'rem', width: 1152, height: 576 },
+      { unit: 'ex', suffix: 'ex', width: 576, height: 288 },
     ];
 
     it.each(unitCases)(

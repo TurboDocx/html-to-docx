@@ -46,6 +46,7 @@ const SVG_UNIT_TO_PIXEL_CONVERSIONS = {
   pt: 1.33333333333, // 1/72 inch
   pc: 16, // 1 pica = 12 points
   em: 16, // Assume 16px default
+  ex: 8, // 1ex = 0.5em (half the assumed em); probe-image-size can emit ex
   rem: 16, // Assume 16px default
   '%': 1, // Cannot convert without parent context, treat as pixels
 };
