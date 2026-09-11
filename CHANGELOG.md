@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.23.1](https://github.com/TurboDocx/html-to-docx/compare/v1.23.0...v1.23.1) (2026-09-11)
+
+Dependency-security hygiene. No change to the published library runtime — the npm tarball ships only `dist/`, type defs, `scripts/`, `README`, and `LICENSE`, so none of these dependencies reach consumers. This release re-pins the release branch, which was still carrying the advisories below.
+
+
+### Chores
+
+* **deps:** bump `js-yaml` to 3.15.2 / 4.3.2 — high, GHSA-2883-xcg3-v3hh (dev tooling only)
+* **deps:** bump `next` to 16.3.4 in the Next.js example — **critical**, GHSA-2xp9-vwfh-vxw4 + GHSA-p293-qw3h-jr36 (example app) ([#239](https://github.com/TurboDocx/html-to-docx/pull/239))
+* **deps:** bump `sharp` to 0.35.4 and `baseline-browser-mapping` to 2.11.0 in the Next.js example — high / moderate, GHSA-rgj7-g3m4-5g8c + GHSA-w5vr-8v7q-w6rv ([#242](https://github.com/TurboDocx/html-to-docx/pull/242))
+
 ## [1.23.0](https://github.com/TurboDocx/html-to-docx/compare/v1.22.2...v1.23.0) (2026-09-10)
 
 
