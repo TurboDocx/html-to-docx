@@ -471,12 +471,137 @@ List of supported list-style-types:
 - lower-alpha-bracket-end, will result in `a) List item`
 - decimal-bracket-end, will result in `1) List item`
 - decimal-bracket, will result in `(1) List item`
+- decimal-leading-zero, will result in `01. List item`
 - decimal, **(the default)** will result in `1. List item`
+
+Add `data-suffix=")"` to close the count with a bracket in any of those formats: `<ol data-suffix=")" style="list-style-type: lower-roman">` numbers `i)`, `ii)`. Each nested `<ol>` uses the format it declares, so a list can count `1.` / `a.` / `i.` level by level.
 
 Also you could add attribute `data-start="n"` to start the numbering from the n-th.
 
 `<ol data-start="2">` will start the numbering from ( B. b. II. ii. 2. )
 
+Multilevel outline numbering (`1.`, `1.1.`, `1.1.1.`) is available with `data-numbering="outline"`. Nested `<ol>`s that also declare `data-numbering="outline"` (or declare no numbering of their own) continue the same outline, so items under `2.` are numbered `2.1.`, `2.2.`:
+```html
+<ol data-numbering="outline">
+  <li>Scope
+    <ol data-numbering="outline">
+      <li>In scope</li>
+      <li>Out of scope</li>
+    </ol>
+  </li>
+</ol>
+```
+
+`list-style-type` on `<ul>` selects the bullet for every level of that list: `disc` (•), `circle` (◦) or `square` (▪). These are Unicode glyphs in Arial, so they render without the Symbol or Wingdings fonts. A `<ul>` without a `list-style-type` keeps the default Symbol-font bullet. Nested lists use the `list-style-type` they declare.
+
+`data-bullet` on `<ul>` names the bullet glyph itself, and wins over `list-style-type`: `<ul data-bullet="❖">`. It must be a single character. ● ○ ■ and the three keyword glyphs are drawn in Arial; any other glyph (❖ ➢ ➔ ❏ ◆ ★ …) in DejaVu Sans, which covers the Dingbats and Miscellaneous Symbols blocks. Give each nested `<ul>` its own `data-bullet` for a glyph per level:
+```html
+<ul data-bullet="❖">
+  <li>Level one
+    <ul data-bullet="➢"><li>Level two</li></ul>
+  </li>
+</ul>
+```
+
+Checklists are written as a `<ul data-checklist="true">`. Each item starts with a checkbox (☐, or ☑ when `data-checked="true"`) in the "Segoe UI Symbol" font instead of a bullet, and is indented like a list item. The text of a checked item is struck through when it also has `data-strike="true"`:
+```html
+<ul data-checklist="true">
+  <li data-checked="true" data-strike="true">Send the proposal</li>
+  <li data-checked="false">Book the kickoff call</li>
+</ul>
+```
+
+### Paragraph spacing, line height and borders
+
+On paragraph-level elements (`<p>`, `<h1>`–`<h6>`, `<li>`):
+- `margin-top` and `margin-bottom` set the space before and after the paragraph (px, pt, cm or in). A `margin-top` on a `<ul>`/`<ol>` is not applied to each of its items.
+- `line-height` without a unit (or in %) is a multiple of a single line. In px, pt, cm or in it is a minimum line height (`1px` = 15 twips, `1pt` = 20 twips).
+- A multiple is written as `w:line` in 240ths of a line with `w:lineRule="auto"`, so it stays the same multiple at every font size — `line-height: 1.5` (or `150%`) is `w:line="360"` whether the text is 8px or 30px, while an absolute value such as `20px` becomes `w:lineRule="atLeast"`.
+- `font-weight: normal`, or a numeric weight below 600, switches bold OFF (`<w:b w:val="0"/>`) rather than simply leaving it unset, so it removes the bold a heading carries from its style — a `<strong>` nested inside that heading still comes out bold.
+- `border`, `border-top`, `border-right`, `border-bottom` and `border-left` become paragraph borders. `solid`, `dashed`, `dotted` and `double` are supported (other visible styles render as a single line), widths are clamped to Word's 1/4pt–12pt range, and the border sits 1pt from the text. Word joins identical borders on consecutive paragraphs into one box.
+
+```html
+<h2 style="margin-top: 24px; margin-bottom: 8px; border-bottom: 1px solid #1f4e79">Summary</h2>
+<p style="line-height: 22.5px; margin-bottom: 12px">Body text</p>
+```
+
+### Text
+
+- Tab characters in text (a literal tab or `&#9;`) become Word tab characters.
+- `font-size` in `em` and the keywords `smaller`/`larger` scale the inherited size; `rem` and the keywords `xx-small` to `xxx-large` scale the document `fontSize`. Values that cannot be resolved keep the inherited size.
+
+### Table cell padding
+
+`padding` and `padding-top` / `padding-right` / `padding-bottom` / `padding-left` on a `<td>` or `<th>` become `<w:tcMar>`, the per-cell override of the table's cell margins. The shorthand takes one to four values and fills the sides the CSS way (all / vertical-horizontal / top-horizontal-bottom / clockwise from the top).
+
+```html
+<td style="padding: 12px">even on all four sides</td>
+<td style="padding: 4px 8px">4px above and below, 8px left and right</td>
+<td style="padding: 8px; padding-left: 0">flush left, padded elsewhere</td>
+```
+
+- Lengths are `px`, `pt`, `cm` or `in`, plus a bare `0`. `1px` = 15 twips.
+- Only the sides you declare are written, and a side you leave out keeps the table default (80 twips top/bottom, 160 twips left/right). `padding: 0` writes four explicit zeros, which is how you cancel that default.
+- Percentages, negative lengths, relative units (`em`, `rem`) and keywords are ignored, as is a shorthand with more than four values or one unreadable part — the whole declaration is dropped rather than half-applied.
+- Padding is only read on cells. Elsewhere it is ignored, as it always was.
+
+### Table indent and spacing
+
+`margin-left` on a `<table>` becomes `<w:tblInd>`, the distance from the text margin to the table's leading edge:
+
+```html
+<table style="margin-left: 36px">…</table>
+```
+
+- Lengths are `px`, `pt`, `cm`, `in` or a bare `0`. Negative values, percentages and `auto` are ignored, because Word stores this as an absolute non-negative distance.
+- `<table align="left|right|center">` sets `<w:jc>`; without it a table is centred.
+
+Every top-level table is normally followed by an empty paragraph, so that two adjacent tables do not merge into one in Word. A table that should sit flush against what follows can turn that off for itself:
+
+```html
+<table data-no-spacing-after="true">…</table>
+```
+
+Any value other than `"false"` suppresses it. The document-wide `table.addSpacingAfter` option is unaffected: this only ever removes the paragraph, never adds one.
+
+### Page number fields
+
+An inline `<span data-field="page">` or `<span data-field="numpages">` becomes a real Word field — the current page number, or the page count — rather than literal text. It works anywhere a run can go: body, header, footer or table cell.
+
+```html
+<p style="text-align: right">Page <span data-field="page">1</span> of <span data-field="numpages">1</span></p>
+```
+
+- The element's own text is kept as the field's cached result, which is what a reader sees until the fields are updated (Word does this on print and on <kbd>Ctrl</kbd>+<kbd>A</kbd>, <kbd>F9</kbd>). An empty marker caches `1`.
+- Every run of the field carries the formatting the span would have had as text, inherited from enclosing `<span>`/`<strong>`/`<em>`/`<u>` elements and from the span's own `style`, so the number is set in the surrounding type.
+- An unrecognised `data-field` value is left alone and renders as ordinary text.
+- The older `pageNumber: true` option, which appends a page number to the first paragraph of the footer, still works and is unchanged.
+
+### Background shapes
+
+An empty inline marker draws a shape at a fixed spot on the page, behind the text. This is for page furniture — header bands, rules, colour blocks — that has no place in the text flow.
+
+```html
+<span data-shape="rect" data-left="0" data-top="0" data-width="816" data-height="96" data-fill="#EEF2FF"></span>
+<span data-shape="line" data-left="96" data-top="95" data-width="624" data-stroke="#DEE2E6" data-stroke-width="2" data-stroke-style="dashed"></span>
+```
+
+| Attribute | Applies to | Meaning |
+| --- | --- | --- |
+| `data-shape` | both | `rect` or `line` |
+| `data-left`, `data-top` | both | position of the top-left corner, in CSS px from the top-left corner of the **page**. For a line, `data-top` is the centre of the rule. |
+| `data-width` | both | width in px |
+| `data-height` | rect | height in px |
+| `data-fill` | rect | fill colour, `#RGB` or `#RRGGBB` |
+| `data-stroke` | line | line colour, `#RGB` or `#RRGGBB` |
+| `data-stroke-width` | line | line thickness in px, default `1` |
+| `data-stroke-style` | line | `solid` (default), `dashed` or `dotted` |
+
+- The marker produces no text and adds no height to its paragraph: the shape is anchored to the page, wraps nothing and paints behind the text. Put it inside a paragraph that already exists rather than giving it one of its own.
+- Markers paint in source order, so a later one covers an earlier one.
+- Shapes work in the body, in `headerHTMLString` and in `footerHTMLString`.
+- A marker with a missing or unreadable number or colour is dropped silently — one bad attribute in a template never costs you the document.
+- Rectangles have no outline and lines have no fill; there is no border, corner radius or rotation. Shapes are written as DrawingML (`wps`), which Word 2010 and later and current LibreOffice render; there is no VML fallback for Word 2007.
 
 ## SVG Image Support
 

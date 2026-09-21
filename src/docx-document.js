@@ -323,7 +323,7 @@ class DocxDocument {
       'Symbol',
       'Times New Roman',
     ];
-    this.fontTableObjects.forEach(({ fontName, genericFontName }) => {
+    this.fontTableObjects.forEach(({ fontName, genericFontName, altName }) => {
       if (!fontNames.includes(fontName)) {
         fontNames.push(fontName);
         const fontFragment = fragment({
@@ -339,7 +339,7 @@ class DocxDocument {
             fontFragment.ele('@w', 'pitch').att('@w', 'val', 'variable');
             break;
           case 'sans-serif':
-            fontFragment.ele('@w', 'altName').att('@w', 'val', 'Arial');
+            fontFragment.ele('@w', 'altName').att('@w', 'val', altName || 'Arial');
             fontFragment.ele('@w', 'family').att('@w', 'val', 'swiss');
             fontFragment.ele('@w', 'pitch').att('@w', 'val', 'variable');
             break;
@@ -379,7 +379,7 @@ class DocxDocument {
     // The current implementation is a quick fix to handle nested lists
     // For every ul or ol encountered, all levels have the same startValue
     // This helps in handling the indentation for that particular level in the transformation
-    this.numberingObjects.forEach(({ numberingId, type, properties }) => {
+    this.numberingObjects.forEach(({ numberingId, type, properties, outline, baseLevel }) => {
       const abstractNumberingFragment = fragment({ namespaceAlias: { w: namespaces.w } })
         .ele('@w', 'abstractNum')
         .att('@w', 'abstractNumId', String(numberingId));
@@ -391,31 +391,47 @@ class DocxDocument {
         startValue = properties.start;
       }
       [...Array(9).keys()].forEach((level) => {
+        let levelStart = type === 'ol' ? startValue : '1';
+        let numberFormat =
+          type === 'ol'
+            ? this.ListStyleBuilder.getListStyleType(
+                properties.style && properties.style['list-style-type']
+              )
+            : 'bullet';
+        let levelText =
+          type === 'ol'
+            ? this.ListStyleBuilder.getListPrefixSuffix(
+                properties.style,
+                level,
+                properties.attributes
+              )
+            : this.ListStyleBuilder.getUnorderedListPrefixSuffix(
+                properties.style,
+                properties.attributes
+              );
+        // "01." is as wide as an outline "1.1.": hang it as far so it clears its text.
+        let hangingIndent = numberFormat === 'decimalZero' ? 540 : 360;
+        if (type === 'ol' && outline) {
+          // Outline levels are all decimal; only the list's own first level
+          // honours its start value, deeper levels restart at 1 under their parent.
+          levelStart = level === baseLevel ? startValue : '1';
+          numberFormat = 'decimal';
+          levelText = this.ListStyleBuilder.getOutlineListLevelText(level, baseLevel);
+          // "1.1.1." is wider than "1.": give each deeper level 180 more twips.
+          hangingIndent = 360 + 180 * Math.max(0, level - baseLevel);
+        }
+
         const levelFragment = fragment({ namespaceAlias: { w: namespaces.w } })
           .ele('@w', 'lvl')
           .att('@w', 'ilvl', level)
           .ele('@w', 'start')
-          .att('@w', 'val', type === 'ol' ? startValue : '1')
+          .att('@w', 'val', levelStart)
           .up()
           .ele('@w', 'numFmt')
-          .att(
-            '@w',
-            'val',
-            type === 'ol'
-              ? this.ListStyleBuilder.getListStyleType(
-                  properties.style && properties.style['list-style-type']
-                )
-              : 'bullet'
-          )
+          .att('@w', 'val', numberFormat)
           .up()
           .ele('@w', 'lvlText')
-          .att(
-            '@w',
-            'val',
-            type === 'ol'
-              ? this.ListStyleBuilder.getListPrefixSuffix(properties.style, level)
-              : this.ListStyleBuilder.getUnorderedListPrefixSuffix(properties.style)
-          )
+          .att('@w', 'val', levelText)
           .up()
           .ele('@w', 'lvlJc')
           .att('@w', 'val', 'left')
@@ -429,22 +445,28 @@ class DocxDocument {
           .up()
           .ele('@w', 'ind')
           .att('@w', 'left', (level + 1) * 720)
-          .att('@w', 'hanging', 360)
+          .att('@w', 'hanging', hangingIndent)
           .up()
           .up()
           .up();
 
         if (type === 'ul') {
-          levelFragment.last().import(
-            fragment({ namespaceAlias: { w: namespaces.w } })
-              .ele('@w', 'rPr')
-              .ele('@w', 'rFonts')
-              .att('@w', 'ascii', 'Symbol')
-              .att('@w', 'hAnsi', 'Symbol')
-              .att('@w', 'hint', 'default')
-              .up()
-              .up()
+          const bulletFont = this.ListStyleBuilder.getUnorderedListFont(
+            properties.style,
+            properties.attributes
           );
+          const bulletRunPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } });
+          const bulletFontsElement = bulletRunPropertiesFragment
+            .ele('@w', 'rPr')
+            .ele('@w', 'rFonts')
+            .att('@w', 'ascii', bulletFont)
+            .att('@w', 'hAnsi', bulletFont);
+          if (bulletFont !== 'Symbol') {
+            // Pin every script slot so Word never picks another font for the glyph.
+            bulletFontsElement.att('@w', 'eastAsia', bulletFont).att('@w', 'cs', bulletFont);
+          }
+          bulletFontsElement.att('@w', 'hint', 'default');
+          levelFragment.last().import(bulletRunPropertiesFragment);
         }
         abstractNumberingFragment.import(levelFragment);
       });
@@ -497,17 +519,45 @@ class DocxDocument {
     return relationshipXMLStrings;
   }
 
-  createNumbering(type, properties) {
+  // options.outline: multilevel "1. / 1.1. / 1.1.1." numbering whose first
+  // rendered level is options.baseLevel (the list's nesting depth).
+  createNumbering(type, properties, options = {}) {
     this.lastNumberingId += 1;
-    this.numberingObjects.push({ numberingId: this.lastNumberingId, type, properties });
+    this.numberingObjects.push({
+      numberingId: this.lastNumberingId,
+      type,
+      properties,
+      outline: Boolean(options.outline),
+      baseLevel: options.baseLevel || 0,
+    });
 
     return this.lastNumberingId;
+  }
+
+  // Every <wp:docPr> in a part needs an id no other drawing uses, or Word
+  // reports the ids as duplicated and renumbers them on save. Pictures take
+  // theirs from the media counter, so shapes draw from the same counter rather
+  // than starting a second sequence that would collide with it. The number
+  // also rises with source order, which is what the shape anchors use as their
+  // z-order so a later shape paints over an earlier one.
+  createDrawingId() {
+    this.lastMediaId += 1;
+    return this.lastMediaId;
   }
 
   createFont(fontFamily) {
     const fontTableObject = fontFamilyToTableObject(fontFamily, this.font);
     this.fontTableObjects.push(fontTableObject);
     return fontTableObject.fontName;
+  }
+
+  // Adds a font table entry for a font the converter itself uses (rather than
+  // one parsed from a CSS font-family list), with an optional alternative name.
+  registerFont({ fontName, genericFontName, altName }) {
+    if (!this.fontTableObjects.some((fontTableObject) => fontTableObject.fontName === fontName)) {
+      this.fontTableObjects.push({ fontName, genericFontName, altName });
+    }
+    return fontName;
   }
 
   async createMediaFile(base64String) {

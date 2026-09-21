@@ -207,6 +207,18 @@ const paragraphBordersObject = {
     color: 'FFFFFF',
   },
 };
+// Checklist items (<ul data-checklist="true">) start with one of these glyphs
+// instead of a list marker. U+2610/U+2611 (Miscellaneous Symbols) are not in
+// common text fonts, so the run names "Segoe UI Symbol", which ships with
+// Windows. The font table lists it as a sans font with DejaVu Sans as its
+// alternative: without that entry LibreOffice substitutes a colour emoji font
+// for U+2611 when Segoe UI Symbol is not installed.
+const checklistSymbols = {
+  checked: '\u2611', // ☑
+  unchecked: '\u2610', // ☐
+};
+const checklistSymbolFont = 'Segoe UI Symbol';
+const checklistSymbolFallbackFont = 'DejaVu Sans';
 const colorlessColors = ['transparent', 'auto'];
 const verticalAlignValues = ['top', 'middle', 'bottom'];
 const defaultPercentageMarginValue = 0;
@@ -238,6 +250,9 @@ export {
   hyperlinkType,
   imageType,
   paragraphBordersObject,
+  checklistSymbols,
+  checklistSymbolFont,
+  checklistSymbolFallbackFont,
   colorlessColors,
   verticalAlignValues,
   defaultLang,
