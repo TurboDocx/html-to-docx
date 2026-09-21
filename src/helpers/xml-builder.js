@@ -27,7 +27,6 @@ import {
   percentageRegex,
   pointRegex,
   pointToHIP,
-  HIPToTWIP,
   pointToTWIP,
   pixelToHIP,
   pixelToTWIP,
@@ -48,6 +47,9 @@ import {
   defaultFont,
   hyperlinkType,
   paragraphBordersObject,
+  checklistSymbols,
+  checklistSymbolFont,
+  checklistSymbolFallbackFont,
   colorlessColors,
   verticalAlignValues,
   imageType,
@@ -150,7 +152,14 @@ const transformText = (text, transformation) => {
     case 'lowercase':
       return text.toLowerCase();
     case 'capitalize':
-      return text.replace(/\b\w/g, (char) => char.toUpperCase());
+      // The first letter of each word, as CSS capitalises: a word starts after
+      // whitespace or at the start, never after an apostrophe or an accented
+      // letter. `\b\w` is ASCII-only, so it made "don't" into "Don'T" and
+      // "naïve" into "NaïVe".
+      return text.replace(
+        /(^|[\s\u00A0([{"\u201C\u2018-])(\p{L})/gu,
+        (match, before, letter) => before + letter.toUpperCase()
+      );
     default:
       return text;
   }
@@ -230,10 +239,15 @@ const buildStrike = () =>
     .att('@w', 'val', true)
     .up();
 
-const buildBold = () =>
-  fragment({ namespaceAlias: { w: namespaces.w } })
-    .ele('@w', 'b')
-    .up();
+// `off` writes <w:b w:val="0"/>: bold explicitly switched off, which a run
+// needs to not be bold inside a style that is (Heading 1-6).
+const buildBold = (off = false) => {
+  const boldFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'b');
+  if (off) {
+    boldFragment.att('@w', 'val', '0');
+  }
+  return boldFragment.up();
+};
 
 const buildItalics = () =>
   fragment({ namespaceAlias: { w: namespaces.w } })
@@ -267,12 +281,28 @@ const buildBorder = (
     .att('@w', 'color', borderColor)
     .up();
 
-const buildTextElement = (text) =>
-  fragment({ namespaceAlias: { w: namespaces.w } })
-    .ele('@w', 't')
-    .att('@xml', 'space', 'preserve')
-    .txt(text)
-    .up();
+const buildTextElement = (text) => {
+  if (typeof text !== 'string' || !text.includes('\t')) {
+    return fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 't')
+      .att('@xml', 'space', 'preserve')
+      .txt(text)
+      .up();
+  }
+
+  // A tab inside <w:t> is not a tab stop in Word: emit <w:tab/> between the
+  // text segments, all inside the same run so they share its formatting.
+  const textFragment = fragment({ namespaceAlias: { w: namespaces.w } });
+  text.split('\t').forEach((segment, index) => {
+    if (index > 0) {
+      textFragment.ele('@w', 'tab').up();
+    }
+    if (segment) {
+      textFragment.ele('@w', 't').att('@xml', 'space', 'preserve').txt(segment).up();
+    }
+  });
+  return textFragment;
+};
 
 const buildTextDecoration = (value) => {
   if (value.line === 'underline') {
@@ -328,19 +358,19 @@ const buildTextShadow = () =>
     .att('@w', 'val', true)
     .up();
 
+// CSS line-height values in absolute length units (px, pt, cm, in).
+const absoluteLineHeightRegex = /^\s*\d*\.?\d+\s*(px|pt|cm|in)\s*$/i;
+
+// A unitless or percentage line-height is a MULTIPLE of a single line, and is
+// written with lineRule="auto", where w:line counts 240ths of a line: 1.5 is
+// 360 at every font size. It used to be multiplied by the element's font size,
+// which is only the same number at 12pt — a 30px list item at 1.5 came out at
+// 2.8 lines and an 8px one at 0.75, clipping its text.
 // eslint-disable-next-line consistent-return
-const fixupLineHeight = (lineHeight, fontSize) => {
-  // FIXME: If line height is anything other than a number
+const fixupLineHeight = (lineHeight) => {
   // eslint-disable-next-line no-restricted-globals
   if (!isNaN(lineHeight)) {
-    if (fontSize) {
-      const actualLineHeight = +lineHeight * fontSize;
-
-      return HIPToTWIP(actualLineHeight);
-    } else {
-      // 240 TWIP or 12 point is default line height
-      return +lineHeight * 240;
-    }
+    return Math.round(+lineHeight * 240);
   } else if (pointRegex.test(lineHeight)) {
     const matchedParts = lineHeight.match(pointRegex);
     return pointToTWIP(matchedParts[1]);
@@ -355,7 +385,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
     return inchToTWIP(matchedParts[1]);
   } else if (percentageRegex.test(lineHeight)) {
     const matchedParts = lineHeight.match(percentageRegex);
-    return HIPToTWIP((matchedParts[1] * fontSize) / 100);
+    return Math.round((matchedParts[1] / 100) * 240);
   } else {
     // 240 TWIP or 12 point is default line height
     return 240;
@@ -383,6 +413,57 @@ const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
     const matchedParts = fontSizeString.match(percentageRegex);
     return (matchedParts[1] * docxDocumentInstance.fontSize) / 100;
   }
+};
+
+// CSS absolute-size keywords as a factor of the medium (document default) size.
+const fontSizeKeywordScale = {
+  'xx-small': 3 / 5,
+  'x-small': 3 / 4,
+  small: 8 / 9,
+  medium: 1,
+  large: 6 / 5,
+  'x-large': 3 / 2,
+  'xx-large': 2,
+  'xxx-large': 3,
+};
+// CSS relative-size keywords as a factor of the inherited size.
+const relativeFontSizeScale = { smaller: 1 / 1.2, larger: 1.2 };
+
+/**
+ * Resolves a CSS font-size to half-points.
+ *
+ * pt, px, cm, in and % convert exactly as fixupFontSize does (percentages are
+ * rounded to whole half-points, as <w:sz> requires). em, smaller and larger
+ * scale the inherited size; rem and the absolute keywords scale the document
+ * default size. Returns undefined when the value cannot be resolved, so the
+ * caller keeps the inherited size instead of falling back to 5pt.
+ */
+const resolveFontSize = (fontSizeString, docxDocumentInstance, inheritedFontSize) => {
+  const fixedFontSize = fixupFontSize(fontSizeString, docxDocumentInstance);
+  if (typeof fixedFontSize === 'number' && Number.isFinite(fixedFontSize)) {
+    return Number.isInteger(fixedFontSize) ? fixedFontSize : Math.round(fixedFontSize);
+  }
+
+  const documentFontSize =
+    (docxDocumentInstance && docxDocumentInstance.fontSize) || defaultDocumentOptions.fontSize;
+  const baseFontSize =
+    typeof inheritedFontSize === 'number' && inheritedFontSize > 0
+      ? inheritedFontSize
+      : documentFontSize;
+  const value = String(fontSizeString).trim().toLowerCase();
+
+  let resolvedFontSize;
+  const emMatch = value.match(/^(\d*\.?\d+)(r?em)$/);
+  if (emMatch) {
+    resolvedFontSize =
+      Number(emMatch[1]) * (emMatch[2] === 'rem' ? documentFontSize : baseFontSize);
+  } else if (Object.prototype.hasOwnProperty.call(fontSizeKeywordScale, value)) {
+    resolvedFontSize = fontSizeKeywordScale[value] * documentFontSize;
+  } else if (Object.prototype.hasOwnProperty.call(relativeFontSizeScale, value)) {
+    resolvedFontSize = relativeFontSizeScale[value] * baseFontSize;
+  }
+
+  return resolvedFontSize > 0 ? Math.round(resolvedFontSize) : undefined;
 };
 
 // eslint-disable-next-line consistent-return
@@ -449,6 +530,163 @@ const fixupMargin = (marginString) => {
     const matchedParts = marginString.match(percentageRegex);
     return matchedParts[1];
   }
+};
+
+// Cell padding and table indent are lengths Word can only store as an absolute
+// number of TWIPs, so unlike fixupMargin this rejects anything relative (a
+// percentage, `auto`, `em`) and anything negative instead of guessing. A bare
+// `0` is the one unitless length CSS allows, and callers need it to cancel an
+// inherited default, so it is kept.
+const absoluteLengthRegex = /^(\d*\.?\d+)\s*(px|pt|cm|in)?$/i;
+
+// eslint-disable-next-line consistent-return
+const absoluteLengthToTWIP = (lengthString) => {
+  if (lengthString === undefined || lengthString === null) return undefined;
+  const matchedParts = absoluteLengthRegex.exec(String(lengthString).trim());
+  if (!matchedParts) return undefined;
+  const value = Number(matchedParts[1]);
+  if (!Number.isFinite(value)) return undefined;
+  switch ((matchedParts[2] || '').toLowerCase()) {
+    case 'px':
+      return pixelToTWIP(value);
+    case 'pt':
+      return pointToTWIP(value);
+    case 'cm':
+      return cmToTWIP(value);
+    case 'in':
+      return inchToTWIP(value);
+    default:
+      return value === 0 ? 0 : undefined;
+  }
+};
+
+// Paragraph-level elements whose CSS vertical margins and borders map to
+// paragraph properties (<w:spacing> before/after, <w:pBdr>).
+const paragraphLevelTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'];
+
+// Converts a CSS margin length to paragraph spacing in TWIPs. Returns
+// undefined for values <w:spacing> cannot represent (negative, auto, relative
+// units), so the paragraph keeps the spacing of its style.
+const fixupParagraphSpacing = (marginString) => {
+  const value = String(marginString).trim();
+  if (/^(0+(\.0*)?|\.0+)$/.test(value)) {
+    return 0;
+  }
+  if (value.startsWith('-') || percentageRegex.test(value)) {
+    return undefined;
+  }
+  const spacing = fixupMargin(value);
+  return typeof spacing === 'number' && Number.isFinite(spacing) ? spacing : undefined;
+};
+
+// CSS padding is read on table cells only, where it maps to <w:tcMar> — the
+// per-cell override of the table's <w:tblCellMar>. Everywhere else Word has no
+// box to put it in.
+const tableCellPaddingProperties = [
+  'padding',
+  'padding-top',
+  'padding-right',
+  'padding-bottom',
+  'padding-left',
+];
+
+// Expands one padding declaration into the sides it sets, in TWIPs. Returns
+// undefined when any part of it is a length Word cannot store, so a broken
+// declaration is dropped whole rather than applied by halves.
+const parseCellPadding = (propertyName, value) => {
+  if (propertyName !== 'padding') {
+    const sideMargin = absoluteLengthToTWIP(value);
+    return sideMargin === undefined
+      ? undefined
+      : { [propertyName.slice('padding-'.length)]: sideMargin };
+  }
+  const parts = String(value).trim().split(/\s+/);
+  if (parts.length > 4) return undefined;
+  const lengths = parts.map(absoluteLengthToTWIP);
+  if (lengths.some((length) => length === undefined)) return undefined;
+  // CSS shorthand fill order: 1 value sets all four, 2 vertical/horizontal,
+  // 3 top/horizontal/bottom, 4 top/right/bottom/left.
+  const [top, right = top, bottom = top, left = right] = lengths;
+  return { top, right, bottom, left };
+};
+
+const paragraphBorderSides = ['top', 'left', 'bottom', 'right'];
+const paragraphBorderProperties = {
+  border: paragraphBorderSides,
+  'border-top': ['top'],
+  'border-left': ['left'],
+  'border-bottom': ['bottom'],
+  'border-right': ['right'],
+};
+// CSS border-style -> ST_Border. Styles without an OOXML equivalent render as
+// a single line; none/hidden (and a missing style, per CSS) draw no border.
+const paragraphBorderStyles = {
+  solid: 'single',
+  dashed: 'dashed',
+  dotted: 'dotted',
+  double: 'double',
+  groove: 'single',
+  ridge: 'single',
+  inset: 'single',
+  outset: 'single',
+};
+// CSS border-width keywords in px.
+const borderWidthKeywords = { thin: 1, medium: 3, thick: 5 };
+// Distance between a paragraph border and its text, in points.
+const paragraphBorderSpacing = 1;
+
+// Converts a CSS border width to eighths of a point, or undefined when the
+// token is not a supported length.
+const borderWidthToEighthPoints = (token) => {
+  if (Object.prototype.hasOwnProperty.call(borderWidthKeywords, token)) {
+    return borderWidthKeywords[token] * 6;
+  }
+  const match = token.match(/^(\d*\.?\d+)(px|pt|cm|in)?$/);
+  if (!match || (!match[2] && Number(match[1]) !== 0)) {
+    return undefined;
+  }
+  const value = Number(match[1]);
+  const pointsPerUnit = { px: 0.75, pt: 1, cm: 72 / 2.54, in: 72 };
+  return value * (match[2] ? pointsPerUnit[match[2]] : 0) * 8;
+};
+
+// Parses a CSS border shorthand value (`<width> <style> <color>`, any order)
+// into a paragraph border side, or null when it draws no border.
+const parseParagraphBorder = (borderString) => {
+  // Split on whitespace, keeping functional colors such as rgb(0, 0, 0) whole.
+  const tokens =
+    String(borderString)
+      .trim()
+      .match(/[^\s(]+\([^)]*\)|[^\s]+/g) || [];
+  let stroke;
+  let size = borderWidthKeywords.medium * 6;
+  let color = 'auto';
+
+  tokens.forEach((token) => {
+    const lowerCaseToken = token.toLowerCase();
+    const width = borderWidthToEighthPoints(lowerCaseToken);
+    if (['none', 'hidden'].includes(lowerCaseToken)) {
+      stroke = null;
+    } else if (Object.prototype.hasOwnProperty.call(paragraphBorderStyles, lowerCaseToken)) {
+      stroke = paragraphBorderStyles[lowerCaseToken];
+    } else if (width !== undefined) {
+      size = width;
+    } else if (isColorCode(token)) {
+      color = fixupColorCode(token).toUpperCase();
+    }
+  });
+
+  if (!stroke || size <= 0) {
+    return null;
+  }
+
+  return {
+    stroke,
+    // Word accepts paragraph border widths from 1/4pt (2) to 12pt (96).
+    size: Math.min(96, Math.max(2, Math.round(size))),
+    spacing: paragraphBorderSpacing,
+    color,
+  };
 };
 
 const borderStyleParser = (style) => {
@@ -555,21 +793,37 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           modifiedAttributes.textAlign = vNodeStyleValue;
         }
       } else if (vNodeStyleKey === 'font-weight') {
-        // FIXME: remove bold check when other font weights are handled.
-        if (vNodeStyleValue === 'bold') {
+        // Word has bold and not-bold. 600 and up is bold, as browsers draw it
+        // when a family has no face in between. A weight that is NOT bold is
+        // kept as `false` rather than dropped, so it can switch off the bold a
+        // heading style or an enclosing <strong> would otherwise hand down.
+        const weight = String(vNodeStyleValue).trim().toLowerCase();
+        if (weight === 'bold' || weight === 'bolder' || Number(weight) >= 600) {
           modifiedAttributes.strong = vNodeStyleValue;
+        } else if (weight === 'normal' || weight === 'lighter' || Number(weight) > 0) {
+          modifiedAttributes.strong = false;
         }
       } else if (vNodeStyleKey === 'font-family') {
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
       } else if (vNodeStyleKey === 'font-size') {
-        modifiedAttributes.fontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
-      } else if (vNodeStyleKey === 'line-height') {
-        modifiedAttributes.lineHeight = fixupLineHeight(
+        const fontSize = resolveFontSize(
           vNodeStyleValue,
-          vNodeStyle['font-size']
-            ? fixupFontSize(vNodeStyle['font-size'], docxDocumentInstance)
-            : null
+          docxDocumentInstance,
+          modifiedAttributes.fontSize
         );
+        if (fontSize !== undefined) {
+          modifiedAttributes.fontSize = fontSize;
+        }
+      } else if (vNodeStyleKey === 'line-height') {
+        modifiedAttributes.lineHeight = fixupLineHeight(vNodeStyleValue);
+        // An absolute line-height is a height, not a multiple of a single line:
+        // emit it as a minimum line height. Unitless and percentage values keep
+        // the "auto" rule, and an inherited "atLeast" rule must not leak onto them.
+        if (absoluteLineHeightRegex.test(vNodeStyleValue)) {
+          modifiedAttributes.lineRule = 'atLeast';
+        } else {
+          delete modifiedAttributes.lineRule;
+        }
       } else if (vNodeStyleKey === 'margin') {
         const marginParts = vNodeStyleValue.split(' ');
         const margins = {
@@ -624,9 +878,48 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         if (isZeroOrTruthy(leftMargin) || isZeroOrTruthy(rightMargin)) {
           modifiedAttributes.indentation = indentation;
         }
+      } else if (vNodeStyleKey === 'margin-top') {
+        if (paragraphLevelTags.includes(vNode.tagName)) {
+          const beforeSpacing = fixupParagraphSpacing(vNodeStyleValue);
+          if (isZeroOrTruthy(beforeSpacing)) {
+            modifiedAttributes.beforeSpacing = beforeSpacing;
+          }
+        }
       } else if (vNodeStyleKey === 'margin-bottom') {
         if (vNode.tagName === 'p') {
           modifiedAttributes.afterSpacing = fixupMargin(vNodeStyle['margin-bottom']);
+        } else if (paragraphLevelTags.includes(vNode.tagName)) {
+          const afterSpacing = fixupParagraphSpacing(vNodeStyleValue);
+          if (isZeroOrTruthy(afterSpacing)) {
+            modifiedAttributes.afterSpacing = afterSpacing;
+          }
+        }
+      } else if (tableCellPaddingProperties.includes(vNodeStyleKey)) {
+        // Sides are merged one declaration at a time, in source order, so a
+        // `padding-left: 0` after a `padding: 8px` cancels only the left side —
+        // and a side nobody mentioned is left out of <w:tcMar> entirely so it
+        // keeps inheriting the table default.
+        if (vNode.tagName === 'td' || vNode.tagName === 'th') {
+          const paddingSides = parseCellPadding(vNodeStyleKey, vNodeStyleValue);
+          if (paddingSides) {
+            modifiedAttributes.cellMargin = {
+              ...(modifiedAttributes.cellMargin || {}),
+              ...paddingSides,
+            };
+          }
+        }
+      } else if (Object.prototype.hasOwnProperty.call(paragraphBorderProperties, vNodeStyleKey)) {
+        if (paragraphLevelTags.includes(vNode.tagName)) {
+          const paragraphBorder = parseParagraphBorder(vNodeStyleValue);
+          const paragraphBorders = { ...(modifiedAttributes.paragraphBorders || {}) };
+          paragraphBorderProperties[vNodeStyleKey].forEach((side) => {
+            if (paragraphBorder) {
+              paragraphBorders[side] = paragraphBorder;
+            } else {
+              delete paragraphBorders[side];
+            }
+          });
+          modifiedAttributes.paragraphBorders = paragraphBorders;
         }
       } else if (vNodeStyleKey === 'display') {
         modifiedAttributes.display = vNodeStyle.display;
@@ -721,7 +1014,7 @@ const buildFormatting = (htmlTag, options) => {
   switch (htmlTag) {
     case 'strong':
     case 'b':
-      return buildBold();
+      return buildBold(Boolean(options && options.off));
     case 'em':
     case 'i':
       return buildItalics();
@@ -845,6 +1138,35 @@ const sortRprChildren = (rprFragment) => {
   return fragment(sortedXml);
 };
 
+// Collects the children of a properties element under their element names so
+// they can be emitted in schema order instead of in the order the attributes
+// happened to be set. Word reads <w:tcPr>/<w:tblPr> children as an ordered
+// sequence and drops whatever is out of place, and a child cannot simply be
+// spliced into a list that is itself unordered.
+const buildOrderedProperties = (propertiesFragment, childFragments, elementOrder, sorted) => {
+  // An element the order table does not name sorts to the end rather than to
+  // the front, so adding a builder without updating the table cannot push a
+  // known child out of its slot.
+  const slotOf = (name) => {
+    const slot = elementOrder.indexOf(name);
+    return slot === -1 ? elementOrder.length : slot;
+  };
+  const orderedChildFragments = sorted
+    ? childFragments
+        .map((childFragment, originalIndex) => ({ ...childFragment, originalIndex }))
+        .sort((a, b) => {
+          const slotDiff = slotOf(a.name) - slotOf(b.name);
+          return slotDiff !== 0 ? slotDiff : a.originalIndex - b.originalIndex;
+        })
+    : childFragments;
+  orderedChildFragments.forEach((childFragment) =>
+    propertiesFragment.import(childFragment.fragment)
+  );
+  propertiesFragment.up();
+
+  return propertiesFragment;
+};
+
 const buildRunProperties = (attributes) => {
   const runPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'rPr');
   if (attributes && attributes.constructor === Object) {
@@ -859,6 +1181,10 @@ const buildRunProperties = (attributes) => {
 
       if (key === 'fontSize' || key === 'font') {
         options[key] = attributes[key];
+      }
+
+      if (key === 'strong' && attributes[key] === false) {
+        options.off = true;
       }
 
       if (key === 'textDecoration') {
@@ -878,6 +1204,285 @@ const buildRunProperties = (attributes) => {
   runPropertiesFragment.up();
 
   return runPropertiesFragment;
+};
+
+// ---------------------------------------------------------------------------
+// Marker elements
+//
+// Two things a document needs cannot be written as HTML text, because they are
+// not text: a page number, which only Word can know, and a shape drawn at a
+// fixed spot on the paper. Both arrive as an inline element carrying data-*
+// attributes, which the converter reads instead of rendering. The element
+// produces no text of its own.
+// ---------------------------------------------------------------------------
+
+const collectVNodeText = (vNode) => {
+  if (isVText(vNode)) return vNode.text;
+  if (vNode && Array.isArray(vNode.children)) return vNode.children.map(collectVNodeText).join('');
+  return '';
+};
+
+// A field is five runs, not one: Word stores the instruction and the number it
+// last calculated side by side. Everything between "begin" and "end" is the
+// field; the run after "separate" holds the cached result, which is what a
+// reader sees until the fields are updated. All five carry the same <w:rPr> so
+// the number is set in the type around it rather than falling back to Normal.
+const fieldInstructions = {
+  page: ' PAGE ',
+  numpages: ' NUMPAGES ',
+};
+
+const buildFieldRun = (runPropertiesAttributes, buildContent) => {
+  const runFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'r');
+  runFragment.import(sortRprChildren(buildRunProperties(cloneDeep(runPropertiesAttributes))));
+  buildContent(runFragment);
+
+  return runFragment.up();
+};
+
+const buildPageFieldRuns = (vNode, attributes, docxDocumentInstance) => {
+  const fieldName = String(vNode.properties.attributes['data-field']).trim().toLowerCase();
+  const instruction = fieldInstructions[fieldName];
+  if (!instruction) return null;
+
+  const fieldAttributes = modifiedStyleAttributesBuilder(docxDocumentInstance, vNode, attributes);
+  // The element's own text is the cached result. An empty marker still needs
+  // something for a reader to see before the fields update, and "1" is the
+  // only honest guess for both PAGE and NUMPAGES.
+  const cachedResult = collectVNodeText(vNode).trim() || '1';
+
+  return [
+    buildFieldRun(fieldAttributes, (runFragment) =>
+      runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'begin').up()
+    ),
+    buildFieldRun(fieldAttributes, (runFragment) =>
+      runFragment.ele('@w', 'instrText').att('@xml', 'space', 'preserve').txt(instruction).up()
+    ),
+    buildFieldRun(fieldAttributes, (runFragment) =>
+      runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'separate').up()
+    ),
+    buildFieldRun(fieldAttributes, (runFragment) =>
+      runFragment.import(buildTextElement(cachedResult))
+    ),
+    buildFieldRun(fieldAttributes, (runFragment) =>
+      runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'end').up()
+    ),
+  ];
+};
+
+// CSS dash keywords Word has a preset for. Anything else falls back to solid
+// rather than dropping the shape — a rule drawn wrong is better than no rule.
+const shapeDashStyles = { solid: 'solid', dashed: 'dash', dotted: 'sysDot' };
+
+const shapeSixDigitColorRegex = /^#([0-9a-f]{6})$/i;
+const shapeThreeDigitColorRegex = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i;
+
+const parseShapeColor = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  const sixDigit = shapeSixDigitColorRegex.exec(trimmed);
+  if (sixDigit) return sixDigit[1].toUpperCase();
+  const threeDigit = shapeThreeDigitColorRegex.exec(trimmed);
+  if (threeDigit) {
+    return hex3ToHex(threeDigit[1], threeDigit[2], threeDigit[3]).toUpperCase();
+  }
+  return undefined;
+};
+
+const parseShapeNumber = (value) => {
+  if (value === undefined || value === null || String(value).trim() === '') return undefined;
+  const parsed = Number(String(value).trim());
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+// Returns the shape a marker describes, or null when anything it needs is
+// missing or unreadable. A half-understood marker is dropped rather than drawn
+// somewhere arbitrary, and never throws: one bad attribute in a template must
+// not cost the caller the whole document.
+const parseShapeMarker = (vNode) => {
+  const markerAttributes = vNode.properties.attributes;
+  const shape = String(markerAttributes['data-shape']).trim().toLowerCase();
+  if (shape !== 'rect' && shape !== 'line') return null;
+
+  const left = parseShapeNumber(markerAttributes['data-left']);
+  const top = parseShapeNumber(markerAttributes['data-top']);
+  const width = parseShapeNumber(markerAttributes['data-width']);
+  if (left === undefined || top === undefined || width === undefined || width <= 0) return null;
+
+  if (shape === 'rect') {
+    const height = parseShapeNumber(markerAttributes['data-height']);
+    const fill = parseShapeColor(markerAttributes['data-fill']);
+    if (height === undefined || height <= 0 || !fill) return null;
+    return { shape, left, top, width, height, fill };
+  }
+
+  const stroke = parseShapeColor(markerAttributes['data-stroke']);
+  if (!stroke) return null;
+  const declaredStrokeWidth = parseShapeNumber(markerAttributes['data-stroke-width']);
+  const strokeWidth =
+    declaredStrokeWidth !== undefined && declaredStrokeWidth > 0 ? declaredStrokeWidth : 1;
+  const dash =
+    shapeDashStyles[
+      String(markerAttributes['data-stroke-style'] || 'solid')
+        .trim()
+        .toLowerCase()
+    ] || 'solid';
+  // A line's box is flat, so its top edge and its centre are the same y: the
+  // stroke straddles it, which is what makes data-top the centre of the rule.
+  return { shape, left, top, width, height: 0, stroke, strokeWidth, dash };
+};
+
+const buildShapeGeometry = (marker) => {
+  const shapePropertiesFragment = fragment({
+    namespaceAlias: { wps: namespaces.wps, a: namespaces.a },
+  }).ele('@wps', 'spPr');
+
+  shapePropertiesFragment
+    .ele('@a', 'xfrm')
+    .ele('@a', 'off')
+    .att('x', '0')
+    .att('y', '0')
+    .up()
+    .ele('@a', 'ext')
+    .att('cx', String(pixelToEMU(marker.width)))
+    .att('cy', String(pixelToEMU(marker.height)))
+    .up()
+    .up();
+  shapePropertiesFragment
+    .ele('@a', 'prstGeom')
+    .att('prst', marker.shape === 'line' ? 'line' : 'rect')
+    .ele('@a', 'avLst')
+    .up()
+    .up();
+
+  if (marker.shape === 'rect') {
+    shapePropertiesFragment
+      .ele('@a', 'solidFill')
+      .ele('@a', 'srgbClr')
+      .att('val', marker.fill)
+      .up()
+      .up();
+    shapePropertiesFragment.ele('@a', 'ln').ele('@a', 'noFill').up().up();
+  } else {
+    // A line has no interior to fill — the whole shape is its outline, so the
+    // colour and the dash pattern live on <a:ln>.
+    shapePropertiesFragment
+      .ele('@a', 'ln')
+      .att('w', String(pixelToEMU(marker.strokeWidth)))
+      .ele('@a', 'solidFill')
+      .ele('@a', 'srgbClr')
+      .att('val', marker.stroke)
+      .up()
+      .up()
+      .ele('@a', 'prstDash')
+      .att('val', marker.dash)
+      .up()
+      .up();
+  }
+
+  return shapePropertiesFragment.up();
+};
+
+const buildShapeGraphic = (marker) => {
+  const graphicFragment = fragment({ namespaceAlias: { a: namespaces.a } }).ele('@a', 'graphic');
+  const graphicDataFragment = graphicFragment.ele('@a', 'graphicData').att('uri', namespaces.wps);
+  const shapeFragment = fragment({ namespaceAlias: { wps: namespaces.wps } }).ele('@wps', 'wsp');
+  shapeFragment.ele('@wps', 'cNvSpPr').up();
+  shapeFragment.import(buildShapeGeometry(marker));
+  shapeFragment.ele('@wps', 'bodyPr').up();
+  graphicDataFragment.import(shapeFragment.up());
+
+  return graphicFragment.up();
+};
+
+// The anchor is what makes the shape page furniture rather than content: it is
+// measured from the page corner, takes no space in the line (wrapNone), and
+// sits behind the text. relativeHeight rises with the drawing id, so a marker
+// written later in the HTML paints over one written earlier.
+const buildShapeAnchor = (marker, drawingId) => {
+  const anchorFragment = fragment({ namespaceAlias: { wp: namespaces.wp } })
+    .ele('@wp', 'anchor')
+    .att('distT', '0')
+    .att('distB', '0')
+    .att('distL', '0')
+    .att('distR', '0')
+    .att('simplePos', '0')
+    .att('relativeHeight', String(drawingId))
+    .att('behindDoc', '1')
+    .att('locked', '0')
+    .att('layoutInCell', '1')
+    .att('allowOverlap', '1');
+
+  // Required by the schema even though nothing reads it while simplePos="0".
+  anchorFragment.ele('@wp', 'simplePos').att('x', '0').att('y', '0').up();
+  anchorFragment
+    .ele('@wp', 'positionH')
+    .att('relativeFrom', 'page')
+    .ele('@wp', 'posOffset')
+    .txt(String(pixelToEMU(marker.left)))
+    .up()
+    .up();
+  anchorFragment
+    .ele('@wp', 'positionV')
+    .att('relativeFrom', 'page')
+    .ele('@wp', 'posOffset')
+    .txt(String(pixelToEMU(marker.top)))
+    .up()
+    .up();
+  anchorFragment
+    .ele('@wp', 'extent')
+    .att('cx', String(pixelToEMU(marker.width)))
+    .att('cy', String(pixelToEMU(marker.height)))
+    .up();
+  anchorFragment
+    .ele('@wp', 'effectExtent')
+    .att('l', '0')
+    .att('t', '0')
+    .att('r', '0')
+    .att('b', '0')
+    .up();
+  anchorFragment.ele('@wp', 'wrapNone').up();
+  anchorFragment
+    .ele('@wp', 'docPr')
+    .att('id', String(drawingId))
+    .att('name', `Shape ${drawingId}`)
+    .up();
+  anchorFragment.ele('@wp', 'cNvGraphicFramePr').up();
+  anchorFragment.import(buildShapeGraphic(marker));
+
+  return anchorFragment.up();
+};
+
+const buildShapeMarkerRun = (vNode, docxDocumentInstance) => {
+  if (!docxDocumentInstance) return null;
+  const marker = parseShapeMarker(vNode);
+  if (!marker) return null;
+
+  const drawingId = docxDocumentInstance.createDrawingId();
+  const runFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'r');
+  const drawingFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'drawing');
+  drawingFragment.import(buildShapeAnchor(marker, drawingId));
+  runFragment.import(drawingFragment.up());
+
+  return runFragment.up();
+};
+
+// Intercepts the marker elements before they are treated as text. Returns the
+// runs they stand for, or null when the element is ordinary markup.
+const buildMarkerRuns = (vNode, attributes, docxDocumentInstance) => {
+  if (!isVNode(vNode) || !vNode.properties || !vNode.properties.attributes) return null;
+  const markerAttributes = vNode.properties.attributes;
+  if (markerAttributes['data-shape'] !== undefined) {
+    const shapeRun = buildShapeMarkerRun(vNode, docxDocumentInstance);
+    // An unreadable marker still swallows its element: it was never text, and
+    // rendering the leftovers would put stray characters on the page.
+    return shapeRun ? [shapeRun] : [];
+  }
+  if (markerAttributes['data-field'] !== undefined) {
+    return buildPageFieldRuns(vNode, attributes, docxDocumentInstance);
+  }
+
+  return null;
 };
 
 const buildRun = async (vNode, attributes, docxDocumentInstance) => {
@@ -1192,6 +1797,14 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 };
 
 const buildRunOrRuns = async (vNode, attributes, docxDocumentInstance) => {
+  // Every route an inline element can take into a run passes through here —
+  // straight from a paragraph, from inside a <strong>, from a table cell — so
+  // this is the one place the marker elements have to be caught. Catching them
+  // here is also what keeps an empty marker alive: the span loop below walks
+  // children, and a marker has none.
+  const markerRuns = buildMarkerRuns(vNode, attributes, docxDocumentInstance);
+  if (markerRuns) return markerRuns;
+
   if ((isVNode(vNode) || vNode?.isCoveringNode) && vNode.tagName === 'span' && vNode.children) {
     let runFragments = [];
 
@@ -1298,6 +1911,40 @@ const buildListContinuationIndent = (level) => {
     .up();
 };
 
+// Hanging indent of a checklist item at `level`, matching list numbering
+// (numbering.xml uses left=(level+1)*720, hanging=360).
+const checklistIndentLeft = (level) => ((level || 0) + 1) * 720;
+
+// The checkbox glyph run and the tab that moves the item text to the indent.
+const buildChecklistMarkerRuns = (checked, fontSize) => {
+  const glyphRunFragment = fragment({ namespaceAlias: { w: namespaces.w } });
+  const runPropertiesElement = glyphRunFragment
+    .ele('@w', 'r')
+    .ele('@w', 'rPr')
+    .ele('@w', 'rFonts')
+    .att('@w', 'ascii', checklistSymbolFont)
+    .att('@w', 'hAnsi', checklistSymbolFont)
+    .att('@w', 'eastAsia', checklistSymbolFont)
+    .att('@w', 'cs', checklistSymbolFont)
+    .up();
+  if (typeof fontSize === 'number' && fontSize > 0) {
+    runPropertiesElement.ele('@w', 'sz').att('@w', 'val', fontSize).up();
+  }
+  runPropertiesElement
+    .up()
+    .ele('@w', 't')
+    .att('@xml', 'space', 'preserve')
+    .txt(checked ? checklistSymbols.checked : checklistSymbols.unchecked);
+
+  const tabRunFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'r')
+    .ele('@w', 'tab')
+    .up()
+    .up();
+
+  return [glyphRunFragment, tabRunFragment];
+};
+
 const buildNumberingInstances = () =>
   fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'num')
@@ -1305,10 +1952,11 @@ const buildNumberingInstances = () =>
     .up()
     .up();
 
-const buildSpacing = (lineSpacing, beforeSpacing, afterSpacing) => {
+const buildSpacing = (lineSpacing, beforeSpacing, afterSpacing, lineRule = 'auto') => {
   const spacingFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'spacing');
+  const hasLine = typeof lineSpacing === 'number' && lineSpacing >= 0;
 
-  if (typeof lineSpacing === 'number' && lineSpacing >= 0) {
+  if (hasLine) {
     spacingFragment.att('@w', 'line', lineSpacing);
   }
   if (typeof beforeSpacing === 'number' && beforeSpacing >= 0) {
@@ -1318,7 +1966,10 @@ const buildSpacing = (lineSpacing, beforeSpacing, afterSpacing) => {
     spacingFragment.att('@w', 'after', afterSpacing);
   }
 
-  spacingFragment.att('@w', 'lineRule', 'auto').up();
+  // "atLeast" only makes sense with an explicit line value.
+  spacingFragment
+    .att('@w', 'lineRule', hasLine && lineRule === 'atLeast' ? 'atLeast' : 'auto')
+    .up();
 
   return spacingFragment;
 };
@@ -1356,18 +2007,21 @@ const buildHorizontalAlignment = (horizontalAlignment) => {
     .up();
 };
 
-const buildParagraphBorder = () => {
+// Builds <w:pBdr> from { top, left, bottom, right } sides of
+// { size, spacing, color, stroke }. Without arguments it emits the white
+// padding borders used for shaded block paragraphs.
+const buildParagraphBorder = (borders = paragraphBordersObject) => {
   const paragraphBorderFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
     'pBdr'
   );
-  const bordersObject = cloneDeep(paragraphBordersObject);
+  const bordersObject = cloneDeep(borders);
 
-  Object.keys(bordersObject).forEach((borderName) => {
+  paragraphBorderSides.forEach((borderName) => {
     if (bordersObject[borderName]) {
-      const { size, spacing, color } = bordersObject[borderName];
+      const { size, spacing, color, stroke } = bordersObject[borderName];
 
-      const borderFragment = buildBorder(borderName, size, spacing, color);
+      const borderFragment = buildBorder(borderName, size, spacing, color, stroke);
       paragraphBorderFragment.import(borderFragment);
     }
   });
@@ -1377,38 +2031,141 @@ const buildParagraphBorder = () => {
   return paragraphBorderFragment;
 };
 
+// ECMA-376 CT_PPrBase + CT_PPr child element sequence (Part 1, §17.3.1.26).
+// Like <w:rPr> (see RPR_ELEMENT_ORDER), Word expects <w:pPr> children in this
+// order while LibreOffice accepts any order. Elements that are not part of
+// CT_PPr (legacy output such as <w:rtl/> or text decoration) sort to the end
+// in their original order.
+const PPR_ELEMENT_ORDER = [
+  'pStyle',
+  'keepNext',
+  'keepLines',
+  'pageBreakBefore',
+  'framePr',
+  'widowControl',
+  'numPr',
+  'suppressLineNumbers',
+  'pBdr',
+  'shd',
+  'tabs',
+  'suppressAutoHyphens',
+  'kinsoku',
+  'wordWrap',
+  'overflowPunct',
+  'topLinePunct',
+  'autoSpaceDE',
+  'autoSpaceDN',
+  'bidi',
+  'adjustRightInd',
+  'snapToGrid',
+  'spacing',
+  'ind',
+  'contextualSpacing',
+  'mirrorIndents',
+  'suppressOverlap',
+  'jc',
+  'textDirection',
+  'textAlignment',
+  'textboxTightWrap',
+  'outlineLvl',
+  'divId',
+  'cnfStyle',
+  'rPr',
+  'sectPr',
+  'pPrChange',
+];
+const pprElementSortIndex = (name) => {
+  const idx = PPR_ELEMENT_ORDER.indexOf(name);
+  return idx === -1 ? PPR_ELEMENT_ORDER.length : idx;
+};
+
 const buildParagraphProperties = (attributes, docxDocumentInstance) => {
   const paragraphPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
     'pPr'
   );
+  // Children are collected first and imported in spec order at the end, so
+  // the output order does not depend on the order CSS properties were declared.
+  const children = [];
+  const addChild = (name, childFragment) => {
+    children.push({ name, childFragment, originalIndex: children.length });
+  };
 
   // Add RTL support when direction is rtl
   if (docxDocumentInstance && docxDocumentInstance.direction === 'rtl') {
-    paragraphPropertiesFragment.ele('@w', 'bidi').up();
-    paragraphPropertiesFragment.ele('@w', 'rtl').att('@w', 'val', '1').up();
+    addChild(
+      'bidi',
+      fragment({ namespaceAlias: { w: namespaces.w } })
+        .ele('@w', 'bidi')
+        .up()
+    );
+    addChild(
+      'rtl',
+      fragment({ namespaceAlias: { w: namespaces.w } })
+        .ele('@w', 'rtl')
+        .att('@w', 'val', '1')
+        .up()
+    );
   }
 
   if (attributes && attributes.constructor === Object) {
+    let paragraphBorders = null;
+    const isChecklistParagraph = Boolean(attributes.checklist);
     Object.keys(attributes).forEach((key) => {
       switch (key) {
+        case 'checklist':
+          // Checklist items are indented like list items, with the checkbox
+          // glyph in the hanging indent; later blocks align with the text.
+          const checklistLeft = checklistIndentLeft(attributes.checklist.level);
+          if (attributes.isContinuation) {
+            addChild(
+              'ind',
+              fragment({ namespaceAlias: { w: namespaces.w } })
+                .ele('@w', 'ind')
+                .att('@w', 'left', String(checklistLeft))
+                .att('@w', 'hanging', '0')
+                .up()
+            );
+          } else {
+            addChild(
+              'tabs',
+              fragment({ namespaceAlias: { w: namespaces.w } })
+                .ele('@w', 'tabs')
+                .ele('@w', 'tab')
+                .att('@w', 'val', 'left')
+                .att('@w', 'pos', String(checklistLeft))
+                .up()
+                .up()
+            );
+            addChild(
+              'ind',
+              fragment({ namespaceAlias: { w: namespaces.w } })
+                .ele('@w', 'ind')
+                .att('@w', 'left', String(checklistLeft))
+                .att('@w', 'hanging', '360')
+                .up()
+            );
+          }
+          // eslint-disable-next-line no-param-reassign
+          delete attributes.checklist;
+          break;
         case 'numbering':
           // Handle continuation paragraphs (issue #145)
           // Continuation paragraphs get indentation instead of numbering
           if (attributes.isContinuation) {
             const indentationFragment = buildListContinuationIndent(attributes.indentLevel || 0);
-            paragraphPropertiesFragment.import(indentationFragment);
+            addChild('ind', indentationFragment);
           } else {
             const { levelId, numberingId } = attributes[key];
             const numberingPropertiesFragment = buildNumberingProperties(levelId, numberingId);
-            paragraphPropertiesFragment.import(numberingPropertiesFragment);
+            addChild('numPr', numberingPropertiesFragment);
           }
           // eslint-disable-next-line no-param-reassign
           delete attributes.numbering;
           break;
         case 'textAlign':
           const horizontalAlignmentFragment = buildHorizontalAlignment(attributes[key]);
-          paragraphPropertiesFragment.import(horizontalAlignmentFragment);
+          addChild('jc', horizontalAlignmentFragment);
           // eslint-disable-next-line no-param-reassign
           delete attributes.textAlign;
           break;
@@ -1417,28 +2174,36 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           // Essentially if background color needs to be across the row
           if (attributes.display === 'block') {
             const shadingFragment = buildShading(attributes[key]);
-            paragraphPropertiesFragment.import(shadingFragment);
+            addChild('shd', shadingFragment);
             // FIXME: Inner padding in case of shaded paragraphs.
-            const paragraphBorderFragment = buildParagraphBorder();
-            paragraphPropertiesFragment.import(paragraphBorderFragment);
+            // CSS borders (below) replace these padding borders side by side.
+            paragraphBorders = { ...cloneDeep(paragraphBordersObject), ...paragraphBorders };
             // eslint-disable-next-line no-param-reassign
             delete attributes.backgroundColor;
           }
           break;
+        case 'paragraphBorders':
+          paragraphBorders = { ...paragraphBorders, ...attributes.paragraphBorders };
+          // eslint-disable-next-line no-param-reassign
+          delete attributes.paragraphBorders;
+          break;
         case 'paragraphStyle':
           const pStyleFragment = buildPStyle(attributes.paragraphStyle);
-          paragraphPropertiesFragment.import(pStyleFragment);
+          addChild('pStyle', pStyleFragment);
           delete attributes.paragraphStyle;
           break;
         case 'indentation':
-          const indentationFragment = buildIndentation(attributes[key]);
-          paragraphPropertiesFragment.import(indentationFragment);
+          // A checklist item's indent comes from its level (see 'checklist').
+          if (!isChecklistParagraph) {
+            const indentationFragment = buildIndentation(attributes[key]);
+            addChild('ind', indentationFragment);
+          }
           // eslint-disable-next-line no-param-reassign
           delete attributes.indentation;
           break;
         case 'textDecoration':
           const textDecorationFragment = buildTextDecoration(attributes[key]);
-          paragraphPropertiesFragment.import(textDecorationFragment);
+          addChild('textDecoration', textDecorationFragment);
           // we don't delete attributes.textDecoration so that it could be inherited by children nodes.
           break;
         // Note: pageBreakAfter is not handled here — OOXML has no paragraph property for it.
@@ -1448,27 +2213,41 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           const pageBreakBeforeFragment = fragment({ namespaceAlias: { w: namespaces.w } })
             .ele('@w', 'pageBreakBefore')
             .up();
-          paragraphPropertiesFragment.import(pageBreakBeforeFragment);
+          addChild('pageBreakBefore', pageBreakBeforeFragment);
           // eslint-disable-next-line no-param-reassign
           delete attributes.pageBreakBefore;
           break;
       }
     });
 
+    if (paragraphBorders && paragraphBorderSides.some((side) => paragraphBorders[side])) {
+      addChild('pBdr', buildParagraphBorder(paragraphBorders));
+    }
+
     const spacingFragment = buildSpacing(
       attributes.lineHeight,
       attributes.beforeSpacing,
-      attributes.afterSpacing
+      attributes.afterSpacing,
+      attributes.lineRule
     );
     // eslint-disable-next-line no-param-reassign
     delete attributes.lineHeight;
+    // eslint-disable-next-line no-param-reassign
+    delete attributes.lineRule;
     // eslint-disable-next-line no-param-reassign
     delete attributes.beforeSpacing;
     // eslint-disable-next-line no-param-reassign
     delete attributes.afterSpacing;
 
-    paragraphPropertiesFragment.import(spacingFragment);
+    addChild('spacing', spacingFragment);
   }
+
+  children
+    .sort((a, b) => {
+      const slotDiff = pprElementSortIndex(a.name) - pprElementSortIndex(b.name);
+      return slotDiff !== 0 ? slotDiff : a.originalIndex - b.originalIndex;
+    })
+    .forEach(({ childFragment }) => paragraphPropertiesFragment.import(childFragment));
   paragraphPropertiesFragment.up();
 
   return paragraphPropertiesFragment;
@@ -1744,6 +2523,23 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       isParagraph: true,
     }
   );
+  // Checklist item (see buildList): strike the text of checked items marked
+  // data-strike, and start the first paragraph of the item with the checkbox.
+  const checklistItem = attributes && attributes.checklist ? attributes.checklist : null;
+  if (checklistItem && checklistItem.strike) {
+    modifiedAttributes.strike = true;
+  }
+  const checklistMarkerRuns =
+    checklistItem && !attributes.isContinuation
+      ? buildChecklistMarkerRuns(checklistItem.checked, modifiedAttributes.fontSize)
+      : [];
+  if (checklistMarkerRuns.length && docxDocumentInstance) {
+    docxDocumentInstance.registerFont({
+      fontName: checklistSymbolFont,
+      genericFontName: 'sans-serif',
+      altName: checklistSymbolFallbackFont,
+    });
+  }
   // IMAGE SPACING FIX: Ensure proper spacing for paragraphs containing images
   // Images in paragraphs need specific spacing attributes to render correctly in DOCX
   if (isVNode(vNode) && vNode.children && vNode.children.some((child) => child.tagName === 'img')) {
@@ -1757,6 +2553,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     docxDocumentInstance
   );
   paragraphFragment.import(paragraphPropertiesFragment);
+  checklistMarkerRuns.forEach((markerRunFragment) => paragraphFragment.import(markerRunFragment));
   if (isVNode(vNode) && vNodeHasChildren(vNode)) {
     if (
       [
@@ -1947,29 +2744,84 @@ const buildTableCellWidth = (tableCellWidth, parentWidth) =>
     .att('@w', 'type', 'dxa')
     .up();
 
+const buildCellMargin = (side, margin) =>
+  fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', side)
+    .att('@w', 'type', 'dxa')
+    .att('@w', 'w', String(margin))
+    .up();
+
+// Only the sides the HTML actually declared are written, because <w:tcMar>
+// overrides the table's <w:tblCellMar> side by side: an omitted side keeps the
+// table default, while an explicit 0 is how a caller cancels it.
+const buildTableCellMarginFragment = (cellMargin) => {
+  const tableCellMarginFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
+    '@w',
+    'tcMar'
+  );
+  // <w:tcMar> children are themselves an ordered sequence: top, left (start),
+  // bottom, right (end).
+  ['top', 'left', 'bottom', 'right'].forEach((side) => {
+    if (typeof cellMargin[side] === 'number') {
+      tableCellMarginFragment.import(buildCellMargin(side, cellMargin[side]));
+    }
+  });
+
+  return tableCellMarginFragment.up();
+};
+
+// ECMA-376 CT_TcPr child element sequence (§17.4.70). Word reads the children
+// as an ordered sequence and drops whatever is out of place.
+const TCPR_ELEMENT_ORDER = [
+  'cnfStyle',
+  'tcW',
+  'gridSpan',
+  'hMerge',
+  'vMerge',
+  'tcBorders',
+  'shd',
+  'noWrap',
+  'tcMar',
+  'textDirection',
+  'tcFitText',
+  'vAlign',
+  'hideMark',
+];
+
 const buildTableCellProperties = (attributes, parentWidth) => {
   const tableCellPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
     'tcPr'
   );
+  const childFragments = [];
+  let hasCellMargin = false;
   if (attributes && attributes.constructor === Object) {
     Object.keys(attributes).forEach((key) => {
       switch (key) {
+        case 'cellMargin':
+          const cellMarginFragment = buildTableCellMarginFragment(attributes[key]);
+          childFragments.push({ name: 'tcMar', fragment: cellMarginFragment });
+          hasCellMargin = true;
+          // Dropped from the attributes so the cell's own padding does not
+          // travel down into a nested table's cells.
+          // eslint-disable-next-line no-param-reassign
+          delete attributes.cellMargin;
+          break;
         case 'backgroundColor':
           const shadingFragment = buildShading(attributes[key]);
-          tableCellPropertiesFragment.import(shadingFragment);
+          childFragments.push({ name: 'shd', fragment: shadingFragment });
           // eslint-disable-next-line no-param-reassign
           delete attributes.backgroundColor;
           break;
         case 'verticalAlign':
           const verticalAlignmentFragment = buildVerticalAlignment(attributes[key]);
-          tableCellPropertiesFragment.import(verticalAlignmentFragment);
+          childFragments.push({ name: 'vAlign', fragment: verticalAlignmentFragment });
           // eslint-disable-next-line no-param-reassign
           delete attributes.verticalAlign;
           break;
         case 'colSpan':
           const gridSpanFragment = buildGridSpanFragment(attributes[key]);
-          tableCellPropertiesFragment.import(gridSpanFragment);
+          childFragments.push({ name: 'gridSpan', fragment: gridSpanFragment });
           // eslint-disable-next-line no-param-reassign
           delete attributes.colSpan;
           break;
@@ -1977,28 +2829,36 @@ const buildTableCellProperties = (attributes, parentWidth) => {
           const { top, left, bottom, right } = attributes[key];
           if (top || bottom || left || right) {
             const tableCellBorderFragment = buildTableCellBorders(attributes[key]);
-            tableCellPropertiesFragment.import(tableCellBorderFragment);
+            childFragments.push({ name: 'tcBorders', fragment: tableCellBorderFragment });
           }
           // eslint-disable-next-line no-param-reassign
           delete attributes.tableCellBorder;
           break;
         case 'rowSpan':
           const verticalMergeFragment = buildVerticalMerge(attributes[key]);
-          tableCellPropertiesFragment.import(verticalMergeFragment);
+          childFragments.push({ name: 'vMerge', fragment: verticalMergeFragment });
 
           delete attributes.rowSpan;
           break;
         case 'width':
           const widthFragment = buildTableCellWidth(attributes[key], parentWidth);
-          tableCellPropertiesFragment.import(widthFragment);
+          childFragments.push({ name: 'tcW', fragment: widthFragment });
           delete attributes.width;
           break;
       }
     });
   }
-  tableCellPropertiesFragment.up();
 
-  return tableCellPropertiesFragment;
+  // <w:tcMar> has to land between <w:shd> and <w:vAlign>, which the order the
+  // attributes were set in cannot promise, so a cell that declared padding has
+  // its whole <w:tcPr> put in spec order. Cells that did not are emitted in
+  // the order they always were.
+  return buildOrderedProperties(
+    tableCellPropertiesFragment,
+    childFragments,
+    TCPR_ELEMENT_ORDER,
+    hasCellMargin
+  );
 };
 
 /**
@@ -3323,7 +4183,14 @@ const buildTableRow = async (
             modifiedAttributes.color = fixupColorCode(tableRowStyleValue);
           }
         } else if (tableRowStlyeKey === 'font-size') {
-          modifiedAttributes.fontSize = fixupFontSize(tableRowStyleValue, docxDocumentInstance);
+          const fontSize = resolveFontSize(
+            tableRowStyleValue,
+            docxDocumentInstance,
+            modifiedAttributes.fontSize
+          );
+          if (fontSize !== undefined) {
+            modifiedAttributes.fontSize = fontSize;
+          }
         } else if (tableRowStlyeKey === 'font-family') {
           modifiedAttributes.font = docxDocumentInstance.createFont(tableRowStyleValue);
         } else if (tableRowStlyeKey === 'font-weight') {
@@ -3482,13 +4349,6 @@ const buildTableWidth = (tableWidth) =>
     .att('@w', 'w', String(tableWidth))
     .up();
 
-const buildCellMargin = (side, margin) =>
-  fragment({ namespaceAlias: { w: namespaces.w } })
-    .ele('@w', side)
-    .att('@w', 'type', 'dxa')
-    .att('@w', 'w', String(margin))
-    .up();
-
 const buildTableCellMargins = (margin) => {
   const tableCellMarFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
@@ -3507,20 +4367,55 @@ const buildTableCellMargins = (margin) => {
   return tableCellMarFragment;
 };
 
+const buildTableIndent = (tableIndent) =>
+  fragment({ namespaceAlias: { w: namespaces.w } })
+    .ele('@w', 'tblInd')
+    .att('@w', 'w', String(tableIndent))
+    .att('@w', 'type', 'dxa')
+    .up();
+
+// ECMA-376 CT_TblPrBase child element sequence (§17.4.60).
+const TBLPR_ELEMENT_ORDER = [
+  'tblStyle',
+  'tblpPr',
+  'tblOverlap',
+  'bidiVisual',
+  'tblStyleRowBandSize',
+  'tblStyleColBandSize',
+  'tblW',
+  'jc',
+  'tblCellSpacing',
+  'tblInd',
+  'tblBorders',
+  'shd',
+  'tblLayout',
+  'tblCellMar',
+  'tblLook',
+];
+
 const buildTableProperties = (attributes) => {
   const tablePropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele(
     '@w',
     'tblPr'
   );
+  const childFragments = [];
+  let hasTableIndent = false;
 
   if (attributes && attributes.constructor === Object) {
     Object.keys(attributes).forEach((key) => {
       switch (key) {
+        case 'tableIndent':
+          const tableIndentFragment = buildTableIndent(attributes[key]);
+          childFragments.push({ name: 'tblInd', fragment: tableIndentFragment });
+          hasTableIndent = true;
+          // eslint-disable-next-line no-param-reassign
+          delete attributes.tableIndent;
+          break;
         case 'tableBorder':
           const { top, bottom, left, right } = attributes[key];
           if (top || bottom || left || right) {
             const tableBordersFragment = buildTableBorders(attributes[key]);
-            tablePropertiesFragment.import(tableBordersFragment);
+            childFragments.push({ name: 'tblBorders', fragment: tableBordersFragment });
           }
           // eslint-disable-next-line no-param-reassign
           // delete attributes.tableBorder;
@@ -3528,7 +4423,7 @@ const buildTableProperties = (attributes) => {
         case 'tableCellSpacing':
           if (attributes[key]) {
             const tableCellSpacingFragment = buildTableCellSpacing(attributes[key]);
-            tablePropertiesFragment.import(tableCellSpacingFragment);
+            childFragments.push({ name: 'tblCellSpacing', fragment: tableCellSpacingFragment });
           }
           // eslint-disable-next-line no-param-reassign
           delete attributes.tableCellSpacing;
@@ -3536,7 +4431,7 @@ const buildTableProperties = (attributes) => {
         case 'width':
           if (attributes[key]) {
             const tableWidthFragment = buildTableWidth(attributes[key]);
-            tablePropertiesFragment.import(tableWidthFragment);
+            childFragments.push({ name: 'tblW', fragment: tableWidthFragment });
           }
           // eslint-disable-next-line no-param-reassign
           delete attributes.width;
@@ -3545,20 +4440,27 @@ const buildTableProperties = (attributes) => {
     });
   }
   const tableCellMarginFragment = buildTableCellMargins(160);
-  tablePropertiesFragment.import(tableCellMarginFragment);
+  childFragments.push({ name: 'tblCellMar', fragment: tableCellMarginFragment });
 
   // Use align attribute if provided, otherwise default to center
   const tableAlignment = (attributes && attributes.tableAlign) ? attributes.tableAlign : 'center';
   const alignmentFragment = buildHorizontalAlignment(tableAlignment);
-  tablePropertiesFragment.import(alignmentFragment);
+  childFragments.push({ name: 'jc', fragment: alignmentFragment });
   if (attributes && attributes.tableAlign) {
     // eslint-disable-next-line no-param-reassign
     delete attributes.tableAlign;
   }
 
-  tablePropertiesFragment.up();
-
-  return tablePropertiesFragment;
+  // <w:tblInd> belongs between <w:tblCellSpacing> and <w:tblBorders>, which
+  // the order the attributes were set in cannot promise, so an indented table
+  // has its whole <w:tblPr> put in spec order. Tables that declared no indent
+  // are emitted in the order they always were.
+  return buildOrderedProperties(
+    tablePropertiesFragment,
+    childFragments,
+    TBLPR_ELEMENT_ORDER,
+    hasTableIndent
+  );
 };
 
 const buildTable = async (vNode, attributes, docxDocumentInstance) => {
@@ -3747,6 +4649,14 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             ...tableBorders.strokes,
             bottom: borderStyleParser(tableStyles[tableStyle]),
           };
+        } else if (tableStyle === 'margin-left') {
+          // <w:tblInd> is the distance from the text margin to the table's
+          // leading edge, so it only takes a non-negative absolute length — a
+          // table cannot hang into the page margin this way.
+          const tableIndent = absoluteLengthToTWIP(tableStyles[tableStyle]);
+          if (tableIndent !== undefined) {
+            modifiedAttributes.tableIndent = tableIndent;
+          }
         } else if (tableStyle === 'text-align') {
           // CSS text-align on tables affects cell content, not table position
           // Pass it to modifiedAttributes so cells can inherit it
