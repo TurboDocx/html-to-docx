@@ -369,6 +369,20 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       expect(numPrCount).toBe(1);
     });
 
+    test('inline text after a block is a continuation paragraph (no numId "null")', async () => {
+      const htmlString = '<ul><li><p>First para</p>Trailing <b>inline</b> text</li></ul>';
+
+      const docx = await HTMLtoDOCX(htmlString);
+      const parsed = await parseDOCX(docx);
+
+      assertParagraphCount(parsed, 2);
+      assertParagraphText(parsed, 1, 'Trailing inline text');
+      expect(parsed.xml).not.toContain('w:val="null"');
+      expect(parsed.paragraphs[0].xml).toContain('<w:numPr>');
+      expect(parsed.paragraphs[1].xml).not.toContain('<w:numPr>');
+      expect(parsed.paragraphs[1].xml).toMatch(/<w:ind w:left="1080" w:hanging="0"\/>/);
+    });
+
     test('should maintain proper indentation for continuation paragraphs', async () => {
       const htmlString = `
         <ul>
