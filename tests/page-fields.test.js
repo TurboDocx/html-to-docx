@@ -215,9 +215,9 @@ describe('inline page fields', () => {
         body: '<p>body</p>',
         header: '<p><strong><span data-field="page" style="color: #112233">1</span></strong></p>',
       });
-      // The header root declares w as its default namespace, so its runs are
-      // serialized without the prefix.
-      const boldRuns = headerXml.match(/<b\/>/g) || [];
+      // The header is written with the w: prefix, as the body is
+      // (header-footer-prefixes.test.js).
+      const boldRuns = headerXml.match(/<w:b\/>/g) || [];
       expect(boldRuns.length).toBeGreaterThanOrEqual(5);
       expect(headerXml).toContain('val="112233"');
     });
