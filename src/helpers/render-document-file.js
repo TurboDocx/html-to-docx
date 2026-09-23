@@ -184,6 +184,35 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
 
     const parentVNodeProperties = tempVNodeObject.node.properties;
 
+    // Issue #198 — a <table> inside an <li> has to be routed through
+    // buildTable. classifyListItemChildren() buckets it as a block, which sent
+    // the vNode into buildParagraph(); that has no way to translate a table
+    // into a paragraph, so it emitted nothing and the table was silently
+    // dropped from the document.
+    //
+    // Word has no concept of a table carrying a bullet or number marker, so the
+    // table renders between the list item's paragraphs. Options mirror the
+    // top-level <table> branch of findXMLEquivalent() so a table renders the
+    // same way whether or not it sits inside a list.
+    if (isVNode(tempVNodeObject.node) && tempVNodeObject.node.tagName.toLowerCase() === 'table') {
+      const listTableFragment = await xmlBuilder.buildTable(
+        tempVNodeObject.node,
+        {
+          maximumWidth: docxDocumentInstance.availableDocumentSpace,
+          rowCantSplit: docxDocumentInstance.tableRowCantSplit,
+        },
+        docxDocumentInstance
+      );
+      xmlFragment.import(listTableFragment);
+      // Adding empty paragraph for space after table only if the option is enabled
+      if (docxDocumentInstance.addSpacingAfterTable) {
+        const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
+        xmlFragment.import(emptyParagraphFragment);
+      }
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     if (
       isVText(tempVNodeObject.node) ||
       (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
