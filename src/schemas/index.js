@@ -10,3 +10,4 @@ export { default as settingsXML } from './settings';
 export { default as webSettingsXML } from './web-settings';
 export { default as genericRelsXML } from './generic-rels';
 export { default as generateDocumentTemplate } from './document.template';
+export { default as generateSectionTemplate } from './section.template';

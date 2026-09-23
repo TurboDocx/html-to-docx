@@ -17,6 +17,7 @@ import {
   fontTableXML as fontTableXMLString,
   genericRelsXML as genericRelsXMLString,
   generateDocumentTemplate,
+  generateSectionTemplate,
 } from './schemas';
 import { convertVTreeToXML } from './helpers';
 import namespaces from './namespaces';
@@ -102,19 +103,9 @@ function generateXMLString(xmlString, direction) {
 }
 
 async function generateSectionXML(vTree, type = 'header') {
-  const sectionXML = create({
-    encoding: 'UTF-8',
-    standalone: true,
-    namespaceAlias: {
-      w: namespaces.w,
-      ve: namespaces.ve,
-      o: namespaces.o,
-      r: namespaces.r,
-      v: namespaces.v,
-      wp: namespaces.wp,
-      w10: namespaces.w10,
-    },
-  }).ele('@w', type === 'header' ? 'hdr' : 'ftr');
+  // From a template that declares the prefixes, as document.xml is: see
+  // section.template.js for what an undeclared root did to the band's markup.
+  const sectionXML = create({ encoding: 'UTF-8', standalone: true }, generateSectionTemplate(type));
 
   const XMLFragment = fragment();
   await convertVTreeToXML(this, vTree, XMLFragment);
