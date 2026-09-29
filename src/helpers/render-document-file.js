@@ -657,7 +657,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     }
   }
 
-  const vTree = convertHTML(docxDocumentInstance.htmlString);
+  const vTree = convertHTML({ css: docxDocumentInstance.css }, docxDocumentInstance.htmlString);
 
   if (!vTree) {
     throw new Error('Failed to convert HTML to VDOM tree. No VTree generated.');
