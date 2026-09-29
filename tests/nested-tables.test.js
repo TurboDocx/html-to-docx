@@ -872,10 +872,10 @@ describe('Nested Tables - Issue #147', () => {
     });
 
     /**
-     * Pre-existing library limitation: <tfoot> is dropped at all nesting
-     * levels (not specific to nested tables). thead and tbody work.
+     * <thead>, <tbody> and <tfoot> all render, including in nested tables.
+     * (<tfoot> rendering was previously dropped at every nesting level.)
      */
-    test('inner table with thead and tbody renders; tfoot is dropped (pre-existing)', async () => {
+    test('inner table with thead, tbody and tfoot all render', async () => {
       const html = `
         <table border="1">
           <tr>
@@ -893,7 +893,7 @@ describe('Nested Tables - Issue #147', () => {
       expect(Buffer.isBuffer(buf)).toBe(true);
       expect(texts).toContain('headerCol');
       expect(texts).toContain('bodyCol');
-      // footerCol is currently dropped by the library — pin behavior.
+      expect(texts).toContain('footerCol');
     });
 
     test('inner table with caption tag', async () => {
