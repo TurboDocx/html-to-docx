@@ -76,6 +76,7 @@
     "test:alignments": "npm run build && node example/example-alignments.js",
     "test:rtl": "npm run build && node example/example-rtl.js",
     "test:headings": "npm run build && node example/example-heading-styles.js",
+    "test:example-table": "npm run build && node example/example-table-in-list.js",
     "test:ts": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/typescript-example.ts",
     "test:ts-rtl": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/rtl-example.ts",
     "test:all": "npm run test:unit && npm run test && npm run test:headings && npm run test:ts && npm run test:ts-rtl",

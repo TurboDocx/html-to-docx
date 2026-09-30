@@ -926,15 +926,11 @@ describe('List items with multiple paragraphs - Issue #145', () => {
     });
 
     /**
-     * KNOWN LIMITATION (pre-existing on develop): a <table> nested directly
-     * inside a <li> is not actually rendered — only its surrounding text
-     * paragraphs come through. Documenting current behavior here so a future
-     * fix (likely in xml-builder.buildParagraph) can flip the expectation.
-     *
-     * develop: drops the table AND the trailing paragraph.
-     * pr-148:  preserves both wrapper paragraphs; still drops the table.
+     * Was a KNOWN LIMITATION until issue #198: a <table> nested directly inside
+     * a <li> reached buildParagraph(), which cannot translate a table, so the
+     * table was silently dropped. It is now routed through buildTable().
      */
-    test('<table> inside <li> does not crash and preserves wrapper paragraphs', async () => {
+    test('<table> inside <li> renders and preserves wrapper paragraphs', async () => {
       const html = `
         <ul>
           <li>
@@ -952,7 +948,9 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       const text = extractTexts(xml);
       expect(text).toContain('cell intro');
       expect(text).toContain('cell outro');
-      // Note: table content (r1c1) is currently dropped — a separate fix.
+      expect(xml).toContain('<w:tbl>');
+      expect(text).toContain('r1c1');
+      expect(text).toContain('r1c2');
     });
 
     test('whitespace-only <li> does not crash', async () => {
@@ -1108,6 +1106,155 @@ describe('List items with multiple paragraphs - Issue #145', () => {
       const xml = await zip.file('word/document.xml').async('string');
       const numPrCount = (xml.match(/<w:numPr>/g) || []).length;
       expect(numPrCount).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  /**
+   * Issue #198: https://github.com/TurboDocx/html-to-docx/issues/198
+   *
+   * A <table> nested directly inside an <li> was silently omitted from the
+   * DOCX. classifyListItemChildren() buckets <table> as a block element, and
+   * the block branch handed the vNode to buildParagraph(), which has no way to
+   * translate a table into a paragraph — so it emitted nothing. The surrounding
+   * paragraphs rendered, the file opened cleanly in Word, and the table was
+   * just gone: silent data loss.
+   *
+   * The table is now routed through buildTable(). Word has no concept of a
+   * table carrying a bullet or number marker, so it renders between the item's
+   * paragraphs rather than as a marked list line.
+   */
+  describe('Tables inside list items - Issue #198', () => {
+    const readDocumentXML = async (html, options) => {
+      const buf = await HTMLtoDOCX(html, null, options);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buf);
+      return zip.file('word/document.xml').async('string');
+    };
+
+    test('renders the table from the issue reproduction', async () => {
+      // Exact HTML from issue #198
+      const html = `
+        <ul>
+          <li>
+            <p>before table</p>
+            <table border="1">
+              <tr><td>r1c1</td><td>r1c2</td></tr>
+              <tr><td>r2c1</td><td>r2c2</td></tr>
+            </table>
+            <p>after table</p>
+          </li>
+          <li>second item</li>
+        </ul>
+      `;
+      const xml = await readDocumentXML(html);
+
+      expect(xml).toContain('<w:tbl>');
+      expect((xml.match(/<w:tc>/g) || []).length).toBe(4);
+      ['r1c1', 'r1c2', 'r2c1', 'r2c2'].forEach((cell) => {
+        expect(xml).toContain(cell);
+      });
+      // Wrapper paragraphs and the following list item still render.
+      expect(xml).toContain('before table');
+      expect(xml).toContain('after table');
+      expect(xml).toContain('second item');
+    });
+
+    test('keeps the table in source order between the wrapper paragraphs', async () => {
+      const html = `
+        <ul>
+          <li>
+            <p>before table</p>
+            <table border="1"><tr><td>in cell</td></tr></table>
+            <p>after table</p>
+          </li>
+        </ul>
+      `;
+      const xml = await readDocumentXML(html);
+
+      expect(xml.indexOf('before table')).toBeLessThan(xml.indexOf('<w:tbl>'));
+      expect(xml.indexOf('<w:tbl>')).toBeLessThan(xml.indexOf('after table'));
+    });
+
+    test('renders a table that is the only child of a list item', async () => {
+      const html = `
+        <ul>
+          <li><table border="1"><tr><td>only child</td></tr></table></li>
+          <li>plain item</li>
+        </ul>
+      `;
+      const xml = await readDocumentXML(html);
+
+      expect(xml).toContain('<w:tbl>');
+      expect(xml).toContain('only child');
+      expect(xml).toContain('plain item');
+    });
+
+    test('renders tables inside nested lists without disturbing numbering', async () => {
+      const html = `
+        <ol>
+          <li>
+            <p>outer one</p>
+            <table border="1"><tr><td>outer cell</td></tr></table>
+          </li>
+          <li>
+            outer two
+            <ul>
+              <li>
+                <p>inner</p>
+                <table border="1"><tr><td>inner cell</td></tr></table>
+              </li>
+            </ul>
+          </li>
+          <li>outer three</li>
+        </ol>
+      `;
+      const xml = await readDocumentXML(html);
+
+      expect((xml.match(/<w:tbl>/g) || []).length).toBe(2);
+      expect(xml).toContain('outer cell');
+      expect(xml).toContain('inner cell');
+      // The outer list keeps a single numbering definition; the nested <ul>
+      // gets its own. A dropped or duplicated numId here would mean the fix
+      // disturbed list numbering.
+      const numIds = [...xml.matchAll(/<w:numId w:val="(\d+)"\/>/g)].map((m) => m[1]);
+      expect(new Set(numIds).size).toBe(2);
+      expect(xml.indexOf('outer three')).toBeGreaterThan(xml.indexOf('inner cell'));
+    });
+
+    test('renders thead/tbody rows of a table inside a list item', async () => {
+      const html = `
+        <ul>
+          <li>
+            <p>intro</p>
+            <table border="1">
+              <thead><tr><th>Header</th></tr></thead>
+              <tbody><tr><td>Body</td></tr></tbody>
+            </table>
+          </li>
+        </ul>
+      `;
+      const xml = await readDocumentXML(html);
+
+      expect(xml).toContain('<w:tbl>');
+      expect(xml).toContain('Header');
+      expect(xml).toContain('Body');
+    });
+
+    test('honors table.addSpacingAfter for tables inside list items', async () => {
+      const html = `
+        <ul>
+          <li>
+            <p>a</p>
+            <table border="1"><tr><td>x</td></tr></table>
+            <p>b</p>
+          </li>
+        </ul>
+      `;
+      const withSpacing = await readDocumentXML(html, { table: { addSpacingAfter: true } });
+      const withoutSpacing = await readDocumentXML(html, { table: { addSpacingAfter: false } });
+
+      const paragraphCount = (xml) => (xml.match(/<w:p>/g) || []).length;
+      expect(paragraphCount(withSpacing)).toBe(paragraphCount(withoutSpacing) + 1);
     });
   });
 });
