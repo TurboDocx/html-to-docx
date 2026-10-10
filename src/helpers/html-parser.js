@@ -12,6 +12,7 @@
 import * as htmlparser2 from 'htmlparser2';
 import { decode } from 'html-entities';
 import { VNode, VText } from '../vdom/index.js';
+import { applyStylesheet } from './css-resolver.js';
 
 // ============================================================================
 // Property Info System
@@ -369,6 +370,11 @@ function convertHTML(options, html) {
 
   const converter = createConverter(VNode, VText);
   const tags = parseHTML(htmlString);
+
+  // Fold any attached stylesheet (opts.css) and embedded <style> tags into each
+  // element's inline `style` before building the VDOM. Resilient by design: a
+  // malformed sheet or unsupported selector never throws.
+  applyStylesheet({ dom: tags, css: opts.css, logger: opts.cssLogger });
 
   let convertedHTML;
   if (tags.length === 0) {

@@ -90,6 +90,15 @@ declare namespace HTMLtoDOCX {
         };
         heading?: HeadingConfig;
         decodeUnicode?: boolean;
+        /**
+         * A CSS stylesheet applied to the content, header, and footer HTML.
+         * Selectors (type, class, id, descendant, grouped, etc.) are resolved
+         * with standard specificity and folded into each element's inline
+         * style; an element's own inline `style` always wins. Embedded
+         * `<style>` tags in the HTML are honored too. `!important`, at-rules,
+         * and external `<link>` stylesheets are not supported.
+         */
+        css?: string;
         lang?: string;
         direction?: "ltr" | "rtl";
         preprocessing?: {
