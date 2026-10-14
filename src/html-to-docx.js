@@ -62,7 +62,7 @@ async function addFilesToContainer(
   });
 
   if (docxDocument.header && headerHTMLString) {
-    const vTree = convertHTML(headerHTMLString);
+    const vTree = convertHTML({ css: docxDocument.css }, headerHTMLString);
 
     docxDocument.relationshipFilename = headerFileName;
     const { headerId, headerXML } = await docxDocument.generateHeaderXML(vTree);
@@ -83,7 +83,7 @@ async function addFilesToContainer(
     docxDocument.headerObjects.push({ headerId, relationshipId, type: docxDocument.headerType });
   }
   if (docxDocument.footer && footerHTMLString) {
-    const vTree = convertHTML(footerHTMLString);
+    const vTree = convertHTML({ css: docxDocument.css }, footerHTMLString);
 
     docxDocument.relationshipFilename = footerFileName;
     const { footerId, footerXML } = await docxDocument.generateFooterXML(vTree);
