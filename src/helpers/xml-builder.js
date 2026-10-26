@@ -1776,6 +1776,8 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 
         attributes.maximumWidth =
           attributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
+        attributes.maximumHeight =
+          attributes.maximumHeight || docxDocumentInstance.availableDocumentHeight;
         attributes.originalWidth = imageProperties.width;
         attributes.originalHeight = imageProperties.height;
 
@@ -2187,6 +2189,12 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           // eslint-disable-next-line no-param-reassign
           delete attributes.paragraphBorders;
           break;
+        case 'paragraphMark':
+          // The paragraph's own type, on its mark: Word lays the last line off
+          // the mark too, and an empty paragraph off nothing else (buildParagraph).
+          addChild('rPr', buildRunProperties(attributes.paragraphMark));
+          delete attributes.paragraphMark;
+          break;
         case 'paragraphStyle':
           const pStyleFragment = buildPStyle(attributes.paragraphStyle);
           addChild('pStyle', pStyleFragment);
@@ -2296,13 +2304,45 @@ const calculateAbsoluteValues = (attribute, originalAttributeInEMU) => {
  * @param {Object} vNode - Virtual DOM node representing the image element
  * @param {Object} attributes - Image attributes including dimensions and constraints
  * @param {number} attributes.maximumWidth - Maximum allowed width in TWIP units
+ * @param {number} attributes.maximumHeight - Maximum allowed height in TWIP units (the page's text height)
  * @param {number} attributes.originalWidth - Original image width in pixels
  * @param {number} attributes.originalHeight - Original image height in pixels
  */
+// What the author cut off each side of a picture, as fractions of it
+// (`data-crop-*`): Word's crop, written as the picture's <a:srcRect>. A value
+// that is not a fraction of the picture crops nothing.
+const imageCropOf = (vNode) => {
+  const htmlAttributes = (vNode && vNode.properties && vNode.properties.attributes) || {};
+  const side = (name) => {
+    const value = Number(htmlAttributes[`data-crop-${name}`]);
+    return Number.isFinite(value) && value >= 0 && value < 1 ? value : 0;
+  };
+  return { top: side('top'), right: side('right'), bottom: side('bottom'), left: side('left') };
+};
+
+// The line around a picture (`data-border-width` in px, `data-border-color`),
+// or null for none.
+const imageBorderOf = (vNode) => {
+  const htmlAttributes = (vNode && vNode.properties && vNode.properties.attributes) || {};
+  const width = Number(htmlAttributes['data-border-width']);
+  const color = htmlAttributes['data-border-color'];
+  return Number.isFinite(width) && width > 0 && color
+    ? { width, color: fixupColorCode(String(color)) }
+    : null;
+};
+
 const computeImageDimensions = (vNode, attributes) => {
-  const { maximumWidth, originalWidth, originalHeight } = attributes;
+  // Its crop and border ride along to the picture's markup (buildPicture).
+  // eslint-disable-next-line no-param-reassign
+  attributes.crop = imageCropOf(vNode);
+  // eslint-disable-next-line no-param-reassign
+  attributes.border = imageBorderOf(vNode);
+  const { maximumWidth, maximumHeight, originalWidth, originalHeight } = attributes;
   const aspectRatio = originalHeight > 0 ? originalWidth / originalHeight : 1;
-  const maximumWidthInEMU = TWIPToEMU(maximumWidth);
+  // Word lays a picture's line out OUTSIDE the picture (buildEffectExtentFragment),
+  // so the picture and its line both sides are what has to fit.
+  const borderReachInEMU = attributes.border ? 2 * pixelToEMU(attributes.border.width) : 0;
+  const maximumWidthInEMU = Math.max(0, TWIPToEMU(maximumWidth) - borderReachInEMU);
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
 
@@ -2432,6 +2472,22 @@ const computeImageDimensions = (vNode, attributes) => {
     modifiedHeight = originalHeightInEMU;
   }
 
+  // Never wider than its box — the page's text width, or the table cell it is
+  // in — keeping its proportions; one that fits keeps the size it was given. The cap on the natural size above is
+  // replaced by any width the <img> names, so an image an editor sized went
+  // past its cell and off the page; the box is held here, last.
+  if (maximumWidthInEMU > 0 && modifiedWidth > maximumWidthInEMU) {
+    modifiedHeight = Math.round((modifiedHeight * maximumWidthInEMU) / modifiedWidth);
+    modifiedWidth = maximumWidthInEMU;
+  }
+  // Nor taller than the page's text area: an image taller than a page runs
+  // off it, in the line it sits in.
+  const maximumHeightInEMU = Math.max(0, TWIPToEMU(maximumHeight) - borderReachInEMU);
+  if (maximumHeightInEMU > 0 && modifiedHeight > maximumHeightInEMU) {
+    modifiedWidth = Math.round((modifiedWidth * maximumHeightInEMU) / modifiedHeight);
+    modifiedHeight = maximumHeightInEMU;
+  }
+
   // eslint-disable-next-line no-param-reassign
   attributes.width = modifiedWidth;
   // eslint-disable-next-line no-param-reassign
@@ -2513,6 +2569,18 @@ const processImageSource = async (docxDocumentInstance, vNode, imageSource, logC
   return { base64String, imageProperties };
 };
 
+// The run formatting a paragraph's mark carries (see buildParagraph).
+const paragraphMarkFormatting = [
+  'font',
+  'fontSize',
+  'strong',
+  'i',
+  'u',
+  'strike',
+  'color',
+  'textDecoration',
+];
+
 const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
   const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'p');
   const modifiedAttributes = modifiedStyleAttributesBuilder(
@@ -2539,6 +2607,23 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       genericFontName: 'sans-serif',
       altName: checklistSymbolFallbackFont,
     });
+  }
+  // A paragraph that names its own font or size puts them on its mark too.
+  // Word lays a paragraph's last line off the tallest of its runs AND its mark,
+  // and an empty paragraph off its mark alone; a mark left to the style takes
+  // the style's size (Heading 1's is 24pt), which made a 22.5pt heading's line
+  // taller in Word than in the HTML it came from.
+  // The mark takes the rest of the paragraph's run formatting with them, as a
+  // mark typed in Word does.
+  const ownStyle = (isVNode(vNode) && vNode.properties && vNode.properties.style) || {};
+  if (ownStyle['font-family'] || ownStyle['font-size']) {
+    const paragraphMark = {};
+    paragraphMarkFormatting.forEach((key) => {
+      if (modifiedAttributes[key] !== undefined) {
+        paragraphMark[key] = modifiedAttributes[key];
+      }
+    });
+    modifiedAttributes.paragraphMark = paragraphMark;
   }
   // IMAGE SPACING FIX: Ensure proper spacing for paragraphs containing images
   // Images in paragraphs need specific spacing attributes to render correctly in DOCX
@@ -2621,6 +2706,8 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           const { imageProperties } = result;
           modifiedAttributes.maximumWidth =
             modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
+          modifiedAttributes.maximumHeight =
+            modifiedAttributes.maximumHeight || docxDocumentInstance.availableDocumentHeight;
           modifiedAttributes.originalWidth = imageProperties.width;
           modifiedAttributes.originalHeight = imageProperties.height;
 
@@ -2668,6 +2755,8 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       const { imageProperties } = result;
       modifiedAttributes.maximumWidth =
         modifiedAttributes.maximumWidth || docxDocumentInstance.availableDocumentSpace;
+      modifiedAttributes.maximumHeight =
+        modifiedAttributes.maximumHeight || docxDocumentInstance.availableDocumentHeight;
       modifiedAttributes.originalWidth = imageProperties.width;
       modifiedAttributes.originalHeight = imageProperties.height;
 
@@ -2740,7 +2829,14 @@ const buildTableCellBorders = (tableCellBorder) => {
 const buildTableCellWidth = (tableCellWidth, parentWidth) =>
   fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'tcW')
-    .att('@w', 'w', fixupColumnWidth(tableCellWidth, parentWidth))
+    .att(
+      '@w',
+      'w',
+      // A number is already TWIPs: a fixed-layout cell's own columns.
+      typeof tableCellWidth === 'number'
+        ? String(Math.round(tableCellWidth))
+        : fixupColumnWidth(tableCellWidth, parentWidth)
+    )
     .att('@w', 'type', 'dxa')
     .up();
 
@@ -3567,6 +3663,46 @@ const buildNestedTableSentinelParagraph = () =>
     .up()
     .up();
 
+// The left and right margin every table gives its cells (<w:tblCellMar>),
+// in TWIPs; top and bottom get half. A cell's own padding overrides it.
+const DEFAULT_TABLE_CELL_MARGIN = 160;
+
+// How many grid columns a cell spans.
+const columnSpanOf = (cellVNode) => {
+  const colSpan =
+    cellVNode.properties.colSpan ||
+    (cellVNode.properties.style && cellVNode.properties.style['column-span']);
+  return colSpan ? parseInt(colSpan) : 1;
+};
+
+// How wide a cell is: the grid columns it covers, from `start`.
+const gridSpanWidth = (attributes, start, span) => {
+  const widths = attributes.tableGridColumnWidths;
+  if (!Array.isArray(widths) || widths.length === 0 || start + span > widths.length) {
+    return undefined;
+  }
+  return widths.slice(start, start + span).reduce((sum, width) => sum + width, 0);
+};
+
+// How many grid columns a row lays its cells over.
+const gridColumnCountOfRow = (rowVNode) =>
+  vNodeHasChildren(rowVNode)
+    ? rowVNode.children.reduce(
+        (accumulator, childVNode) => accumulator + columnSpanOf(childVNode),
+        0
+      )
+    : 0;
+
+// A cell's width less its horizontal margins, or undefined when its width is
+// unknown or the margins leave nothing.
+const cellContentWidth = (attributes) => {
+  const margin = attributes.cellMargin || {};
+  const side = (name) =>
+    typeof margin[name] === 'number' ? margin[name] : DEFAULT_TABLE_CELL_MARGIN;
+  const width = attributes.maximumWidth - side('left') - side('right');
+  return attributes.maximumWidth > 0 && width > 0 ? width : undefined;
+};
+
 const buildTableCell = async (
   vNode,
   attributes,
@@ -3798,8 +3934,20 @@ const buildTableCell = async (
       }
     }
   }
+  // A fixed-layout table's cell declares the width of its columns, which is
+  // what Word lays it out at; one that sets its own keeps that.
+  if (modifiedAttributes.tableLayout === 'fixed' && !modifiedAttributes.width) {
+    modifiedAttributes.width = modifiedAttributes.maximumWidth;
+  }
+  // What the cell lays its content out in: its width less its left and right
+  // margins — its own padding, or the table's default. Read before the cell's
+  // properties are built, which drop its padding from the attributes.
+  const contentWidth = cellContentWidth(modifiedAttributes);
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
+  if (contentWidth) {
+    modifiedAttributes.maximumWidth = contentWidth;
+  }
   // Track the last imported content so we know whether the cell needs a
   // trailing sentinel <w:p> (OOXML requires every <w:tc> to end with a
   // <w:p>; Word marks the file corrupted otherwise) and whether the next
@@ -4041,6 +4189,12 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       }
     }
 
+    if (attributes.tableLayout === 'fixed') {
+      const coveredWidth = gridSpanWidth(attributes, columnIndex.index, spanObject.colSpan || 1);
+      if (coveredWidth) {
+        cellProperties.width = coveredWidth;
+      }
+    }
     const tableCellPropertiesFragment = buildTableCellProperties(cellProperties, parentWidth);
     rowSpanCellFragment.import(tableCellPropertiesFragment);
 
@@ -4080,6 +4234,18 @@ const buildTableRowProperties = (attributes) => {
           tableRowPropertiesFragment.import(tableRowHeightFragment);
           // eslint-disable-next-line no-param-reassign
           delete attributes.tableRowHeight;
+          break;
+        case 'tableHeaderRow':
+          // A <thead> row: Word's header row, repeated at the top of each page.
+          if (attributes.tableHeaderRow) {
+            tableRowPropertiesFragment.import(
+              fragment({ namespaceAlias: { w: namespaces.w } })
+                .ele('@w', 'tblHeader')
+                .up()
+            );
+          }
+          // eslint-disable-next-line no-param-reassign
+          delete attributes.tableHeaderRow;
           break;
         case 'rowCantSplit':
           if (attributes.rowCantSplit) {
@@ -4237,7 +4403,14 @@ const buildTableRow = async (
       );
       const tableCellFragment = await buildTableCell(
         column,
-        { ...modifiedAttributes, maximumWidth: maximumColumnWidth },
+        {
+          ...modifiedAttributes,
+          // As wide as the grid columns it spans, from where it stands — the
+          // even split is only the fallback for a table whose grid is unknown.
+          maximumWidth:
+            gridSpanWidth(modifiedAttributes, columnIndex.index, columnSpanOf(column)) ||
+            maximumColumnWidth,
+        },
         rowSpanMap,
         columnIndex,
         docxDocumentInstance,
@@ -4283,9 +4456,11 @@ const buildTableGrid = (vNode, attributes) => {
   if (vNodeHasChildren(vNode)) {
     const gridColumns = vNode.children.filter((childVNode) => childVNode.tagName === 'col');
     const gridWidth = attributes.maximumWidth / gridColumns.length;
+    const widths = attributes.tableGridColumnWidths;
+    const known = Array.isArray(widths) && widths.length === gridColumns.length;
 
     for (let index = 0; index < gridColumns.length; index++) {
-      const tableGridColFragment = buildTableGridCol(gridWidth);
+      const tableGridColFragment = buildTableGridCol(known ? widths[index] : gridWidth);
       tableGridFragment.import(tableGridColFragment);
     }
   }
@@ -4297,17 +4472,13 @@ const buildTableGrid = (vNode, attributes) => {
 const buildTableGridFromTableRow = (vNode, attributes) => {
   const tableGridFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tblGrid');
   if (vNodeHasChildren(vNode)) {
-    const numberOfGridColumns = vNode.children.reduce((accumulator, childVNode) => {
-      const colSpan =
-        childVNode.properties.colSpan ||
-        (childVNode.properties.style && childVNode.properties.style['column-span']);
-
-      return accumulator + (colSpan ? parseInt(colSpan) : 1);
-    }, 0);
+    const numberOfGridColumns = gridColumnCountOfRow(vNode);
     const gridWidth = attributes.maximumWidth / numberOfGridColumns;
+    const widths = attributes.tableGridColumnWidths;
+    const known = Array.isArray(widths) && widths.length === numberOfGridColumns;
 
     for (let index = 0; index < numberOfGridColumns; index++) {
-      const tableGridColFragment = buildTableGridCol(gridWidth);
+      const tableGridColFragment = buildTableGridCol(known ? widths[index] : gridWidth);
       tableGridFragment.import(tableGridColFragment);
     }
   }
@@ -4400,6 +4571,7 @@ const buildTableProperties = (attributes) => {
   );
   const childFragments = [];
   let hasTableIndent = false;
+  let hasTableLayout = false;
 
   if (attributes && attributes.constructor === Object) {
     Object.keys(attributes).forEach((key) => {
@@ -4436,10 +4608,20 @@ const buildTableProperties = (attributes) => {
           // eslint-disable-next-line no-param-reassign
           delete attributes.width;
           break;
+        case 'tableLayout':
+          childFragments.push({
+            name: 'tblLayout',
+            fragment: fragment({ namespaceAlias: { w: namespaces.w } })
+              .ele('@w', 'tblLayout')
+              .att('@w', 'type', attributes[key])
+              .up(),
+          });
+          hasTableLayout = true;
+          break;
       }
     });
   }
-  const tableCellMarginFragment = buildTableCellMargins(160);
+  const tableCellMarginFragment = buildTableCellMargins(DEFAULT_TABLE_CELL_MARGIN);
   childFragments.push({ name: 'tblCellMar', fragment: tableCellMarginFragment });
 
   // Use align attribute if provided, otherwise default to center
@@ -4459,7 +4641,80 @@ const buildTableProperties = (attributes) => {
     tablePropertiesFragment,
     childFragments,
     TBLPR_ELEMENT_ORDER,
-    hasTableIndent
+    hasTableIndent || hasTableLayout
+  );
+};
+
+// The grid a table is laid over: its <col>s, or else its first row's cells and
+// their spans — as its <w:tblGrid> is built below.
+const tableGridColumnCountOf = (tableVNode) => {
+  if (!vNodeHasChildren(tableVNode)) {
+    return 0;
+  }
+  const colgroup = tableVNode.children.find((childVNode) => childVNode.tagName === 'colgroup');
+  if (colgroup && vNodeHasChildren(colgroup)) {
+    return colgroup.children.filter((childVNode) => childVNode.tagName === 'col').length;
+  }
+  const rows = tableVNode.children.flatMap((childVNode) =>
+    ['thead', 'tbody'].includes(childVNode.tagName) && vNodeHasChildren(childVNode)
+      ? childVNode.children
+      : [childVNode]
+  );
+  const firstRow = rows.find((childVNode) => childVNode.tagName === 'tr');
+  return firstRow ? gridColumnCountOfRow(firstRow) : 0;
+};
+
+// A <col>'s own width in TWIPs, or undefined when it sets none.
+const colWidthOf = (colVNode, tableWidth) => {
+  const declared =
+    (colVNode.properties.style && colVNode.properties.style.width) ||
+    (colVNode.properties.attributes && colVNode.properties.attributes.width) ||
+    colVNode.properties.width;
+  if (!declared) {
+    return undefined;
+  }
+  const value = /^\d+(\.\d+)?$/.test(String(declared)) ? `${declared}px` : String(declared);
+  const width = fixupColumnWidth(value, tableWidth);
+  return typeof width === 'number' && Number.isFinite(width) ? width : undefined;
+};
+
+// Whole TWIPs that add up to exactly `total`: the last column takes the
+// rounding, so the grid is as wide as the table.
+const wholeWidths = (widths, total) => {
+  const rounded = widths.map((width) => Math.max(0, Math.round(width)));
+  const drift = Math.round(total) - rounded.reduce((sum, width) => sum + width, 0);
+  if (rounded.length > 0 && Math.abs(drift) <= rounded.length) {
+    rounded[rounded.length - 1] += drift;
+  }
+  return rounded;
+};
+
+// Every grid column's width, in TWIPs. A fixed-layout table takes its <col>s'
+// widths, sharing what they leave among the columns that set none; any other
+// table is split evenly, as it always was.
+const tableGridColumnWidthsOf = (tableVNode, tableWidth, isFixedLayout) => {
+  const count = tableGridColumnCountOf(tableVNode);
+  if (!count || !(tableWidth > 0)) {
+    return [];
+  }
+  const colgroup =
+    isFixedLayout && vNodeHasChildren(tableVNode)
+      ? tableVNode.children.find((childVNode) => childVNode.tagName === 'colgroup')
+      : undefined;
+  const cols =
+    colgroup && vNodeHasChildren(colgroup)
+      ? colgroup.children.filter((childVNode) => childVNode.tagName === 'col')
+      : [];
+  if (cols.length !== count) {
+    return wholeWidths(new Array(count).fill(tableWidth / count), tableWidth);
+  }
+  const declared = cols.map((col) => colWidthOf(col, tableWidth));
+  const set = declared.reduce((sum, width) => sum + (width || 0), 0);
+  const unset = declared.filter((width) => width === undefined).length;
+  const share = unset ? Math.max(0, tableWidth - set) / unset : 0;
+  return wholeWidths(
+    declared.map((width) => (width === undefined ? share : width)),
+    unset ? Math.max(tableWidth, set) : set
   );
 };
 
@@ -4735,7 +4990,22 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         docxDocumentInstance.pageSize.height
       );
     }
+
+    // `table-layout: fixed` keeps the columns as given. Word otherwise re-fits
+    // them to their content, whatever the grid says.
+    if (tableStyles['table-layout'] === 'fixed') {
+      modifiedAttributes.tableLayout = 'fixed';
+    }
   }
+  // Each grid column's width, so every cell knows how wide it is — never a
+  // containing table's. Read before <w:tblPr> is built, which drops the width.
+  modifiedAttributes.tableGridColumnWidths = tableGridColumnWidthsOf(
+    vNode,
+    modifiedAttributes.tableLayout === 'fixed'
+      ? modifiedAttributes.width || attributes.maximumWidth
+      : attributes.maximumWidth,
+    modifiedAttributes.tableLayout === 'fixed'
+  );
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
   tableFragment.import(tablePropertiesFragment);
 
@@ -4766,7 +5036,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,
-              modifiedAttributes,
+              { ...modifiedAttributes, tableHeaderRow: true },
               rowSpanMap,
               docxDocumentInstance,
               setBorderIndexEquivalent(iteratorIndex, childVNode.children.length)
@@ -4866,6 +5136,21 @@ const buildShapeProperties = (attributes) => {
   shapeProperties.import(graphicFrameTransformFragment);
   const presetGeometryFragment = buildPresetGeometry();
   shapeProperties.import(presetGeometryFragment);
+  // The line around the picture, after its geometry as CT_ShapeProperties
+  // orders them.
+  if (attributes.border) {
+    shapeProperties.import(
+      fragment({ namespaceAlias: { a: namespaces.a } })
+        .ele('@a', 'ln')
+        .att('w', String(pixelToEMU(attributes.border.width)))
+        .ele('@a', 'solidFill')
+        .ele('@a', 'srgbClr')
+        .att('val', attributes.border.color.toUpperCase())
+        .up()
+        .up()
+        .up()
+    );
+  }
 
   shapeProperties.up();
 
@@ -4888,13 +5173,16 @@ const buildStretch = () => {
   return stretchFragment;
 };
 
-const buildSrcRectFragment = () =>
+// In thousandths of a percent: a quarter cut off is 25000.
+const cropPart = (fraction) => String(Math.round((fraction || 0) * 100000));
+
+const buildSrcRectFragment = (crop = {}) =>
   fragment({ namespaceAlias: { a: namespaces.a } })
     .ele('@a', 'srcRect')
-    .att('b', '0')
-    .att('l', '0')
-    .att('r', '0')
-    .att('t', '0')
+    .att('b', cropPart(crop.bottom))
+    .att('l', cropPart(crop.left))
+    .att('r', cropPart(crop.right))
+    .att('t', cropPart(crop.top))
     .up();
 
 const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false) => {
@@ -4931,13 +5219,13 @@ const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false) => {
   return blipFragment.up();
 };
 
-const buildBinaryLargeImageOrPictureFill = (relationshipId, isSVG = false) => {
+const buildBinaryLargeImageOrPictureFill = (relationshipId, isSVG = false, crop = {}) => {
   const binaryLargeImageOrPictureFillFragment = fragment({
     namespaceAlias: { pic: namespaces.pic },
   }).ele('@pic', 'blipFill');
   const binaryLargeImageOrPictureFragment = buildBinaryLargeImageOrPicture(relationshipId, isSVG);
   binaryLargeImageOrPictureFillFragment.import(binaryLargeImageOrPictureFragment);
-  const srcRectFragment = buildSrcRectFragment();
+  const srcRectFragment = buildSrcRectFragment(crop);
   binaryLargeImageOrPictureFillFragment.import(srcRectFragment);
   const stretchFragment = buildStretch();
   binaryLargeImageOrPictureFillFragment.import(stretchFragment);
@@ -4994,6 +5282,8 @@ const buildPicture = ({
   width,
   height,
   isSVG = false,
+  crop,
+  border,
 }) => {
   const pictureFragment = fragment({ namespaceAlias: { pic: namespaces.pic } }).ele('@pic', 'pic');
   const nonVisualPicturePropertiesFragment = buildNonVisualPictureProperties(
@@ -5002,9 +5292,13 @@ const buildPicture = ({
     description
   );
   pictureFragment.import(nonVisualPicturePropertiesFragment);
-  const binaryLargeImageOrPictureFill = buildBinaryLargeImageOrPictureFill(relationshipId, isSVG);
+  const binaryLargeImageOrPictureFill = buildBinaryLargeImageOrPictureFill(
+    relationshipId,
+    isSVG,
+    crop
+  );
   pictureFragment.import(binaryLargeImageOrPictureFill);
-  const shapeProperties = buildShapeProperties({ width, height });
+  const shapeProperties = buildShapeProperties({ width, height, border });
   pictureFragment.import(shapeProperties);
   pictureFragment.up();
 
@@ -5034,12 +5328,19 @@ const buildGraphic = (graphicType, attributes) => {
   return graphicFragment;
 };
 
-const buildDrawingObjectNonVisualProperties = (pictureId, pictureName) =>
-  fragment({ namespaceAlias: { wp: namespaces.wp } })
+// The drawing's own name and alt text. Word's Alt Text pane reads the alt text
+// here, not off the picture inside the drawing (<pic:cNvPr>), so it is written
+// on both.
+const buildDrawingObjectNonVisualProperties = (pictureId, pictureName, pictureDescription) => {
+  const docPrFragment = fragment({ namespaceAlias: { wp: namespaces.wp } })
     .ele('@wp', 'docPr')
     .att('id', pictureId)
-    .att('name', pictureName)
-    .up();
+    .att('name', pictureName);
+  if (pictureDescription) {
+    docPrFragment.att('descr', pictureDescription);
+  }
+  return docPrFragment.up();
+};
 
 const buildWrapSquare = () =>
   fragment({ namespaceAlias: { wp: namespaces.wp } })
@@ -5057,14 +5358,29 @@ const buildWrapNone = () =>
     .ele('@wp', 'wrapNone')
     .up();
 
-const buildEffectExtentFragment = () =>
-  fragment({ namespaceAlias: { wp: namespaces.wp } })
+// How far the drawing paints beyond its picture: its line, if it has one. Word
+// draws a picture's line outside the picture and reserves the whole width of
+// it on every side here — checked on a picture Word bordered itself
+// (2026-10-23: a 6pt line, effectExtent 6pt each side, painted 6pt wider).
+const buildEffectExtentFragment = (border) => {
+  if (!border) {
+    return fragment({ namespaceAlias: { wp: namespaces.wp } })
+      .ele('@wp', 'effectExtent')
+      .att('b', '0')
+      .att('l', '0')
+      .att('r', '0')
+      .att('t', '0')
+      .up();
+  }
+  const reach = String(pixelToEMU(border.width));
+  return fragment({ namespaceAlias: { wp: namespaces.wp } })
     .ele('@wp', 'effectExtent')
-    .att('b', '0')
-    .att('l', '0')
-    .att('r', '0')
-    .att('t', '0')
+    .att('l', reach)
+    .att('t', reach)
+    .att('r', reach)
+    .att('b', reach)
     .up();
+};
 
 const buildExtent = ({ width, height }) =>
   fragment({ namespaceAlias: { wp: namespaces.wp } })
@@ -5120,13 +5436,14 @@ const buildAnchoredDrawing = (graphicType, attributes) => {
   anchoredDrawingFragment.import(positionVFragment);
   const extentFragment = buildExtent({ width: attributes.width, height: attributes.height });
   anchoredDrawingFragment.import(extentFragment);
-  const effectExtentFragment = buildEffectExtentFragment();
+  const effectExtentFragment = buildEffectExtentFragment(attributes.border);
   anchoredDrawingFragment.import(effectExtentFragment);
   const wrapSquareFragment = buildWrapSquare();
   anchoredDrawingFragment.import(wrapSquareFragment);
   const drawingObjectNonVisualPropertiesFragment = buildDrawingObjectNonVisualProperties(
     attributes.id,
-    attributes.fileNameWithExtension
+    attributes.fileNameWithExtension,
+    attributes.description
   );
   anchoredDrawingFragment.import(drawingObjectNonVisualPropertiesFragment);
   const graphicFragment = buildGraphic(graphicType, attributes);
@@ -5147,11 +5464,12 @@ const buildInlineDrawing = (graphicType, attributes) => {
 
   const extentFragment = buildExtent({ width: attributes.width, height: attributes.height });
   inlineDrawingFragment.import(extentFragment);
-  const effectExtentFragment = buildEffectExtentFragment();
+  const effectExtentFragment = buildEffectExtentFragment(attributes.border);
   inlineDrawingFragment.import(effectExtentFragment);
   const drawingObjectNonVisualPropertiesFragment = buildDrawingObjectNonVisualProperties(
     attributes.id,
-    attributes.fileNameWithExtension
+    attributes.fileNameWithExtension,
+    attributes.description
   );
   inlineDrawingFragment.import(drawingObjectNonVisualPropertiesFragment);
   const graphicFragment = buildGraphic(graphicType, attributes);
