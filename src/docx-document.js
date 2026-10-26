@@ -62,14 +62,17 @@ function generateContentTypesFragments(contentTypesXML, type, objects) {
 function generateSectionReferenceXML(documentXML, documentSectionType, objects, isEnabled) {
   if (isEnabled && objects && Array.isArray(objects) && objects.length) {
     const xmlFragment = fragment();
-    objects.forEach(({ relationshipId, type }) => {
-      const objectFragment = fragment({ namespaceAlias: { w: namespaces.w, r: namespaces.r } })
-        .ele('@w', `${documentSectionType}Reference`)
-        .att('@r', 'id', `rId${relationshipId}`)
-        .att('@w', 'type', type)
-        .up();
-      xmlFragment.import(objectFragment);
-    });
+    // A section's own part is named by that section's break, not here.
+    objects
+      .filter(({ type }) => type !== 'sectionOnly')
+      .forEach(({ relationshipId, type }) => {
+        const objectFragment = fragment({ namespaceAlias: { w: namespaces.w, r: namespaces.r } })
+          .ele('@w', `${documentSectionType}Reference`)
+          .att('@r', 'id', `rId${relationshipId}`)
+          .att('@w', 'type', type)
+          .up();
+        xmlFragment.import(objectFragment);
+      });
 
     documentXML.root().first().first().import(xmlFragment);
   }
@@ -127,6 +130,50 @@ async function generateSectionXML(vTree, type = 'header') {
   return { [`${type}Id`]: this[`last${referenceName}Id`], [`${type}XML`]: sectionXML };
 }
 
+/**
+ * One section's page, resolved the way the document's own is: the sheet turned
+ * for landscape, and whatever margin it does not set taken from the document.
+ */
+function resolveSection(section, documentPageSize, documentMargins) {
+  const pageSize = section.pageSize || documentPageSize;
+  const isPortraitOrientation = (section.orientation || defaultOrientation) === defaultOrientation;
+  const height = pageSize.height ? pageSize.height : landscapeHeight;
+  const width = pageSize.width ? pageSize.width : landscapeWidth;
+  const sectionWidth = isPortraitOrientation ? width : height;
+  const sectionHeight = isPortraitOrientation ? height : width;
+  const margins = { ...documentMargins, ...(section.margins || {}) };
+
+  return {
+    orientation: isPortraitOrientation ? 'portrait' : 'landscape',
+    width: sectionWidth,
+    height: sectionHeight,
+    margins,
+    availableDocumentSpace: sectionWidth - margins.left - margins.right,
+    availableDocumentHeight: sectionHeight - margins.top - margins.bottom,
+    headerHTML: section.headerHTML || null,
+    footerHTML: section.footerHTML || null,
+    headerRelationshipId: null,
+    footerRelationshipId: null,
+  };
+}
+
+/**
+ * The header and footer a section's break names: its own, when it brought one,
+ * or else the document's. Written into each break once every part exists —
+ * the body is converted before the headers are.
+ */
+function sectionReferencesXML(section, document) {
+  const reference = (type, ownId, objects, isEnabled) => {
+    const documentOwn = objects.find((object) => object.type !== 'sectionOnly');
+    const id = ownId || (isEnabled && documentOwn ? documentOwn.relationshipId : null);
+    return id ? `<w:${type}Reference r:id="rId${id}" w:type="default"/>` : '';
+  };
+  return (
+    reference('header', section.headerRelationshipId, document.headerObjects, document.header) +
+    reference('footer', section.footerRelationshipId, document.footerObjects, document.footer)
+  );
+}
+
 class DocxDocument {
   constructor(properties) {
     this.zip = properties.zip;
@@ -156,6 +203,14 @@ class DocxDocument {
     };
 
     this.availableDocumentSpace = this.width - this.margins.left - this.margins.right;
+    // The text area's height, the tallest an image is drawn (computeImageDimensions).
+    this.availableDocumentHeight = this.height - this.margins.top - this.margins.bottom;
+    // Every section but the last, set up as its own options say; the last is
+    // the document's own (page sections — a landscape page in a portrait
+    // document, a page with its own margins or colour).
+    this.sections = (properties.sections || []).map((section) =>
+      resolveSection(section, this.pageSize, this.margins)
+    );
     this.title = properties.title || '';
     this.subject = properties.subject || '';
     this.creator = properties.creator || applicationName;
@@ -262,7 +317,22 @@ class DocxDocument {
         );
     }
 
-    return documentXML.toString({ prettyPrint: true });
+    // The body's own section properties go last, as the schema has them
+    // (CT_Body): the template opens the body with them, and with one section
+    // that never mattered — with several, the last section is the one after
+    // every break.
+    const body = documentXML.root().first();
+    const bodySectionProperties = body.first();
+    body.import(bodySectionProperties);
+    bodySectionProperties.remove();
+
+    // Each section break names its header and footer, which exist by now.
+    return documentXML
+      .toString({ prettyPrint: true })
+      .replace(/<w:tdxSectionReferences w:val="(\d+)"\/>/g, (_match, index) => {
+        const section = this.sections[Number(index)];
+        return section ? sectionReferencesXML(section, this) : '';
+      });
   }
 
   generateCoreXML() {

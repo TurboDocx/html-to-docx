@@ -551,6 +551,38 @@ const tableSuppressesSpacingAfter = (vNode) => {
   return suppress !== undefined && String(suppress).trim().toLowerCase() !== 'false';
 };
 
+/**
+ * The paragraph that ends a section: a 1pt mark carrying the section's page —
+ * its size, orientation and margins — starting the next section on a new
+ * page. Its header and footer are written in once they exist
+ * (DocxDocument.generateDocumentXML).
+ */
+const buildSectionBreak = (section, index) => {
+  const { width, height, orientation, margins } = section;
+  const paragraph = fragment({ namespaceAlias: { w: namespaces.w } });
+  const paragraphProperties = paragraph.ele('@w', 'p').ele('@w', 'pPr');
+  paragraphProperties
+    .ele('@w', 'spacing')
+    .att('@w', 'before', '0')
+    .att('@w', 'after', '0')
+    .att('@w', 'line', '20')
+    .att('@w', 'lineRule', 'exact');
+  paragraphProperties.ele('@w', 'rPr').ele('@w', 'sz').att('@w', 'val', '2');
+  const sectionProperties = paragraphProperties.ele('@w', 'sectPr');
+  sectionProperties.ele('@w', 'tdxSectionReferences').att('@w', 'val', String(index));
+  sectionProperties.ele('@w', 'type').att('@w', 'val', 'nextPage');
+  sectionProperties
+    .ele('@w', 'pgSz')
+    .att('@w', 'w', String(Math.round(width)))
+    .att('@w', 'h', String(Math.round(height)))
+    .att('@w', 'orient', orientation);
+  const pageMargins = sectionProperties.ele('@w', 'pgMar');
+  ['top', 'right', 'bottom', 'left', 'header', 'footer', 'gutter'].forEach((side) => {
+    pageMargins.att('@w', side, String(Math.round(margins[side] || 0)));
+  });
+  return paragraph;
+};
+
 async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, imageOptions = null) {
   // Use default options if not provided
   if (!imageOptions) {
@@ -558,6 +590,42 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
   }
   if (vNode.tagName === 'div') {
     const divAttributes = vNode.properties.attributes || {};
+
+    // One of the document's sections (options.sections): its content laid out
+    // in its own text box, then the break that sets its pages up.
+    const sectionIndex = divAttributes['data-docx-section'];
+    const section =
+      sectionIndex !== undefined && Array.isArray(docxDocumentInstance.sections)
+        ? docxDocumentInstance.sections[Number(sectionIndex)]
+        : undefined;
+    if (section) {
+      const { availableDocumentSpace, availableDocumentHeight } = docxDocumentInstance;
+      // eslint-disable-next-line no-param-reassign
+      docxDocumentInstance.availableDocumentSpace = section.availableDocumentSpace;
+      // eslint-disable-next-line no-param-reassign
+      docxDocumentInstance.availableDocumentHeight = section.availableDocumentHeight;
+      try {
+        if (vNodeHasChildren(vNode)) {
+          // eslint-disable-next-line no-plusplus
+          for (let index = 0; index < vNode.children.length; index++) {
+            // eslint-disable-next-line no-use-before-define
+            await convertVTreeToXML(
+              docxDocumentInstance,
+              vNode.children[index],
+              xmlFragment,
+              imageOptions
+            );
+          }
+        }
+      } finally {
+        // eslint-disable-next-line no-param-reassign
+        docxDocumentInstance.availableDocumentSpace = availableDocumentSpace;
+        // eslint-disable-next-line no-param-reassign
+        docxDocumentInstance.availableDocumentHeight = availableDocumentHeight;
+      }
+      xmlFragment.import(buildSectionBreak(section, Number(sectionIndex)));
+      return;
+    }
 
     // Legacy backward compat: <div class="page-break"> — keep existing behavior exactly
     if (divAttributes.class === 'page-break') {
