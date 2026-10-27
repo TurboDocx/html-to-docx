@@ -580,6 +580,8 @@ const buildSectionBreak = (section, index) => {
   ['top', 'right', 'bottom', 'left', 'header', 'footer', 'gutter'].forEach((side) => {
     pageMargins.att('@w', side, String(Math.round(margins[side] || 0)));
   });
+  // Whether its first page differs (titlePg), which follows the page's setup.
+  sectionProperties.ele('@w', 'tdxSectionTitlePage').att('@w', 'val', String(index));
   return paragraph;
 };
 
