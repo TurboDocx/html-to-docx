@@ -162,7 +162,7 @@ function resolveSection(section, documentPageSize, documentMargins) {
  * or else the document's. Written into each break once every part exists —
  * the body is converted before the headers are.
  */
-function sectionReferencesXML(section, document) {
+function sectionReferencesXML(section, document, index) {
   const reference = (type, ownId, objects, isEnabled) => {
     const documentOwn = objects.find((object) => object.type !== 'sectionOnly');
     const id = ownId || (isEnabled && documentOwn ? documentOwn.relationshipId : null);
@@ -170,9 +170,24 @@ function sectionReferencesXML(section, document) {
   };
   return (
     reference('header', section.headerRelationshipId, document.headerObjects, document.header) +
-    reference('footer', section.footerRelationshipId, document.footerObjects, document.footer)
+    reference('footer', section.footerRelationshipId, document.footerObjects, document.footer) +
+    (index === 0 ? firstPageReferencesXML(document) : '')
   );
 }
+
+/** Page 1's own header and footer, as the first section names them. */
+function firstPageReferencesXML(document) {
+  const reference = (type, id) =>
+    id ? `<w:${type}Reference r:id="rId${id}" w:type="first"/>` : '';
+  return (
+    reference('header', document.firstPageHeaderRelationshipId) +
+    reference('footer', document.firstPageFooterRelationshipId)
+  );
+}
+
+/** Whether the document's first page has bands of its own. */
+const hasFirstPage = (document) =>
+  Boolean(document.firstPageHeaderRelationshipId || document.firstPageFooterRelationshipId);
 
 class DocxDocument {
   constructor(properties) {
@@ -295,6 +310,16 @@ class DocxDocument {
     generateSectionReferenceXML(documentXML, 'header', this.headerObjects, this.header);
     generateSectionReferenceXML(documentXML, 'footer', this.footerObjects, this.footer);
 
+    // Page 1's own bands, in a document of one section: its first page is the
+    // document's. With several, the first section's break names them instead.
+    if (this.sections.length === 0 && hasFirstPage(this)) {
+      documentXML
+        .root()
+        .first()
+        .first()
+        .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPage'));
+    }
+
     if ((this.header || this.footer) && this.skipFirstHeaderFooter) {
       documentXML
         .root()
@@ -326,13 +351,18 @@ class DocxDocument {
     body.import(bodySectionProperties);
     bodySectionProperties.remove();
 
-    // Each section break names its header and footer, which exist by now.
+    // Each section break names its header and footer, which exist by now;
+    // the first section — or the only one — whether its first page differs.
     return documentXML
       .toString({ prettyPrint: true })
       .replace(/<w:tdxSectionReferences w:val="(\d+)"\/>/g, (_match, index) => {
         const section = this.sections[Number(index)];
-        return section ? sectionReferencesXML(section, this) : '';
-      });
+        return section ? sectionReferencesXML(section, this, Number(index)) : '';
+      })
+      .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, (_match, index) =>
+        Number(index) === 0 && hasFirstPage(this) ? '<w:titlePg/>' : ''
+      )
+      .replace(/<w:tdxFirstPage\/>/g, () => `${firstPageReferencesXML(this)}<w:titlePg/>`);
   }
 
   generateCoreXML() {
@@ -637,8 +667,7 @@ class DocxDocument {
 
     // Handle SVG images based on svgHandling option
     const svgHandling =
-      this.imageProcessing?.svgHandling ||
-      defaultDocumentOptions.imageProcessing.svgHandling;
+      this.imageProcessing?.svgHandling || defaultDocumentOptions.imageProcessing.svgHandling;
 
     if (isSVG(mimeType) && svgHandling === 'convert') {
       try {
