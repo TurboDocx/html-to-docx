@@ -1782,6 +1782,14 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
         attributes.originalHeight = imageProperties.height;
 
         computeImageDimensions(vNode, attributes);
+        // Placed against its text: an anchored picture, each its own place in
+        // the stack, a later one over an earlier one.
+        if (attributes.placement) {
+          attributes.inlineOrAnchored = false;
+          docxDocumentInstance.anchoredPictureCount =
+            (docxDocumentInstance.anchoredPictureCount || 0) + 1;
+          attributes.relativeHeight = 251658240 + docxDocumentInstance.anchoredPictureCount;
+        }
       }
 
       const { type, inlineOrAnchored, ...otherAttributes } = attributes;
@@ -2331,12 +2339,51 @@ const imageBorderOf = (vNode) => {
     : null;
 };
 
+// Where a picture sits against its text (the document editor's wrap, canvas
+// task 4.8): `data-wrap` left or right (Word's Square), behind or front (Behind
+// Text, In Front of Text), `data-wrap-gap` px from the text, `data-position`
+// text (moving with its line) or page, and `data-x` / `data-y` px from the
+// column and its line, or from the page. Null for a picture in line — every
+// picture that names none, so nothing written before changes.
+const PLACED_WRAPS = ['left', 'right', 'behind', 'front'];
+
+const imagePlacementOf = (vNode) => {
+  const htmlAttributes = (vNode && vNode.properties && vNode.properties.attributes) || {};
+  const wrap = htmlAttributes['data-wrap'];
+  if (!PLACED_WRAPS.includes(wrap)) {
+    return null;
+  }
+  const px = (name, fallback) => {
+    const value = Number(htmlAttributes[name]);
+    return Number.isFinite(value) ? value : fallback;
+  };
+  return {
+    wrap,
+    gap: Math.max(0, Math.min(48, px('data-wrap-gap', 12))),
+    position: htmlAttributes['data-position'] === 'page' ? 'page' : 'text',
+    x: px('data-x', 0),
+    y: px('data-y', 0),
+  };
+};
+
+// The picture's own transparency (`data-transparency`, 0-100), or 0.
+const imageTransparencyOf = (vNode) => {
+  const htmlAttributes = (vNode && vNode.properties && vNode.properties.attributes) || {};
+  const value = Number(htmlAttributes['data-transparency']);
+  return Number.isFinite(value) && value > 0 ? Math.min(100, value) : 0;
+};
+
 const computeImageDimensions = (vNode, attributes) => {
   // Its crop and border ride along to the picture's markup (buildPicture).
   // eslint-disable-next-line no-param-reassign
   attributes.crop = imageCropOf(vNode);
   // eslint-disable-next-line no-param-reassign
   attributes.border = imageBorderOf(vNode);
+  // And where it sits against its text, and its transparency.
+  // eslint-disable-next-line no-param-reassign
+  attributes.placement = imagePlacementOf(vNode);
+  // eslint-disable-next-line no-param-reassign
+  attributes.transparency = imageTransparencyOf(vNode);
   const { maximumWidth, maximumHeight, originalWidth, originalHeight } = attributes;
   const aspectRatio = originalHeight > 0 ? originalWidth / originalHeight : 1;
   // Word lays a picture's line out OUTSIDE the picture (buildEffectExtentFragment),
@@ -4608,6 +4655,37 @@ const buildTableProperties = (attributes) => {
           // eslint-disable-next-line no-param-reassign
           delete attributes.width;
           break;
+        case 'tableFloat': {
+          // A floating table, anchored to the text at the margin's edge, its
+          // distance on the side facing the text and below.
+          const { side, gap } = attributes[key];
+          const fromText = String(pixelToTWIP(gap));
+          childFragments.push({
+            name: 'tblpPr',
+            fragment: fragment({ namespaceAlias: { w: namespaces.w } })
+              .ele('@w', 'tblpPr')
+              .att('@w', 'leftFromText', side === 'right' ? fromText : '0')
+              .att('@w', 'rightFromText', side === 'left' ? fromText : '0')
+              .att('@w', 'topFromText', '0')
+              .att('@w', 'bottomFromText', fromText)
+              .att('@w', 'vertAnchor', 'text')
+              .att('@w', 'horzAnchor', 'margin')
+              .att('@w', 'tblpXSpec', side)
+              .att('@w', 'tblpY', '0')
+              .up(),
+          });
+          childFragments.push({
+            name: 'tblOverlap',
+            fragment: fragment({ namespaceAlias: { w: namespaces.w } })
+              .ele('@w', 'tblOverlap')
+              .att('@w', 'val', 'never')
+              .up(),
+          });
+          hasTableLayout = true;
+          // eslint-disable-next-line no-param-reassign
+          delete attributes.tableFloat;
+          break;
+        }
         case 'tableLayout':
           childFragments.push({
             name: 'tblLayout',
@@ -4922,6 +5000,17 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
       }
     }
 
+    // The document editor's wrap (canvas task 4.8): a table the text runs
+    // beside, at the margin's left or right edge (`data-wrap`), `data-wrap-gap`
+    // px from it — Word's Text wrapping: Around.
+    if (['left', 'right'].includes(tableAttributes['data-wrap'])) {
+      const gap = Number(tableAttributes['data-wrap-gap']);
+      modifiedAttributes.tableFloat = {
+        side: tableAttributes['data-wrap'],
+        gap: Number.isFinite(gap) && gap >= 0 ? Math.min(48, gap) : 12,
+      };
+    }
+
     // Handle HTML align attribute for table position (e.g., <table align="center">)
     // This controls table position, NOT cell content alignment
     if (tableAttributes.align) {
@@ -5185,7 +5274,7 @@ const buildSrcRectFragment = (crop = {}) =>
     .att('t', cropPart(crop.top))
     .up();
 
-const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false) => {
+const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false, transparency = 0) => {
   const blipFragment = fragment({
     namespaceAlias: { a: namespaces.a, r: namespaces.r },
   })
@@ -5193,6 +5282,15 @@ const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false) => {
     .att('@r', 'embed', `rId${relationshipId}`)
     // FIXME: possible values 'email', 'none', 'print', 'hqprint', 'screen'
     .att('cstate', 'print');
+
+  // Its transparency, as Word's Picture Transparency writes it: the share of
+  // the picture that shows, in thousandths of a percent. Before any extension.
+  if (transparency > 0) {
+    blipFragment
+      .ele('@a', 'alphaModFix')
+      .att('amt', String(Math.round((100 - transparency) * 1000)))
+      .up();
+  }
 
   // Add SVGBlip extension for native SVG support (Office 2019+)
   if (isSVG) {
@@ -5219,11 +5317,20 @@ const buildBinaryLargeImageOrPicture = (relationshipId, isSVG = false) => {
   return blipFragment.up();
 };
 
-const buildBinaryLargeImageOrPictureFill = (relationshipId, isSVG = false, crop = {}) => {
+const buildBinaryLargeImageOrPictureFill = (
+  relationshipId,
+  isSVG = false,
+  crop = {},
+  transparency = 0
+) => {
   const binaryLargeImageOrPictureFillFragment = fragment({
     namespaceAlias: { pic: namespaces.pic },
   }).ele('@pic', 'blipFill');
-  const binaryLargeImageOrPictureFragment = buildBinaryLargeImageOrPicture(relationshipId, isSVG);
+  const binaryLargeImageOrPictureFragment = buildBinaryLargeImageOrPicture(
+    relationshipId,
+    isSVG,
+    transparency
+  );
   binaryLargeImageOrPictureFillFragment.import(binaryLargeImageOrPictureFragment);
   const srcRectFragment = buildSrcRectFragment(crop);
   binaryLargeImageOrPictureFillFragment.import(srcRectFragment);
@@ -5284,6 +5391,7 @@ const buildPicture = ({
   isSVG = false,
   crop,
   border,
+  transparency = 0,
 }) => {
   const pictureFragment = fragment({ namespaceAlias: { pic: namespaces.pic } }).ele('@pic', 'pic');
   const nonVisualPicturePropertiesFragment = buildNonVisualPictureProperties(
@@ -5295,7 +5403,8 @@ const buildPicture = ({
   const binaryLargeImageOrPictureFill = buildBinaryLargeImageOrPictureFill(
     relationshipId,
     isSVG,
-    crop
+    crop,
+    transparency
   );
   pictureFragment.import(binaryLargeImageOrPictureFill);
   const shapeProperties = buildShapeProperties({ width, height, border });
@@ -5342,17 +5451,19 @@ const buildDrawingObjectNonVisualProperties = (pictureId, pictureName, pictureDe
   return docPrFragment.up();
 };
 
-const buildWrapSquare = () =>
+// Text runs beside a wrapped picture and under it (Word's Square), `distances`
+// away: on the side facing the text and below.
+const buildWrapSquare = (distances) =>
   fragment({ namespaceAlias: { wp: namespaces.wp } })
     .ele('@wp', 'wrapSquare')
     .att('wrapText', 'bothSides')
-    .att('distB', '228600')
-    .att('distT', '228600')
-    .att('distL', '228600')
-    .att('distR', '228600')
+    .att('distT', distances.top)
+    .att('distB', distances.bottom)
+    .att('distL', distances.left)
+    .att('distR', distances.right)
     .up();
 
-// eslint-disable-next-line no-unused-vars
+// Behind or in front of the text: it takes no room in the lines.
 const buildWrapNone = () =>
   fragment({ namespaceAlias: { wp: namespaces.wp } })
     .ele('@wp', 'wrapNone')
@@ -5389,23 +5500,37 @@ const buildExtent = ({ width, height }) =>
     .att('cy', height)
     .up();
 
-const buildPositionV = () =>
-  fragment({ namespaceAlias: { wp: namespaces.wp } })
-    .ele('@wp', 'positionV')
-    .att('relativeFrom', 'paragraph')
-    .ele('@wp', 'posOffset')
-    .txt('19050')
-    .up()
-    .up();
+// Where a placed picture sits (imagePlacementOf). A wrap: at the column's
+// left or right edge, level with the line it belongs to. Behind or in front:
+// its offsets from the column and that line, or from the page when it is
+// fixed there — what the editor measures them from.
+const buildPositionH = (placement) => {
+  const positionFragment = fragment({ namespaceAlias: { wp: namespaces.wp } }).ele(
+    '@wp',
+    'positionH'
+  );
+  if (placement.wrap === 'left' || placement.wrap === 'right') {
+    positionFragment.att('relativeFrom', 'column').ele('@wp', 'align').txt(placement.wrap).up();
+  } else {
+    positionFragment
+      .att('relativeFrom', placement.position === 'page' ? 'page' : 'column')
+      .ele('@wp', 'posOffset')
+      .txt(String(pixelToEMU(placement.x)))
+      .up();
+  }
+  return positionFragment.up();
+};
 
-const buildPositionH = () =>
-  fragment({ namespaceAlias: { wp: namespaces.wp } })
-    .ele('@wp', 'positionH')
-    .att('relativeFrom', 'column')
+const buildPositionV = (placement) => {
+  const wrapped = placement.wrap === 'left' || placement.wrap === 'right';
+  return fragment({ namespaceAlias: { wp: namespaces.wp } })
+    .ele('@wp', 'positionV')
+    .att('relativeFrom', !wrapped && placement.position === 'page' ? 'page' : 'line')
     .ele('@wp', 'posOffset')
-    .txt('19050')
+    .txt(String(wrapped ? 0 : pixelToEMU(placement.y)))
     .up()
     .up();
+};
 
 const buildSimplePos = () =>
   fragment({ namespaceAlias: { wp: namespaces.wp } })
@@ -5414,32 +5539,48 @@ const buildSimplePos = () =>
     .att('y', '0')
     .up();
 
+// A picture placed against its text (imagePlacementOf), as Word stores one:
+// wrapped (Square) or behind or in front of the text (no wrap), its position,
+// its place in the stack, and its distances from the text. Still a picture
+// Word's Layout Options edit.
 const buildAnchoredDrawing = (graphicType, attributes) => {
+  const placement = attributes.placement || {
+    wrap: 'left',
+    gap: 12,
+    position: 'text',
+    x: 0,
+    y: 0,
+  };
+  const wrapped = placement.wrap === 'left' || placement.wrap === 'right';
+  const gap = String(pixelToEMU(wrapped ? placement.gap : 0));
+  const distances = {
+    top: '0',
+    bottom: gap,
+    left: placement.wrap === 'right' ? gap : '0',
+    right: placement.wrap === 'left' ? gap : '0',
+  };
   const anchoredDrawingFragment = fragment({ namespaceAlias: { wp: namespaces.wp } })
     .ele('@wp', 'anchor')
-    .att('distB', '0')
-    .att('distL', '0')
-    .att('distR', '0')
-    .att('distT', '0')
-    .att('relativeHeight', '0')
-    .att('behindDoc', 'false')
-    .att('locked', 'true')
-    .att('layoutInCell', 'true')
-    .att('allowOverlap', 'false')
-    .att('simplePos', 'false');
-  // Even though simplePos isnt supported by Word 2007 simplePos is required.
+    .att('distT', distances.top)
+    .att('distB', distances.bottom)
+    .att('distL', distances.left)
+    .att('distR', distances.right)
+    .att('simplePos', '0')
+    .att('relativeHeight', String(attributes.relativeHeight || 251658240))
+    .att('behindDoc', placement.wrap === 'behind' ? '1' : '0')
+    .att('locked', '0')
+    .att('layoutInCell', '1')
+    .att('allowOverlap', wrapped ? '0' : '1');
+  // Required by the schema even though nothing reads it while simplePos="0".
   const simplePosFragment = buildSimplePos();
   anchoredDrawingFragment.import(simplePosFragment);
-  const positionHFragment = buildPositionH();
-  anchoredDrawingFragment.import(positionHFragment);
-  const positionVFragment = buildPositionV();
-  anchoredDrawingFragment.import(positionVFragment);
+  anchoredDrawingFragment.import(buildPositionH(placement));
+  anchoredDrawingFragment.import(buildPositionV(placement));
   const extentFragment = buildExtent({ width: attributes.width, height: attributes.height });
   anchoredDrawingFragment.import(extentFragment);
   const effectExtentFragment = buildEffectExtentFragment(attributes.border);
   anchoredDrawingFragment.import(effectExtentFragment);
-  const wrapSquareFragment = buildWrapSquare();
-  anchoredDrawingFragment.import(wrapSquareFragment);
+  anchoredDrawingFragment.import(wrapped ? buildWrapSquare(distances) : buildWrapNone());
   const drawingObjectNonVisualPropertiesFragment = buildDrawingObjectNonVisualProperties(
     attributes.id,
     attributes.fileNameWithExtension,
