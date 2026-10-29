@@ -207,18 +207,27 @@ const paragraphBordersObject = {
     color: 'FFFFFF',
   },
 };
+// The document editor's symbol font: the glyphs no common text font has —
+// its list presets' ❖ ➢ ➔ ❏ ◆ ★ and its checklists' ☐ ☑ — and nothing else,
+// from DejaVu Sans. The editor draws them in it, TurboDocx's PDF renderer
+// installs it and the editor's export embeds it in the Word file, so all three
+// draw the same glyph on a line no taller than its text's. (Bullets used to
+// name DejaVu Sans, which Windows lacks, and checkboxes Segoe UI Symbol, which
+// the renderer lacks: each side drew them in a font of its own.)
+const documentSymbolFont = 'TurboDocx Symbols';
+// Listed in the font table as a sans font with DejaVu Sans as its alternative:
+// a reader with neither the font nor its embedded copy then substitutes a text
+// font that has the glyphs, not a colour emoji font (LibreOffice did, for ☑).
+const documentSymbolFallbackFont = 'DejaVu Sans';
 // Checklist items (<ul data-checklist="true">) start with one of these glyphs
 // instead of a list marker. U+2610/U+2611 (Miscellaneous Symbols) are not in
-// common text fonts, so the run names "Segoe UI Symbol", which ships with
-// Windows. The font table lists it as a sans font with DejaVu Sans as its
-// alternative: without that entry LibreOffice substitutes a colour emoji font
-// for U+2611 when Segoe UI Symbol is not installed.
+// common text fonts, so the run names the symbol font.
 const checklistSymbols = {
   checked: '\u2611', // ☑
   unchecked: '\u2610', // ☐
 };
-const checklistSymbolFont = 'Segoe UI Symbol';
-const checklistSymbolFallbackFont = 'DejaVu Sans';
+const checklistSymbolFont = documentSymbolFont;
+const checklistSymbolFallbackFont = documentSymbolFallbackFont;
 const colorlessColors = ['transparent', 'auto'];
 const verticalAlignValues = ['top', 'middle', 'bottom'];
 const defaultPercentageMarginValue = 0;
@@ -253,6 +262,8 @@ export {
   checklistSymbols,
   checklistSymbolFont,
   checklistSymbolFallbackFont,
+  documentSymbolFont,
+  documentSymbolFallbackFont,
   colorlessColors,
   verticalAlignValues,
   defaultLang,
