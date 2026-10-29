@@ -131,12 +131,12 @@ describe('Bullet glyph per list (<ul data-bullet>)', () => {
     ['\u25CF', 'Arial'], // ●
     ['\u25CB', 'Arial'], // ○
     ['\u25A0', 'Arial'], // ■
-    ['\u2756', 'DejaVu Sans'], // ❖
-    ['\u27A2', 'DejaVu Sans'], // ➢
-    ['\u274F', 'DejaVu Sans'], // ❏
-    ['\u2794', 'DejaVu Sans'], // ➔
-    ['\u25C6', 'DejaVu Sans'], // ◆
-    ['\u2605', 'DejaVu Sans'], // ★
+    ['\u2756', 'TurboDocx Symbols'], // ❖
+    ['\u27A2', 'TurboDocx Symbols'], // ➢
+    ['\u274F', 'TurboDocx Symbols'], // ❏
+    ['\u2794', 'TurboDocx Symbols'], // ➔
+    ['\u25C6', 'TurboDocx Symbols'], // ◆
+    ['\u2605', 'TurboDocx Symbols'], // ★
   ])('data-bullet %s draws that glyph in %s at every level', async (glyph, font) => {
     const parsed = await convert(`<ul data-bullet="${glyph}"><li>Item</li></ul>`);
     const { numId } = numberingOf(parsed.paragraphs[0]);
@@ -146,6 +146,31 @@ describe('Bullet glyph per list (<ul data-bullet>)', () => {
       expect(level.lvlText).toBe(glyph);
       expect(level.rFonts).toMatchObject({ ascii: font, hAnsi: font, eastAsia: font, cs: font });
     });
+  });
+
+  // A symbol bullet's font is listed, with DejaVu Sans as its alternative, so
+  // the export can carry it into the Word file (and a reader without it falls
+  // back to a font that has the glyph rather than a colour emoji font).
+  test('lists the symbol font a bullet is drawn in, once, with a DejaVu Sans fallback', async () => {
+    const parsed = await convert(
+      '<ul data-bullet="\u2756"><li>One</li></ul><ul data-bullet="\u2605"><li>Two</li></ul>'
+    );
+    const fontTableXml = (await parsed.zip.file('word/fontTable.xml').async('string')).replace(
+      />\n\s*</g,
+      '><'
+    );
+
+    expect(fontTableXml.match(/<w:font w:name="TurboDocx Symbols">/g)).toHaveLength(1);
+    expect(fontTableXml).toContain(
+      '<w:font w:name="TurboDocx Symbols"><w:altName w:val="DejaVu Sans"/>'
+    );
+  });
+
+  test('does not list the symbol font for a list of Arial bullets', async () => {
+    const parsed = await convert('<ul data-bullet="\u25CF"><li>Item</li></ul>');
+    const fontTableXml = await parsed.zip.file('word/fontTable.xml').async('string');
+
+    expect(fontTableXml).not.toContain('TurboDocx Symbols');
   });
 
   test('data-bullet wins over list-style-type', async () => {

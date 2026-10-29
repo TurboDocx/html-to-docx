@@ -7,7 +7,8 @@
  *     <li data-checked="false">To do</li>
  *   </ul>
  *
- * Glyphs: U+2610 (unchecked) and U+2611 (checked) in "Segoe UI Symbol",
+ * Glyphs: U+2610 (unchecked) and U+2611 (checked) in "TurboDocx Symbols" (the
+ * symbol font the editor, the PDF and — embedded — Word all draw them in),
  * followed by a tab to the hanging indent, like a list marker.
  */
 
@@ -43,7 +44,7 @@ const expectCheckbox = (paragraph, glyph) => {
   const [glyphRun, tabRun] = runsOf(paragraph);
   expect(glyphRun.text).toBe(glyph);
   expect(glyphRun.xml).toContain(
-    '<w:rFonts w:ascii="Segoe UI Symbol" w:hAnsi="Segoe UI Symbol" w:eastAsia="Segoe UI Symbol" w:cs="Segoe UI Symbol"/>'
+    '<w:rFonts w:ascii="TurboDocx Symbols" w:hAnsi="TurboDocx Symbols" w:eastAsia="TurboDocx Symbols" w:cs="TurboDocx Symbols"/>'
   );
   expect(tabRun.tab).toBe(true);
 };
@@ -178,7 +179,7 @@ describe('Checklists (<ul data-checklist="true">)', () => {
 
 describe('Checklist symbol font', () => {
   // Without a font table entry, LibreOffice falls back to a colour emoji font
-  // for U+2611 when "Segoe UI Symbol" is not installed. The entry steers the
+  // for U+2611 when the symbol font is not installed. The entry steers the
   // substitution to a sans text font that has all checkbox glyphs.
   test('registers the symbol font with a DejaVu Sans fallback in the font table', async () => {
     const parsed = await convert(
@@ -186,9 +187,9 @@ describe('Checklist symbol font', () => {
     );
     const fontTableXml = compact(await parsed.zip.file('word/fontTable.xml').async('string'));
 
-    expect(fontTableXml.match(/<w:font w:name="Segoe UI Symbol">/g)).toHaveLength(1);
+    expect(fontTableXml.match(/<w:font w:name="TurboDocx Symbols">/g)).toHaveLength(1);
     expect(fontTableXml).toContain(
-      '<w:font w:name="Segoe UI Symbol"><w:altName w:val="DejaVu Sans"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font>'
+      '<w:font w:name="TurboDocx Symbols"><w:altName w:val="DejaVu Sans"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font>'
     );
   });
 
@@ -196,6 +197,6 @@ describe('Checklist symbol font', () => {
     const parsed = await convert('<ul><li>Item</li></ul>');
     const fontTableXml = await parsed.zip.file('word/fontTable.xml').async('string');
 
-    expect(fontTableXml).not.toContain('Segoe UI Symbol');
+    expect(fontTableXml).not.toContain('TurboDocx Symbols');
   });
 });

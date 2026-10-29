@@ -38,6 +38,8 @@ import {
   documentFileName,
   imageType,
   defaultDocumentOptions,
+  documentSymbolFont,
+  documentSymbolFallbackFont,
 } from './constants';
 import ListStyleBuilder from './utils/list';
 import { fontFamilyToTableObject } from './utils/font-family-conversion';
@@ -556,6 +558,7 @@ class DocxDocument {
             // Pin every script slot so Word never picks another font for the glyph.
             bulletFontsElement.att('@w', 'eastAsia', bulletFont).att('@w', 'cs', bulletFont);
           }
+
           bulletFontsElement.att('@w', 'hint', 'default');
           levelFragment.last().import(bulletRunPropertiesFragment);
         }
@@ -613,6 +616,21 @@ class DocxDocument {
   // options.outline: multilevel "1. / 1.1. / 1.1.1." numbering whose first
   // rendered level is options.baseLevel (the list's nesting depth).
   createNumbering(type, properties, options = {}) {
+    // A list drawn in the symbol font lists it in the font table, which is
+    // written before the numbering is (see generateFontTableXML).
+    if (
+      type === 'ul' &&
+      this.ListStyleBuilder.getUnorderedListFont(
+        properties && properties.style,
+        properties && properties.attributes
+      ) === documentSymbolFont
+    ) {
+      this.registerFont({
+        fontName: documentSymbolFont,
+        genericFontName: 'sans-serif',
+        altName: documentSymbolFallbackFont,
+      });
+    }
     this.lastNumberingId += 1;
     this.numberingObjects.push({
       numberingId: this.lastNumberingId,
