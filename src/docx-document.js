@@ -17,6 +17,7 @@ import {
   fontTableXML as fontTableXMLString,
   genericRelsXML as genericRelsXMLString,
   generateDocumentTemplate,
+  generateSectionTemplate,
 } from './schemas';
 import { convertVTreeToXML } from './helpers';
 import namespaces from './namespaces';
@@ -37,6 +38,8 @@ import {
   documentFileName,
   imageType,
   defaultDocumentOptions,
+  documentSymbolFont,
+  documentSymbolFallbackFont,
 } from './constants';
 import ListStyleBuilder from './utils/list';
 import { fontFamilyToTableObject } from './utils/font-family-conversion';
@@ -61,14 +64,17 @@ function generateContentTypesFragments(contentTypesXML, type, objects) {
 function generateSectionReferenceXML(documentXML, documentSectionType, objects, isEnabled) {
   if (isEnabled && objects && Array.isArray(objects) && objects.length) {
     const xmlFragment = fragment();
-    objects.forEach(({ relationshipId, type }) => {
-      const objectFragment = fragment({ namespaceAlias: { w: namespaces.w, r: namespaces.r } })
-        .ele('@w', `${documentSectionType}Reference`)
-        .att('@r', 'id', `rId${relationshipId}`)
-        .att('@w', 'type', type)
-        .up();
-      xmlFragment.import(objectFragment);
-    });
+    // A section's own part is named by that section's break, not here.
+    objects
+      .filter(({ type }) => type !== 'sectionOnly')
+      .forEach(({ relationshipId, type }) => {
+        const objectFragment = fragment({ namespaceAlias: { w: namespaces.w, r: namespaces.r } })
+          .ele('@w', `${documentSectionType}Reference`)
+          .att('@r', 'id', `rId${relationshipId}`)
+          .att('@w', 'type', type)
+          .up();
+        xmlFragment.import(objectFragment);
+      });
 
     documentXML.root().first().first().import(xmlFragment);
   }
@@ -102,19 +108,9 @@ function generateXMLString(xmlString, direction) {
 }
 
 async function generateSectionXML(vTree, type = 'header') {
-  const sectionXML = create({
-    encoding: 'UTF-8',
-    standalone: true,
-    namespaceAlias: {
-      w: namespaces.w,
-      ve: namespaces.ve,
-      o: namespaces.o,
-      r: namespaces.r,
-      v: namespaces.v,
-      wp: namespaces.wp,
-      w10: namespaces.w10,
-    },
-  }).ele('@w', type === 'header' ? 'hdr' : 'ftr');
+  // From a template that declares the prefixes, as document.xml is: see
+  // section.template.js for what an undeclared root did to the band's markup.
+  const sectionXML = create({ encoding: 'UTF-8', standalone: true }, generateSectionTemplate(type));
 
   const XMLFragment = fragment();
   await convertVTreeToXML(this, vTree, XMLFragment);
@@ -135,6 +131,65 @@ async function generateSectionXML(vTree, type = 'header') {
 
   return { [`${type}Id`]: this[`last${referenceName}Id`], [`${type}XML`]: sectionXML };
 }
+
+/**
+ * One section's page, resolved the way the document's own is: the sheet turned
+ * for landscape, and whatever margin it does not set taken from the document.
+ */
+function resolveSection(section, documentPageSize, documentMargins) {
+  const pageSize = section.pageSize || documentPageSize;
+  const isPortraitOrientation = (section.orientation || defaultOrientation) === defaultOrientation;
+  const height = pageSize.height ? pageSize.height : landscapeHeight;
+  const width = pageSize.width ? pageSize.width : landscapeWidth;
+  const sectionWidth = isPortraitOrientation ? width : height;
+  const sectionHeight = isPortraitOrientation ? height : width;
+  const margins = { ...documentMargins, ...(section.margins || {}) };
+
+  return {
+    orientation: isPortraitOrientation ? 'portrait' : 'landscape',
+    width: sectionWidth,
+    height: sectionHeight,
+    margins,
+    availableDocumentSpace: sectionWidth - margins.left - margins.right,
+    availableDocumentHeight: sectionHeight - margins.top - margins.bottom,
+    headerHTML: section.headerHTML || null,
+    footerHTML: section.footerHTML || null,
+    headerRelationshipId: null,
+    footerRelationshipId: null,
+  };
+}
+
+/**
+ * The header and footer a section's break names: its own, when it brought one,
+ * or else the document's. Written into each break once every part exists —
+ * the body is converted before the headers are.
+ */
+function sectionReferencesXML(section, document, index) {
+  const reference = (type, ownId, objects, isEnabled) => {
+    const documentOwn = objects.find((object) => object.type !== 'sectionOnly');
+    const id = ownId || (isEnabled && documentOwn ? documentOwn.relationshipId : null);
+    return id ? `<w:${type}Reference r:id="rId${id}" w:type="default"/>` : '';
+  };
+  return (
+    reference('header', section.headerRelationshipId, document.headerObjects, document.header) +
+    reference('footer', section.footerRelationshipId, document.footerObjects, document.footer) +
+    (index === 0 ? firstPageReferencesXML(document) : '')
+  );
+}
+
+/** Page 1's own header and footer, as the first section names them. */
+function firstPageReferencesXML(document) {
+  const reference = (type, id) =>
+    id ? `<w:${type}Reference r:id="rId${id}" w:type="first"/>` : '';
+  return (
+    reference('header', document.firstPageHeaderRelationshipId) +
+    reference('footer', document.firstPageFooterRelationshipId)
+  );
+}
+
+/** Whether the document's first page has bands of its own. */
+const hasFirstPage = (document) =>
+  Boolean(document.firstPageHeaderRelationshipId || document.firstPageFooterRelationshipId);
 
 class DocxDocument {
   constructor(properties) {
@@ -165,6 +220,14 @@ class DocxDocument {
     };
 
     this.availableDocumentSpace = this.width - this.margins.left - this.margins.right;
+    // The text area's height, the tallest an image is drawn (computeImageDimensions).
+    this.availableDocumentHeight = this.height - this.margins.top - this.margins.bottom;
+    // Every section but the last, set up as its own options say; the last is
+    // the document's own (page sections — a landscape page in a portrait
+    // document, a page with its own margins or colour).
+    this.sections = (properties.sections || []).map((section) =>
+      resolveSection(section, this.pageSize, this.margins)
+    );
     this.title = properties.title || '';
     this.subject = properties.subject || '';
     this.creator = properties.creator || applicationName;
@@ -249,6 +312,16 @@ class DocxDocument {
     generateSectionReferenceXML(documentXML, 'header', this.headerObjects, this.header);
     generateSectionReferenceXML(documentXML, 'footer', this.footerObjects, this.footer);
 
+    // Page 1's own bands, in a document of one section: its first page is the
+    // document's. With several, the first section's break names them instead.
+    if (this.sections.length === 0 && hasFirstPage(this)) {
+      documentXML
+        .root()
+        .first()
+        .first()
+        .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPage'));
+    }
+
     if ((this.header || this.footer) && this.skipFirstHeaderFooter) {
       documentXML
         .root()
@@ -271,7 +344,27 @@ class DocxDocument {
         );
     }
 
-    return documentXML.toString({ prettyPrint: true });
+    // The body's own section properties go last, as the schema has them
+    // (CT_Body): the template opens the body with them, and with one section
+    // that never mattered — with several, the last section is the one after
+    // every break.
+    const body = documentXML.root().first();
+    const bodySectionProperties = body.first();
+    body.import(bodySectionProperties);
+    bodySectionProperties.remove();
+
+    // Each section break names its header and footer, which exist by now;
+    // the first section — or the only one — whether its first page differs.
+    return documentXML
+      .toString({ prettyPrint: true })
+      .replace(/<w:tdxSectionReferences w:val="(\d+)"\/>/g, (_match, index) => {
+        const section = this.sections[Number(index)];
+        return section ? sectionReferencesXML(section, this, Number(index)) : '';
+      })
+      .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, (_match, index) =>
+        Number(index) === 0 && hasFirstPage(this) ? '<w:titlePg/>' : ''
+      )
+      .replace(/<w:tdxFirstPage\/>/g, () => `${firstPageReferencesXML(this)}<w:titlePg/>`);
   }
 
   generateCoreXML() {
@@ -323,7 +416,7 @@ class DocxDocument {
       'Symbol',
       'Times New Roman',
     ];
-    this.fontTableObjects.forEach(({ fontName, genericFontName }) => {
+    this.fontTableObjects.forEach(({ fontName, genericFontName, altName }) => {
       if (!fontNames.includes(fontName)) {
         fontNames.push(fontName);
         const fontFragment = fragment({
@@ -339,7 +432,7 @@ class DocxDocument {
             fontFragment.ele('@w', 'pitch').att('@w', 'val', 'variable');
             break;
           case 'sans-serif':
-            fontFragment.ele('@w', 'altName').att('@w', 'val', 'Arial');
+            fontFragment.ele('@w', 'altName').att('@w', 'val', altName || 'Arial');
             fontFragment.ele('@w', 'family').att('@w', 'val', 'swiss');
             fontFragment.ele('@w', 'pitch').att('@w', 'val', 'variable');
             break;
@@ -379,7 +472,7 @@ class DocxDocument {
     // The current implementation is a quick fix to handle nested lists
     // For every ul or ol encountered, all levels have the same startValue
     // This helps in handling the indentation for that particular level in the transformation
-    this.numberingObjects.forEach(({ numberingId, type, properties }) => {
+    this.numberingObjects.forEach(({ numberingId, type, properties, outline, baseLevel }) => {
       const abstractNumberingFragment = fragment({ namespaceAlias: { w: namespaces.w } })
         .ele('@w', 'abstractNum')
         .att('@w', 'abstractNumId', String(numberingId));
@@ -391,31 +484,47 @@ class DocxDocument {
         startValue = properties.start;
       }
       [...Array(9).keys()].forEach((level) => {
+        let levelStart = type === 'ol' ? startValue : '1';
+        let numberFormat =
+          type === 'ol'
+            ? this.ListStyleBuilder.getListStyleType(
+                properties.style && properties.style['list-style-type']
+              )
+            : 'bullet';
+        let levelText =
+          type === 'ol'
+            ? this.ListStyleBuilder.getListPrefixSuffix(
+                properties.style,
+                level,
+                properties.attributes
+              )
+            : this.ListStyleBuilder.getUnorderedListPrefixSuffix(
+                properties.style,
+                properties.attributes
+              );
+        // "01." is as wide as an outline "1.1.": hang it as far so it clears its text.
+        let hangingIndent = numberFormat === 'decimalZero' ? 540 : 360;
+        if (type === 'ol' && outline) {
+          // Outline levels are all decimal; only the list's own first level
+          // honours its start value, deeper levels restart at 1 under their parent.
+          levelStart = level === baseLevel ? startValue : '1';
+          numberFormat = 'decimal';
+          levelText = this.ListStyleBuilder.getOutlineListLevelText(level, baseLevel);
+          // "1.1.1." is wider than "1.": give each deeper level 180 more twips.
+          hangingIndent = 360 + 180 * Math.max(0, level - baseLevel);
+        }
+
         const levelFragment = fragment({ namespaceAlias: { w: namespaces.w } })
           .ele('@w', 'lvl')
           .att('@w', 'ilvl', level)
           .ele('@w', 'start')
-          .att('@w', 'val', type === 'ol' ? startValue : '1')
+          .att('@w', 'val', levelStart)
           .up()
           .ele('@w', 'numFmt')
-          .att(
-            '@w',
-            'val',
-            type === 'ol'
-              ? this.ListStyleBuilder.getListStyleType(
-                  properties.style && properties.style['list-style-type']
-                )
-              : 'bullet'
-          )
+          .att('@w', 'val', numberFormat)
           .up()
           .ele('@w', 'lvlText')
-          .att(
-            '@w',
-            'val',
-            type === 'ol'
-              ? this.ListStyleBuilder.getListPrefixSuffix(properties.style, level)
-              : this.ListStyleBuilder.getUnorderedListPrefixSuffix(properties.style)
-          )
+          .att('@w', 'val', levelText)
           .up()
           .ele('@w', 'lvlJc')
           .att('@w', 'val', 'left')
@@ -429,22 +538,29 @@ class DocxDocument {
           .up()
           .ele('@w', 'ind')
           .att('@w', 'left', (level + 1) * 720)
-          .att('@w', 'hanging', 360)
+          .att('@w', 'hanging', hangingIndent)
           .up()
           .up()
           .up();
 
         if (type === 'ul') {
-          levelFragment.last().import(
-            fragment({ namespaceAlias: { w: namespaces.w } })
-              .ele('@w', 'rPr')
-              .ele('@w', 'rFonts')
-              .att('@w', 'ascii', 'Symbol')
-              .att('@w', 'hAnsi', 'Symbol')
-              .att('@w', 'hint', 'default')
-              .up()
-              .up()
+          const bulletFont = this.ListStyleBuilder.getUnorderedListFont(
+            properties.style,
+            properties.attributes
           );
+          const bulletRunPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } });
+          const bulletFontsElement = bulletRunPropertiesFragment
+            .ele('@w', 'rPr')
+            .ele('@w', 'rFonts')
+            .att('@w', 'ascii', bulletFont)
+            .att('@w', 'hAnsi', bulletFont);
+          if (bulletFont !== 'Symbol') {
+            // Pin every script slot so Word never picks another font for the glyph.
+            bulletFontsElement.att('@w', 'eastAsia', bulletFont).att('@w', 'cs', bulletFont);
+          }
+
+          bulletFontsElement.att('@w', 'hint', 'default');
+          levelFragment.last().import(bulletRunPropertiesFragment);
         }
         abstractNumberingFragment.import(levelFragment);
       });
@@ -497,17 +613,60 @@ class DocxDocument {
     return relationshipXMLStrings;
   }
 
-  createNumbering(type, properties) {
+  // options.outline: multilevel "1. / 1.1. / 1.1.1." numbering whose first
+  // rendered level is options.baseLevel (the list's nesting depth).
+  createNumbering(type, properties, options = {}) {
+    // A list drawn in the symbol font lists it in the font table, which is
+    // written before the numbering is (see generateFontTableXML).
+    if (
+      type === 'ul' &&
+      this.ListStyleBuilder.getUnorderedListFont(
+        properties && properties.style,
+        properties && properties.attributes
+      ) === documentSymbolFont
+    ) {
+      this.registerFont({
+        fontName: documentSymbolFont,
+        genericFontName: 'sans-serif',
+        altName: documentSymbolFallbackFont,
+      });
+    }
     this.lastNumberingId += 1;
-    this.numberingObjects.push({ numberingId: this.lastNumberingId, type, properties });
+    this.numberingObjects.push({
+      numberingId: this.lastNumberingId,
+      type,
+      properties,
+      outline: Boolean(options.outline),
+      baseLevel: options.baseLevel || 0,
+    });
 
     return this.lastNumberingId;
+  }
+
+  // Every <wp:docPr> in a part needs an id no other drawing uses, or Word
+  // reports the ids as duplicated and renumbers them on save. Pictures take
+  // theirs from the media counter, so shapes draw from the same counter rather
+  // than starting a second sequence that would collide with it. The number
+  // also rises with source order, which is what the shape anchors use as their
+  // z-order so a later shape paints over an earlier one.
+  createDrawingId() {
+    this.lastMediaId += 1;
+    return this.lastMediaId;
   }
 
   createFont(fontFamily) {
     const fontTableObject = fontFamilyToTableObject(fontFamily, this.font);
     this.fontTableObjects.push(fontTableObject);
     return fontTableObject.fontName;
+  }
+
+  // Adds a font table entry for a font the converter itself uses (rather than
+  // one parsed from a CSS font-family list), with an optional alternative name.
+  registerFont({ fontName, genericFontName, altName }) {
+    if (!this.fontTableObjects.some((fontTableObject) => fontTableObject.fontName === fontName)) {
+      this.fontTableObjects.push({ fontName, genericFontName, altName });
+    }
+    return fontName;
   }
 
   async createMediaFile(base64String) {
@@ -526,8 +685,7 @@ class DocxDocument {
 
     // Handle SVG images based on svgHandling option
     const svgHandling =
-      this.imageProcessing?.svgHandling ||
-      defaultDocumentOptions.imageProcessing.svgHandling;
+      this.imageProcessing?.svgHandling || defaultDocumentOptions.imageProcessing.svgHandling;
 
     if (isSVG(mimeType) && svgHandling === 'convert') {
       try {

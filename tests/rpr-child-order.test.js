@@ -102,6 +102,12 @@ function getAllRprFragments(xml) {
   return [...xml.matchAll(/<w:rPr>([\s\S]*?)<\/w:rPr>/g)].map((m) => m[1]);
 }
 
+// A run's own properties, leaving out a paragraph mark's (inside <w:pPr>):
+// the mark takes the paragraph's type, not what an inner <strong> adds.
+function getRunRprFragments(xml) {
+  return [...xml.matchAll(/<w:r>\s*<w:rPr>([\s\S]*?)<\/w:rPr>/g)].map((m) => m[1]);
+}
+
 describe('<w:rPr> child element order (ECMA-376 EG_RPrBase)', () => {
   test('deeply-nested span color + size + font emits children in spec order', async () => {
     const html =
@@ -382,6 +388,11 @@ describe('<w:rPr> child element order (ECMA-376 EG_RPrBase)', () => {
         await HTMLtoDOCX(html, null, { deterministicIds: true })
       );
       for (const rpr of getAllRprFragments(xml)) {
+        if (rpr.includes('Arial')) {
+          assertRprInSpecOrder(rpr);
+        }
+      }
+      for (const rpr of getRunRprFragments(xml)) {
         if (rpr.includes('Arial')) {
           assertRprInSpecOrder(rpr);
           assertElementPresent(rpr, 'rFonts');
