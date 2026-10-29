@@ -1,3 +1,5 @@
+import { documentSymbolFont } from '../constants';
+
 // Bullet glyphs for an explicit list-style-type on <ul>. Unicode glyphs from
 // the General Punctuation and Geometric Shapes blocks are covered by common
 // text fonts (Arial, Times New Roman, Calibri, Liberation Sans, DejaVu Sans),
@@ -13,8 +15,9 @@ export const unorderedListBullets = {
 };
 
 // Glyphs Arial carries (its WGL4 set). Any other bullet glyph — the dingbats and
-// symbols Google Docs' presets use: ❖ ➢ ➔ ❏ ◆ ★ — is drawn in DejaVu Sans,
-// which covers them and is installed wherever TurboDocx converts documents.
+// symbols Google Docs' presets use: ❖ ➢ ➔ ❏ ◆ ★ — is drawn in the document
+// symbol font (documentSymbolFont), which the editor, the PDF renderer and the
+// Word file (embedded) all have.
 const arialBulletGlyphs = new Set([
   '\u2022', // •
   '\u25E6', // ◦
@@ -23,7 +26,7 @@ const arialBulletGlyphs = new Set([
   '\u25CB', // ○
   '\u25A0', // ■
 ]);
-export const symbolBulletFont = 'DejaVu Sans';
+export const symbolBulletFont = documentSymbolFont;
 
 // <ul data-bullet="❖">: the list's own glyph, when it is exactly one character.
 const getDataBullet = (attributes) => {
