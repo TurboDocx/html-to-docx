@@ -249,10 +249,15 @@ const buildBold = (off = false) => {
   return boldFragment.up();
 };
 
-const buildItalics = () =>
-  fragment({ namespaceAlias: { w: namespaces.w } })
-    .ele('@w', 'i')
-    .up();
+// `off` writes <w:i w:val="0"/>: italic switched off on purpose, by
+// font-style: normal, rather than not set.
+const buildItalics = (off = false) => {
+  const italicFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'i');
+  if (off) {
+    italicFragment.att('@w', 'val', '0');
+  }
+  return italicFragment.up();
+};
 
 const buildUnderline = (type = 'single') =>
   fragment({ namespaceAlias: { w: namespaces.w } })
@@ -803,6 +808,18 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         } else if (weight === 'normal' || weight === 'lighter' || Number(weight) > 0) {
           modifiedAttributes.strong = false;
         }
+      } else if (vNodeStyleKey === 'font-style') {
+        // Word has italic and not; an oblique face draws as italic. `normal`
+        // is kept as `false`, as font-weight's is, so it can switch off an
+        // italic an enclosing <em> or span hands down. The document editor
+        // writes a band's and a text style's italic this way, which came out
+        // upright when only <em> and <i> made a run italic.
+        const style = String(vNodeStyleValue).trim().toLowerCase();
+        if (style === 'italic' || style.startsWith('oblique')) {
+          modifiedAttributes.i = true;
+        } else if (style === 'normal') {
+          modifiedAttributes.i = false;
+        }
       } else if (vNodeStyleKey === 'font-family') {
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
       } else if (vNodeStyleKey === 'font-size') {
@@ -1017,7 +1034,7 @@ const buildFormatting = (htmlTag, options) => {
       return buildBold(Boolean(options && options.off));
     case 'em':
     case 'i':
-      return buildItalics();
+      return buildItalics(Boolean(options && options.off));
     case 'ins':
     case 'u':
       return buildUnderline();
@@ -1183,7 +1200,7 @@ const buildRunProperties = (attributes) => {
         options[key] = attributes[key];
       }
 
-      if (key === 'strong' && attributes[key] === false) {
+      if ((key === 'strong' || key === 'i') && attributes[key] === false) {
         options.off = true;
       }
 
