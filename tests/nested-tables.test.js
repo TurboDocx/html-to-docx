@@ -322,7 +322,6 @@ describe('Nested Tables - Issue #147', () => {
 
       const docx = await HTMLtoDOCX(htmlString);
 
-
       // Should render without errors
       expect(docx).toBeDefined();
     });
@@ -382,6 +381,101 @@ describe('Nested Tables - Issue #147', () => {
       // Tolerant of whitespace between tags.
       const bad = (xml.match(/<\/w:tbl>\s*<\/w:tc>/g) || []).length;
       expect(bad).toBe(0);
+    });
+
+    /**
+     * The rule itself, for cells where nothing was emitted or the last thing
+     * emitted was not a paragraph. Each of these made Word refuse the file.
+     */
+    describe.each([[true], [false]])(
+      'every cell ends in a paragraph (addSpacingAfter: %s)',
+      (addSpacingAfter) => {
+        const cellsNotEndingInParagraph = (xml) =>
+          xml
+            .split('</w:tc>')
+            .slice(0, -1)
+            .filter((cell) => !/(<\/w:p>|<w:p\/>)\s*$/.test(cell));
+
+        test.each([
+          ['an empty list item', '<ul><li></li></ul>'],
+          ['a whitespace-only list item', '<ul><li> </li></ul>'],
+          ['an empty list', '<ul></ul>'],
+          ['an empty figure', '<figure></figure>'],
+          ['an image that cannot be loaded', '<img src="">'],
+          [
+            'a list that ends in a table',
+            '<ul><li><table><tr><td>inner</td></tr></table></li></ul>',
+          ],
+          ['no content', ''],
+          ['text', 'text'],
+        ])('with %s', async (_name, cellHtml) => {
+          const buf = await HTMLtoDOCX(
+            `<table border="1"><tr><td>${cellHtml}</td></tr></table>`,
+            null,
+            {
+              table: { addSpacingAfter },
+            }
+          );
+          const zip = await JSZip.loadAsync(buf);
+          const xml = await zip.file('word/document.xml').async('string');
+          expect(cellsNotEndingInParagraph(xml)).toEqual([]);
+        });
+
+        test.each([
+          ['an empty list item', '<ul><li></li></ul>'],
+          ['an empty figure', '<figure></figure>'],
+          ['an image that cannot be loaded', '<img src="">'],
+        ])('gives a cell with %s a normal-height paragraph', async (_name, cellHtml) => {
+          const buf = await HTMLtoDOCX(
+            `<table border="1"><tr><td>${cellHtml}</td></tr></table>`,
+            null,
+            {
+              table: { addSpacingAfter },
+            }
+          );
+          const zip = await JSZip.loadAsync(buf);
+          const xml = await zip.file('word/document.xml').async('string');
+          // The exact 1pt sentinel belongs after a nested table only; here it would
+          // collapse the row to a hairline.
+          expect(xml).not.toContain('w:lineRule="exact"');
+        });
+      }
+    );
+
+    /**
+     * A list can end in a table since issue #198, so a cell whose last child is
+     * a list can also end in a table. table.addSpacingAfter: false is the
+     * failing configuration: the spacer paragraph otherwise hides the problem.
+     */
+    describe('cell whose list ends in a table', () => {
+      const inner = '<table border="1"><tr><td>inner</td></tr></table>';
+      async function getDocXmlWithoutSpacing(cellHtml) {
+        const buf = await HTMLtoDOCX(
+          `<table border="1"><tr><td>${cellHtml}</td></tr></table>`,
+          null,
+          { table: { addSpacingAfter: false } }
+        );
+        const zip = await JSZip.loadAsync(buf);
+        return zip.file('word/document.xml').async('string');
+      }
+
+      test.each([
+        ['table is the only list item content', `<ul><li>${inner}</li></ul>`],
+        ['table follows text in the list item', `<ul><li>text${inner}</li></ul>`],
+        ['table ends the last of several items', `<ol><li>one</li><li>two${inner}</li></ol>`],
+        ['table ends a nested list', `<ul><li>outer<ul><li>${inner}</li></ul></li></ul>`],
+        ['table ends the second list in the cell', `<ul><li>a</li></ul><ol><li>${inner}</li></ol>`],
+      ])('ends with a paragraph when the %s', async (_name, cellHtml) => {
+        const xml = await getDocXmlWithoutSpacing(cellHtml);
+        expect(xml).toContain('inner');
+        expect(xml).not.toMatch(/<\/w:tbl>\s*<\/w:tc>/);
+      });
+
+      test('adds no extra paragraph when the list continues after the table', async () => {
+        const xml = await getDocXmlWithoutSpacing(`<ul><li>${inner}<p>after</p></li></ul>`);
+        // The closing paragraph must be "after" itself, not a sentinel behind it.
+        expect(xml).toMatch(/after<\/w:t>\s*<\/w:r>\s*<\/w:p>\s*<\/w:tc>/);
+      });
     });
 
     test('multiple cells each ending with nested tables — none violate the rule', async () => {
@@ -467,7 +561,9 @@ describe('Nested Tables - Issue #147', () => {
       `;
       const xml = await getDocXml(html);
       // The separator should exist with the tight spacing.
-      const tight = (xml.match(/<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"\/>/g) || []).length;
+      const tight = (
+        xml.match(/<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"\/>/g) || []
+      ).length;
       // 1 leading + 1 trailing per nested table — here there is exactly one nested table.
       expect(tight).toBeGreaterThanOrEqual(2);
     });
@@ -1112,7 +1208,8 @@ describe('Nested Tables - Issue #147', () => {
     });
 
     test('inner cell with image (data URL)', async () => {
-      const PNG_1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+      const PNG_1x1 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
       const html = `
         <table border="1">
           <tr>
@@ -1358,9 +1455,15 @@ describe('Nested Tables - Issue #147', () => {
         </table>
       `;
       const { texts } = await inspect(html);
-      ['prefix-text', 'spanText', 'midText', 'strongText', 'postText', 'nestedAfterInlines', 'trailing'].forEach((s) =>
-        expect(texts).toContain(s)
-      );
+      [
+        'prefix-text',
+        'spanText',
+        'midText',
+        'strongText',
+        'postText',
+        'nestedAfterInlines',
+        'trailing',
+      ].forEach((s) => expect(texts).toContain(s));
     });
 
     test('massive width pixel value does not crash', async () => {
@@ -1402,8 +1505,7 @@ describe('Nested Tables - Issue #147', () => {
     });
 
     test('nested tables inside cells of a 3x3 grid, all positions', async () => {
-      const buildCell = (label) =>
-        `<td><table border="1"><tr><td>${label}</td></tr></table></td>`;
+      const buildCell = (label) => `<td><table border="1"><tr><td>${label}</td></tr></table></td>`;
       const html = `
         <table border="1">
           <tr>${buildCell('r1c1')}${buildCell('r1c2')}${buildCell('r1c3')}</tr>

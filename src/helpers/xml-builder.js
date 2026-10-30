@@ -2940,14 +2940,10 @@ const buildTableCell = async (
   }
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
-  // Track the last imported content so we know whether the cell needs a
-  // trailing sentinel <w:p> (OOXML requires every <w:tc> to end with a
-  // <w:p>; Word marks the file corrupted otherwise) and whether the next
-  // nested <w:tbl> needs a leading sentinel (without one, the inner
-  // table's top border lays out flush against the cell's top edge and
-  // Word/LibreOffice collapse the two borders into one heavier line).
+  // Track whether the next nested <w:tbl> needs a leading sentinel (without
+  // one, the inner table's top border lays out flush against the cell's top
+  // edge and Word/LibreOffice collapse the two borders into one heavier line).
   let cellHasContent = false;
-  let lastImportWasTable = false;
   if (vNodeHasChildren(vNode)) {
     for (let index = 0; index < vNode.children.length; index++) {
       const childVNode = vNode.children[index];
@@ -2961,7 +2957,6 @@ const buildTableCell = async (
         if (imageFragment) {
           tableCellFragment.import(imageFragment);
           cellHasContent = true;
-          lastImportWasTable = false;
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'figure') {
         if (vNodeHasChildren(childVNode)) {
@@ -2978,7 +2973,6 @@ const buildTableCell = async (
               if (imageFragment) {
                 tableCellFragment.import(imageFragment);
                 cellHasContent = true;
-                lastImportWasTable = false;
               }
             }
           }
@@ -2988,7 +2982,6 @@ const buildTableCell = async (
         if (vNodeHasChildren(childVNode)) {
           await buildList(childVNode, docxDocumentInstance, tableCellFragment);
           cellHasContent = true;
-          lastImportWasTable = false;
         }
       } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
         // Issue #147: render nested <table> in a table cell.
@@ -3008,7 +3001,6 @@ const buildTableCell = async (
         );
         tableCellFragment.import(nestedTableFragment);
         cellHasContent = true;
-        lastImportWasTable = true;
       } else {
         const paragraphFragment = await buildParagraph(
           childVNode,
@@ -3018,19 +3010,19 @@ const buildTableCell = async (
 
         tableCellFragment.import(paragraphFragment);
         cellHasContent = true;
-        lastImportWasTable = false;
       }
     }
-    // If the cell's final imported content was a nested table, append the
-    // hairline sentinel so the cell ends with <w:p> (OOXML requirement;
-    // Word reports the document as corrupted otherwise). When the last
-    // child is already a paragraph or list-paragraph, no sentinel is
-    // needed — this avoids a redundant blank line between nested tables
-    // and following paragraphs in the same cell.
-    if (lastImportWasTable) {
-      tableCellFragment.import(buildNestedTableSentinelParagraph());
-    }
-  } else {
+  }
+  // OOXML requires every <w:tc> to end with a <w:p>; Word reports the document
+  // as corrupted otherwise. A cell can end in a nested table, or hold nothing
+  // at all when its children emitted nothing (an empty <li>, a failed image),
+  // so check what is actually there. When the last child is already a
+  // paragraph, nothing is added — this avoids a redundant blank line between
+  // nested tables and following paragraphs in the same cell.
+  const lastCellChildName = tableCellFragment.last().node.localName;
+  if (lastCellChildName === 'tbl') {
+    tableCellFragment.import(buildNestedTableSentinelParagraph());
+  } else if (lastCellChildName !== 'p') {
     // TODO: Figure out why building with buildParagraph() isn't working
     const paragraphFragment = fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'p')
