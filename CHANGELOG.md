@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.23.3](https://github.com/TurboDocx/html-to-docx/compare/v1.23.2...v1.23.3) (2026-10-30)
+
+
+### Bug Fixes
+
+* **table:** always end a table cell with a paragraph, so Word no longer reports the file as corrupted. Affected cells whose children emit nothing (an empty `<li>`, `<ul>` or `<figure>`, or an image that fails to load) and, since 1.23.2, a list ending in a table with `table.addSpacingAfter: false` ([#262](https://github.com/TurboDocx/html-to-docx/pull/262))
+
 ### [1.23.2](https://github.com/TurboDocx/html-to-docx/compare/v1.23.1...v1.23.2) (2026-10-30)
 
 
