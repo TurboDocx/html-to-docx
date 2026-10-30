@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.23.2](https://github.com/TurboDocx/html-to-docx/compare/v1.23.1...v1.23.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* **list:** render a `<table>` nested inside an `<li>` between the list item's paragraphs instead of silently dropping it ([#229](https://github.com/TurboDocx/html-to-docx/pull/229))
+
+
+### Chores
+
+* **deps:** raise runtime minimums to `axios` ^1.20.0 and `probe-image-size` ^7.4.0
+* **deps:** lockfile security bumps for `follow-redirects`, `fast-uri`, `handlebars`, `brace-expansion`, and `serialize-javascript`, plus Next.js example bumps ([#246](https://github.com/TurboDocx/html-to-docx/pull/246), [#250](https://github.com/TurboDocx/html-to-docx/pull/250), [#251](https://github.com/TurboDocx/html-to-docx/pull/251), [#257](https://github.com/TurboDocx/html-to-docx/pull/257))
+
 ### [1.23.1](https://github.com/TurboDocx/html-to-docx/compare/v1.23.0...v1.23.1) (2026-09-11)
 
 Dependency-security hygiene. No change to the published library runtime — the npm tarball ships only `dist/`, type defs, `scripts/`, `README`, and `LICENSE`, so none of these dependencies reach consumers. This release re-pins the release branch, which was still carrying the advisories below.
