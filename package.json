@@ -76,6 +76,7 @@
     "test:alignments": "npm run build && node example/example-alignments.js",
     "test:rtl": "npm run build && node example/example-rtl.js",
     "test:headings": "npm run build && node example/example-heading-styles.js",
+    "test:example-table": "npm run build && node example/example-table-in-list.js",
     "test:ts": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/typescript-example.ts",
     "test:ts-rtl": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/rtl-example.ts",
     "test:all": "npm run test:unit && npm run test && npm run test:headings && npm run test:ts && npm run test:ts-rtl",
@@ -174,7 +175,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "axios": "^1.12.2",
+    "axios": "^1.20.0",
     "color-name": "^1.1.4",
     "html-entities": "^2.3.3",
     "html-minifier-terser": "^7.2.0",
@@ -184,12 +185,12 @@
     "lru-cache": "^10.4.3",
     "mime-types": "^2.1.35",
     "nanoid": "^3.3.18",
-    "probe-image-size": "^7.2.3",
+    "probe-image-size": "^7.4.0",
     "xmlbuilder2": "2.1.2"
   },
   "overrides": {
     "bl": "^1.2.3",
-    "fast-uri": "3.1.6",
+    "fast-uri": "3.1.9",
     "browserslist": "4.28.7",
     "baseline-browser-mapping": "2.11.0",
     "form-data": "^4.0.6",
