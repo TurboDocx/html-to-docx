@@ -29,5 +29,5 @@ jobs:
         run: npm ci  # Clean install to ensure reproducible builds
 
       - name: Run all tests
-        # Runs: unit tests (Jest), integration tests, heading styles examples, and TypeScript tests
+        # Runs: unit tests (Vitest), integration tests, heading styles examples, and TypeScript tests
         run: npm run test:all

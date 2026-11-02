@@ -6,18 +6,20 @@ import { parseDOCX } from './helpers/docx-assertions.js';
 import { isSVG, convertSVGtoPNG, parseSVGDimensions } from '../src/utils/image.js';
 import { SVG_BASE64, SVG_FIXTURE, PNG_FIXTURE } from './fixtures/index.js';
 
-// Mock sharp module
-jest.mock('sharp', () => {
-  const mockSharp = jest.fn((buffer) => {
+// Mock sharp module. src/utils/image.js loads it with require() because it is optional, and
+// vi.mock only intercepts imports, so the mock is handed to that require() instead. vi.hoisted
+// runs before the imports above; the original loader is restored after this file.
+const sharpLoader = vi.hoisted(() => {
+  const mockSharp = vi.fn((buffer) => {
     // Check if buffer contains invalid SVG for test purposes
     const bufferContent = buffer.toString('utf-8');
     const shouldThrowError = bufferContent.includes('not valid svg') ||
                             (!bufferContent.includes('<svg') && !bufferContent.includes('<?xml'));
 
     const api = {
-      resize: jest.fn(() => api),
-      png: jest.fn(() => api),
-      toBuffer: jest.fn(async () => {
+      resize: vi.fn(() => api),
+      png: vi.fn(() => api),
+      toBuffer: vi.fn(async () => {
         if (shouldThrowError) {
           throw new Error('Input buffer contains unsupported image format');
         }
@@ -57,8 +59,17 @@ jest.mock('sharp', () => {
     };
     return api;
   });
-  return mockSharp;
-}, { virtual: true });
+  const Module = require('module');
+  const load = Module._load;
+  Module._load = function loadWithMockSharp(request, ...args) {
+    return request === 'sharp' ? mockSharp : load.call(this, request, ...args);
+  };
+  return { Module, load };
+});
+
+afterAll(() => {
+  sharpLoader.Module._load = sharpLoader.load;
+});
 
 describe('SVG Handling', () => {
   describe('isSVG utility', () => {

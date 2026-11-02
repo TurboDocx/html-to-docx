@@ -7,7 +7,7 @@ import { parseDOCX } from './helpers/docx-assertions';
 import { PNG_1x1_BASE64, JPEG_1x1_BASE64 } from './fixtures/index';
 
 // Mock axios for downloadImageToBase64 tests
-jest.mock('axios');
+vi.mock('axios');
 
 describe('Inline Image Caching', () => {
   describe('Cache consistency between buildImage and buildRun', () => {

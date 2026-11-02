@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
-const { sanitizeSVGVNode, validateSVGString } = require('../src/utils/svg-sanitizer');
-const { VNode } = require('../src/vdom');
+import { sanitizeSVGVNode, validateSVGString } from '../src/utils/svg-sanitizer';
+import { VNode } from '../src/vdom';
 
 describe('SVG Sanitization - Security Tests', () => {
   describe('sanitizeSVGVNode - Blocking Dangerous Elements', () => {
@@ -415,8 +415,8 @@ describe('SVG Sanitization - Security Tests', () => {
     let consoleLogSpy;
 
     beforeEach(() => {
-      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {

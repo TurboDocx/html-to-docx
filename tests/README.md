@@ -19,9 +19,9 @@ npm run test:unit:watch
 npm run test:unit:coverage
 
 # Run a specific test file
-npx jest tests/xml-escape.test.js
-npx jest tests/heading-styles.test.js
-npx jest tests/heading-integration.test.js
+npx vitest run tests/xml-escape.test.js
+npx vitest run tests/heading-styles.test.js
+npx vitest run tests/heading-integration.test.js
 
 # Run all tests (unit + integration)
 npm run test:all

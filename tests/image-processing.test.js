@@ -15,7 +15,7 @@ import { PNG_1x1_BASE64, JPEG_1x1_BASE64, GIF_1x1_BASE64, PNG_FIXTURE } from './
 import axios from 'axios';
 
 // Mock axios for downloadImageToBase64 tests
-jest.mock('axios');
+vi.mock('axios');
 
 describe('Image Processing', () => {
   // Base64 images loaded from fixture files
@@ -503,7 +503,7 @@ describe('Image Processing', () => {
 
   describe('downloadImageToBase64 utility', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     test('should download image and convert to base64', async () => {
@@ -596,7 +596,7 @@ describe('Image Processing', () => {
     let mockDocxInstance;
 
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       // Create a minimal mock document instance
       mockDocxInstance = {
         imageProcessing: {},
@@ -749,7 +749,7 @@ describe('Image Processing', () => {
 
   describe('Image cache isolation', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     test('should isolate cache between different document generations', async () => {
@@ -881,7 +881,7 @@ describe('Image Processing', () => {
 
   describe('LRU cache eviction and memory limits', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     test('should respect maxCacheEntries limit and evict oldest entries', async () => {
@@ -1069,7 +1069,7 @@ describe('Image Processing', () => {
 
   describe('HTML attribute vs CSS style precedence', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     test('CSS style width/height should override HTML attribute width/height', async () => {
