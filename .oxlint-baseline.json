@@ -97,9 +97,6 @@
     },
     {
       "files": [
-        "example/typescript/rtl-example.ts",
-        "example/typescript/type-test.ts",
-        "example/typescript/typescript-example.ts",
         "scripts/diff-docx.js"
       ],
       "rules": {

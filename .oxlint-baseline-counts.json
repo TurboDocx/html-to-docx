@@ -45,9 +45,6 @@
     "tests/helpers/docx-validator.js": 1
   },
   "import-js/no-extraneous-dependencies": {
-    "example/typescript/rtl-example.ts": 1,
-    "example/typescript/type-test.ts": 1,
-    "example/typescript/typescript-example.ts": 1,
     "scripts/diff-docx.js": 1
   },
   "import-js/no-unresolved": {
