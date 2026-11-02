@@ -1,0 +1,1318 @@
+{
+  "overrides": [
+    {
+      "files": [
+        "src/utils/xml-escape.js",
+        "tests/inline-image-caching.test.js"
+      ],
+      "rules": {
+        "arrow-body-style": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/list.js"
+      ],
+      "rules": {
+        "class-methods-use-this": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js",
+        "src/docx-document.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js",
+        "src/utils/svg.js"
+      ],
+      "rules": {
+        "complexity": "off"
+      }
+    },
+    {
+      "files": [
+        "index.js",
+        "src/docx-document.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "default-param-last": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "eqeqeq": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/fixtures/index.js",
+        "tests/image-processing.test.js",
+        "tests/inline-image-caching.test.js",
+        "tests/nested-tables.test.js"
+      ],
+      "rules": {
+        "eslint-js/camelcase": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "eslint-js/consistent-return": "off"
+      }
+    },
+    {
+      "files": [
+        "index.js"
+      ],
+      "rules": {
+        "eslint-js/dot-notation": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "src/helpers/xml-builder.js",
+        "src/vdom/index.js",
+        "tests/rpr-child-order.test.js",
+        "tests/table-cell-borders.test.js"
+      ],
+      "rules": {
+        "eslint-js/no-restricted-syntax": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/helpers/docx-validator.js"
+      ],
+      "rules": {
+        "eslint-js/no-return-await": "off"
+      }
+    },
+    {
+      "files": [
+        "example/typescript/rtl-example.ts",
+        "example/typescript/type-test.ts",
+        "example/typescript/typescript-example.ts",
+        "scripts/diff-docx.js"
+      ],
+      "rules": {
+        "import-js/no-extraneous-dependencies": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "import-js/no-unresolved": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/image-processing.test.js"
+      ],
+      "rules": {
+        "import-js/order": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx",
+        "example/nextjs-example/app/page.tsx",
+        "tests/alignment.test.js",
+        "tests/heading-integration.test.js",
+        "tests/heading-styles.test.js",
+        "tests/helpers/docx-assertions.js",
+        "tests/helpers/docx-validator.js",
+        "tests/html-parser.test.js",
+        "tests/htmlparser2-compatibility.test.js",
+        "tests/image-processing.test.js",
+        "tests/inline-color-override.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/nested-tables.test.js",
+        "tests/page-break.test.js",
+        "tests/rpr-child-order.test.js",
+        "tests/strikethrough.test.js",
+        "tests/svg-handling.test.js",
+        "tests/table-cell-borders.test.js",
+        "tests/vdom.test.js",
+        "tests/vtree-iteration.test.js",
+        "tests/xml-escape.test.js"
+      ],
+      "rules": {
+        "import/extensions": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js"
+      ],
+      "rules": {
+        "import/first": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/render-document-file.js"
+      ],
+      "rules": {
+        "import/namespace": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/svg-sanitizer.js"
+      ],
+      "rules": {
+        "import/no-anonymous-default-export": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "babel.config.js",
+        "commitlint.config.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-alignments.js",
+        "example/example-heading-styles.js",
+        "example/example-inline-svg.js",
+        "example/example-node.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "example/example-table-in-list.js",
+        "jest.config.js",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js",
+        "tests/svg-sanitization.test.js"
+      ],
+      "rules": {
+        "import/no-commonjs": "off"
+      }
+    },
+    {
+      "files": [
+        "example/typescript/rtl-example.ts",
+        "example/typescript/typescript-example.ts",
+        "rollup.config.js",
+        "src/helpers/html-parser.js",
+        "src/helpers/render-document-file.js",
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "import/no-namespace": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js"
+      ],
+      "rules": {
+        "import/no-nodejs-modules": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/layout.tsx"
+      ],
+      "rules": {
+        "import/no-unassigned-import": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/truthy-check.js",
+        "src/utils/xml-escape.js"
+      ],
+      "rules": {
+        "import/prefer-default-export": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "babel.config.js",
+        "commitlint.config.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-alignments.js",
+        "example/example-heading-styles.js",
+        "example/example-inline-svg.js",
+        "example/example-node.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "example/example-table-in-list.js",
+        "jest.config.js",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js",
+        "tests/svg-sanitization.test.js"
+      ],
+      "rules": {
+        "import/unambiguous": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/alignment.test.js",
+        "tests/heading-integration.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/page-break.test.js",
+        "tests/rpr-child-order.test.js",
+        "tests/strikethrough.test.js",
+        "tests/table-cell-borders.test.js",
+        "tests/vtree-iteration.test.js"
+      ],
+      "rules": {
+        "jest/expect-expect": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/alignment.test.js",
+        "tests/html-parser.test.js",
+        "tests/table-cell-borders.test.js",
+        "tests/vdom.test.js"
+      ],
+      "rules": {
+        "jest/no-conditional-expect": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/alignment.test.js",
+        "tests/heading-styles.test.js",
+        "tests/html-parser.test.js",
+        "tests/htmlparser2-compatibility.test.js",
+        "tests/inline-image-caching.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/nested-tables.test.js",
+        "tests/rpr-child-order.test.js",
+        "tests/table-cell-borders.test.js",
+        "tests/vdom.test.js"
+      ],
+      "rules": {
+        "jest/no-conditional-in-test": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/inline-image-caching.test.js"
+      ],
+      "rules": {
+        "jest/prefer-mock-return-shorthand": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/html-parser.test.js",
+        "tests/htmlparser2-compatibility.test.js",
+        "tests/image-processing.test.js",
+        "tests/nested-tables.test.js",
+        "tests/vdom.test.js"
+      ],
+      "rules": {
+        "jest/prefer-strict-equal": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/alignment.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/vtree-iteration.test.js"
+      ],
+      "rules": {
+        "jest/prefer-to-have-length": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/svg-handling.test.js"
+      ],
+      "rules": {
+        "jest/require-to-throw-message": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/html-parser.js",
+        "src/helpers/render-document-file.js",
+        "src/vdom/index.js",
+        "tests/helpers/docx-validator.js",
+        "tests/table-cell-borders.test.js"
+      ],
+      "rules": {
+        "jsdoc/require-param": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/html-parser.js",
+        "src/helpers/render-document-file.js",
+        "src/vdom/index.js",
+        "tests/helpers/docx-validator.js",
+        "tests/table-cell-borders.test.js"
+      ],
+      "rules": {
+        "jsdoc/require-returns": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "logical-assignment-operators": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "max-depth": "off"
+      }
+    },
+    {
+      "files": [
+        "example/example-node.js",
+        "example/example.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "max-lines": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "max-lines-per-function": "off"
+      }
+    },
+    {
+      "files": [
+        "index.d.ts",
+        "index.js",
+        "src/docx-document.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js",
+        "src/html-to-docx.js",
+        "src/schemas/core.js",
+        "src/schemas/document.template.js",
+        "src/schemas/styles.js",
+        "src/utils/image.js",
+        "src/utils/svg.js",
+        "src/vdom/index.js",
+        "tests/helpers/docx-assertions.js"
+      ],
+      "rules": {
+        "max-params": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "max-statements": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/postinstall.js"
+      ],
+      "rules": {
+        "no-bitwise": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js",
+        "tests/helpers/docx-validator.js",
+        "tests/inline-color-override.test.js"
+      ],
+      "rules": {
+        "no-cond-assign": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/example-inline-svg.js",
+        "example/typescript/rtl-example.ts",
+        "example/typescript/typescript-example.ts",
+        "scripts/diff-docx.js",
+        "scripts/postinstall.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "src/helpers/xml-builder.js",
+        "tests/table-cell-borders.test.js"
+      ],
+      "rules": {
+        "no-continue": "off"
+      }
+    },
+    {
+      "files": [
+        "src/vdom/index.js"
+      ],
+      "rules": {
+        "no-eq-null": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/html-parser.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js",
+        "src/utils/truthy-check.js"
+      ],
+      "rules": {
+        "no-implicit-coercion": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-inline-svg.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js"
+      ],
+      "rules": {
+        "no-implicit-globals": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-utils.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "no-lonely-if": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "tests/image-processing.test.js",
+        "tests/inline-image-caching.test.js"
+      ],
+      "rules": {
+        "no-plusplus": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "no-promise-executor-return": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/svg-sanitization.test.js"
+      ],
+      "rules": {
+        "no-script-url": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js"
+      ],
+      "rules": {
+        "no-shadow": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/helpers/docx-validator.js"
+      ],
+      "rules": {
+        "no-underscore-dangle": "off"
+      }
+    },
+    {
+      "files": [
+        "example/typescript/type-test.ts",
+        "index.js",
+        "scripts/postinstall.js",
+        "src/utils/image.js",
+        "tests/helpers/docx-assertions.js",
+        "tests/image-processing.test.js",
+        "tests/nested-tables.test.js"
+      ],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx",
+        "scripts/diff-docx.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "no-use-before-define": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/htmlparser2-compatibility.test.js"
+      ],
+      "rules": {
+        "no-useless-concat": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/htmlparser2-compatibility.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/nested-tables.test.js"
+      ],
+      "rules": {
+        "node/global-require": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/example-alignments.js",
+        "example/example-node.js",
+        "rollup.config.js",
+        "scripts/postinstall.js"
+      ],
+      "rules": {
+        "node/no-process-env": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-inline-svg.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "example/typescript/rtl-example.ts",
+        "example/typescript/typescript-example.ts",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js"
+      ],
+      "rules": {
+        "node/no-sync": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js",
+        "tests/helpers/docx-validator.js",
+        "tests/html-parser.test.js"
+      ],
+      "rules": {
+        "prefer-destructuring": "off"
+      }
+    },
+    {
+      "files": [
+        "index.js",
+        "src/helpers/html-parser.js",
+        "src/helpers/xml-builder.js",
+        "src/vdom/index.js"
+      ],
+      "rules": {
+        "prefer-object-has-own": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/example-heading-styles.js",
+        "scripts/diff-utils.js"
+      ],
+      "rules": {
+        "prefer-template": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "preserve-caught-error": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-utils.js"
+      ],
+      "rules": {
+        "promise/always-return": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/inline-image-caching.test.js"
+      ],
+      "rules": {
+        "promise/param-names": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/example-alignments.js",
+        "example/example-heading-styles.js",
+        "example/example-node.js",
+        "example/example-table-in-list.js",
+        "example/example.js",
+        "scripts/diff-docx.js"
+      ],
+      "rules": {
+        "promise/prefer-await-to-callbacks": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js"
+      ],
+      "rules": {
+        "promise/prefer-await-to-then": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/image-processing.test.js"
+      ],
+      "rules": {
+        "radix": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx"
+      ],
+      "rules": {
+        "react-perf/jsx-no-new-function-as-prop": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx"
+      ],
+      "rules": {
+        "react/button-has-type": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/layout.tsx"
+      ],
+      "rules": {
+        "react/only-export-components": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/svg-handling.test.js"
+      ],
+      "rules": {
+        "require-await": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js",
+        "src/helpers/xml-builder.js",
+        "src/html-to-docx.js",
+        "src/schemas/styles.js",
+        "src/utils/options-utils.js",
+        "tests/alignment.test.js",
+        "tests/heading-integration.test.js",
+        "tests/helpers/docx-validator.js",
+        "tests/image-processing.test.js",
+        "tests/inline-image-caching.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/nested-tables.test.js",
+        "tests/page-break.test.js",
+        "tests/strikethrough.test.js",
+        "tests/svg-handling.test.js",
+        "tests/vtree-iteration.test.js"
+      ],
+      "rules": {
+        "sort-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "example/typescript/typescript-example.ts"
+      ],
+      "rules": {
+        "typescript/ban-ts-comment": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx",
+        "example/nextjs-example/app/layout.tsx",
+        "example/nextjs-example/app/page.tsx",
+        "example/typescript/rtl-example.ts",
+        "example/typescript/typescript-example.ts"
+      ],
+      "rules": {
+        "typescript/explicit-function-return-type": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx",
+        "example/nextjs-example/app/layout.tsx",
+        "example/nextjs-example/app/page.tsx"
+      ],
+      "rules": {
+        "typescript/explicit-module-boundary-types": "off"
+      }
+    },
+    {
+      "files": [
+        "src/vdom/index.js"
+      ],
+      "rules": {
+        "typescript/no-extraneous-class": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-alignments.js",
+        "example/example-heading-styles.js",
+        "example/example-inline-svg.js",
+        "example/example-node.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "example/example-table-in-list.js",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js",
+        "src/utils/image.js",
+        "tests/htmlparser2-compatibility.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/nested-tables.test.js",
+        "tests/svg-sanitization.test.js"
+      ],
+      "rules": {
+        "typescript/no-require-imports": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-alignments.js",
+        "example/example-heading-styles.js",
+        "example/example-inline-svg.js",
+        "example/example-node.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "example/example-table-in-list.js",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js",
+        "src/utils/image.js",
+        "tests/htmlparser2-compatibility.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/nested-tables.test.js",
+        "tests/svg-sanitization.test.js"
+      ],
+      "rules": {
+        "typescript/no-var-requires": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-utils.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "typescript/prefer-for-of": "off"
+      }
+    },
+    {
+      "files": [
+        "example/typescript/typescript-example.ts"
+      ],
+      "rules": {
+        "typescript/prefer-ts-expect-error": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx",
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "unicorn/catch-error-name": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/color-conversion.js"
+      ],
+      "rules": {
+        "unicorn/consistent-function-scoping": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/html-parser.test.js",
+        "tests/htmlparser2-compatibility.test.js"
+      ],
+      "rules": {
+        "unicorn/escape-case": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js",
+        "src/utils/vnode.js",
+        "src/vdom/index.js"
+      ],
+      "rules": {
+        "unicorn/explicit-length-check": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx"
+      ],
+      "rules": {
+        "unicorn/filename-case": "off"
+      }
+    },
+    {
+      "files": [
+        "example/typescript/rtl-example.ts",
+        "example/typescript/typescript-example.ts"
+      ],
+      "rules": {
+        "unicorn/import-style": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/svg-sanitization.test.js"
+      ],
+      "rules": {
+        "unicorn/max-nested-calls": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js"
+      ],
+      "rules": {
+        "unicorn/new-for-builtins": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/postinstall.js",
+        "src/helpers/html-parser.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "unicorn/no-array-reduce": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js",
+        "src/schemas/styles.js"
+      ],
+      "rules": {
+        "unicorn/no-array-sort": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js"
+      ],
+      "rules": {
+        "unicorn/no-immediate-mutation": "off"
+      }
+    },
+    {
+      "files": [
+        "index.js"
+      ],
+      "rules": {
+        "unicorn/no-instanceof-builtins": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "unicorn/no-lonely-if": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js",
+        "src/docx-document.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js",
+        "src/schemas/styles.js",
+        "src/vdom/index.js"
+      ],
+      "rules": {
+        "unicorn/no-negated-condition": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "unicorn/no-object-as-default-parameter": "off"
+      }
+    },
+    {
+      "files": [
+        "example/comprehensive-svg-test.js",
+        "example/example-inline-svg.js",
+        "example/example-svg.js"
+      ],
+      "rules": {
+        "unicorn/no-process-exit": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/list-multiple-paragraphs.test.js"
+      ],
+      "rules": {
+        "unicorn/no-unreadable-array-destructuring": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/render-document-file.js"
+      ],
+      "rules": {
+        "unicorn/no-useless-fallback-in-spread": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/list.js"
+      ],
+      "rules": {
+        "unicorn/no-useless-switch-case": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/svg-handling.test.js",
+        "tests/svg-sanitization.test.js",
+        "tests/vdom.test.js"
+      ],
+      "rules": {
+        "unicorn/no-useless-undefined": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/render-document-file.js",
+        "src/utils/font-family-conversion.js"
+      ],
+      "rules": {
+        "unicorn/prefer-at": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/postinstall.js",
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "unicorn/prefer-code-point": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx"
+      ],
+      "rules": {
+        "unicorn/prefer-dom-node-append": "off"
+      }
+    },
+    {
+      "files": [
+        "example/nextjs-example/app/DocxGenerator.tsx"
+      ],
+      "rules": {
+        "unicorn/prefer-dom-node-remove": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/helpers/docx-assertions.js"
+      ],
+      "rules": {
+        "unicorn/prefer-export-from": "off"
+      }
+    },
+    {
+      "files": [
+        "index.js"
+      ],
+      "rules": {
+        "unicorn/prefer-global-this": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js",
+        "src/helpers/xml-builder.js",
+        "src/utils/svg.js"
+      ],
+      "rules": {
+        "unicorn/prefer-logical-operator-over-ternary": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "babel.config.js",
+        "commitlint.config.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-alignments.js",
+        "example/example-heading-styles.js",
+        "example/example-inline-svg.js",
+        "example/example-node.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "example/example-table-in-list.js",
+        "example/typescript/rtl-example.ts",
+        "example/typescript/typescript-example.ts",
+        "jest.config.js",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js",
+        "src/utils/image.js",
+        "tests/htmlparser2-compatibility.test.js",
+        "tests/list-multiple-paragraphs.test.js",
+        "tests/nested-tables.test.js",
+        "tests/svg-sanitization.test.js"
+      ],
+      "rules": {
+        "unicorn/prefer-module": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "example/comprehensive-svg-test.js",
+        "example/example-alignments.js",
+        "example/example-heading-styles.js",
+        "example/example-inline-svg.js",
+        "example/example-node.js",
+        "example/example-rtl.js",
+        "example/example-svg.js",
+        "example/example-table-in-list.js",
+        "example/example.js",
+        "example/typescript/rtl-example.ts",
+        "example/typescript/typescript-example.ts",
+        "scripts/diff-docx.js",
+        "scripts/diff-utils.js",
+        "scripts/postinstall.js",
+        "tests/fixtures/index.js",
+        "tests/htmlparser2-compatibility.test.js"
+      ],
+      "rules": {
+        "unicorn/prefer-node-protocol": "off"
+      }
+    },
+    {
+      "files": [
+        "src/schemas/styles.js",
+        "src/utils/image.js",
+        "src/utils/svg.js",
+        "tests/helpers/docx-validator.js",
+        "tests/list-multiple-paragraphs.test.js"
+      ],
+      "rules": {
+        "unicorn/prefer-number-coercion": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js",
+        "src/schemas/styles.js",
+        "src/utils/color-conversion.js",
+        "src/utils/image.js",
+        "src/utils/svg.js",
+        "tests/helpers/docx-validator.js",
+        "tests/image-processing.test.js",
+        "tests/list-multiple-paragraphs.test.js"
+      ],
+      "rules": {
+        "unicorn/prefer-number-properties": "off"
+      }
+    },
+    {
+      "files": [
+        "index.js",
+        "scripts/postinstall.js",
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "unicorn/prefer-optional-catch-binding": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "unicorn/prefer-regexp-test": "off"
+      }
+    },
+    {
+      "files": [
+        ".github/scripts/update-contributors.js",
+        "src/helpers/render-document-file.js"
+      ],
+      "rules": {
+        "unicorn/prefer-set-has": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/diff-docx.js"
+      ],
+      "rules": {
+        "unicorn/prefer-single-call": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "unicorn/prefer-spread": "off"
+      }
+    },
+    {
+      "files": [
+        "rollup.config.js",
+        "scripts/diff-utils.js",
+        "src/helpers/xml-builder.js",
+        "src/utils/svg.js",
+        "src/utils/xml-escape.js",
+        "tests/helpers/docx-validator.js"
+      ],
+      "rules": {
+        "unicorn/prefer-string-replace-all": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js",
+        "src/utils/image.js",
+        "src/utils/svg.js"
+      ],
+      "rules": {
+        "unicorn/prefer-string-slice": "off"
+      }
+    },
+    {
+      "files": [
+        "src/constants.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js"
+      ],
+      "rules": {
+        "unicorn/prefer-structured-clone": "off"
+      }
+    },
+    {
+      "files": [
+        "src/helpers/xml-builder.js",
+        "src/utils/image.js",
+        "src/utils/svg.js"
+      ],
+      "rules": {
+        "unicorn/prefer-ternary": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/image.js"
+      ],
+      "rules": {
+        "unicorn/prefer-type-error": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js",
+        "src/helpers/render-document-file.js",
+        "src/helpers/xml-builder.js",
+        "src/utils/list.js",
+        "src/utils/options-utils.js"
+      ],
+      "rules": {
+        "unicorn/switch-case-braces": "off"
+      }
+    },
+    {
+      "files": [
+        "src/docx-document.js",
+        "src/html-to-docx.js",
+        "src/utils/image.js",
+        "src/utils/svg.js",
+        "tests/fixtures/index.js",
+        "tests/inline-svg-element.test.js",
+        "tests/svg-handling.test.js"
+      ],
+      "rules": {
+        "unicorn/text-encoding-identifier-case": "off"
+      }
+    }
+  ]
+}

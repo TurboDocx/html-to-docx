@@ -55,9 +55,6 @@ typings/
 # Optional npm cache directory
 .npm
 
-# Optional eslint cache
-.eslintcache
-
 # Optional REPL history
 .node_repl_history
 
@@ -111,3 +108,5 @@ temp/
 
 # macOS
 .DS_Store
+# Temporary config written by scripts/oxlint-baseline.mjs
+.oxlintrc.unbaselined.json

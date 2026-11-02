@@ -1,0 +1,28 @@
+# Build output
+dist/
+# Vendored third-party code, kept close to upstream
+oxlint-plugins/
+# Not yet formatted, see scripts/oxlint-baseline.mjs
+.github/scripts/update-contributors.js
+example/example-alignments.js
+example/example-svg.js
+jest.config.js
+rollup.config.js
+scripts/diff-docx.js
+scripts/postinstall.js
+src/docx-document.js
+src/helpers/xml-builder.js
+src/utils/xml-escape.js
+tests/alignment.test.js
+tests/html-parser.test.js
+tests/htmlparser2-compatibility.test.js
+tests/image-processing.test.js
+tests/inline-color-override.test.js
+tests/list-multiple-paragraphs.test.js
+tests/page-break.test.js
+tests/rpr-child-order.test.js
+tests/strikethrough.test.js
+tests/svg-handling.test.js
+tests/svg-sanitization.test.js
+tests/vdom.test.js
+tests/xml-escape.test.js

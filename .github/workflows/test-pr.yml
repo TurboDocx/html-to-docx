@@ -31,3 +31,35 @@ jobs:
       - name: Run all tests
         # Runs: unit tests (Jest), integration tests, heading styles examples, and TypeScript tests
         run: npm run test:all
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        # Fails on any violation the baseline counts do not cover and, on a pull request, on a
+        # baseline that grew compared to the base branch.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          base_args=""
+          if [ -n "$BASE_REF" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_REF"
+            base_args="--base FETCH_HEAD"
+          fi
+          npm run -s lint:ci -- $base_args
+
+      - name: Check formatting
+        # Runs even when lint fails, so one CI run reports both.
+        if: success() || failure()
+        run: npm run prettier:check

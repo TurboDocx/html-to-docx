@@ -1,0 +1,4 @@
+# Build output
+dist/
+# Vendored third-party code, kept close to upstream
+oxlint-plugins/
