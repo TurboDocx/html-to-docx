@@ -231,11 +231,13 @@ describe('baseline ratchet (scripts/oxlint-baseline.mjs)', () => {
     expect(result.stderr).toContain('src/messy.js');
   });
 
-  test("keeps a renamed file's allowance, for the counts and the Prettier list", () => {
+  test("keeps a renamed file's allowance once the rename is locked in, for the counts and the Prettier list", () => {
     git({ args: ['mv', LEGACY, MOVED] });
     git({ args: ['mv', UGLY, 'src/renamed.js'] });
-    expect(check().status).toBe(0);
+    // The PR that renames the file must lock the move in, or the branch it merges into goes red.
+    expect(check().status).toBe(1);
     expect(ratchet().status).toBe(0);
+    expect(check().status).toBe(0);
     expect(counts()['no-console']).toStrictEqual({ [MOVED]: 1, [STABLE]: 1 });
     expect(readFileSync(path.join(dir, '.prettier-baseline'), 'utf8')).toContain(
       '\nsrc/renamed.js\n'

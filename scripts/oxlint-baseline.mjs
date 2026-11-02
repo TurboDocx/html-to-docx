@@ -192,10 +192,11 @@ const findFixed = ({ current, committed }) =>
       .map(([file, count]) => ({ rule, file, count: current[rule]?.[file] ?? 0, committed: count }))
   );
 
-// Files added, changed, renamed or deleted since `ref`, untracked files included.
+// Files added, changed or deleted since `ref`, untracked files included. A rename lists both paths
+// (--no-renames), so the PR that renames a baselined file must lock the move in.
 const changedFilesSince = async ({ ref }) => {
   const [tracked, untracked] = await Promise.all([
-    git({ gitArgs: ['diff', '--name-only', '--no-color', ref] }),
+    git({ gitArgs: ['diff', '--name-only', '--no-renames', '--no-color', ref] }),
     git({ gitArgs: ['ls-files', '--others', '--exclude-standard'] }),
   ]);
   return new Set([...linesOf({ text: tracked.stdout }), ...linesOf({ text: untracked.stdout })]);
