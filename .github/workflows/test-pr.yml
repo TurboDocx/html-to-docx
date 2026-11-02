@@ -48,15 +48,18 @@ jobs:
 
       - name: Lint
         # Fails on any violation the baseline counts do not cover and, on a pull request, on a
-        # baseline that grew compared to the base branch.
+        # baseline that grew compared to the base branch. A PR that turns on a new rule and
+        # baselines its violations opts in with the lint-baseline-growth label.
         env:
           BASE_REF: ${{ github.base_ref }}
+          ALLOW_BASELINE_GROWTH: ${{ contains(github.event.pull_request.labels.*.name, 'lint-baseline-growth') }}
         run: |
           base_args=""
           if [ -n "$BASE_REF" ]; then
             git fetch --no-tags --depth=1 origin "$BASE_REF"
             base_args="--base FETCH_HEAD"
           fi
+          if [ "$ALLOW_BASELINE_GROWTH" = "true" ]; then base_args="$base_args --allow-base-growth"; fi
           npm run -s lint:ci -- $base_args
 
       - name: Check formatting

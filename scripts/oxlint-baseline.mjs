@@ -11,9 +11,11 @@
 //   node scripts/oxlint-baseline.mjs --check          fail on any violation the counts do not cover
 //   node scripts/oxlint-baseline.mjs --check --base <ref>
 //                                                     CI on a pull request: also fail if the committed
-//                                                     lists grew compared to <ref>
+//                                                     lists grew compared to <ref>, unless
+//                                                     --allow-base-growth is passed (CI passes it when
+//                                                     the PR carries the lint-baseline-growth label)
 //   node scripts/oxlint-baseline.mjs --allow-growth   regenerate even though they grow; only for turning
-//                                                     on a new rule, which also changes .oxlintrc.json
+//                                                     on a new rule
 import { execFile } from 'node:child_process';
 import { access, readFile, rm, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
@@ -188,14 +190,6 @@ const committedAt = async ({ ref }) => {
   };
 };
 
-const configChangedSince = async ({ ref }) => {
-  const { status } = await run({
-    command: 'git',
-    commandArgs: ['diff', '--quiet', ref, '--', CONFIG, PRETTIER_IGNORE],
-  });
-  return status !== 0;
-};
-
 const check = async ({ committed, current, diagnostics }) => {
   const growth = findGrowth({ current, allowed: committed.counts });
   let failed = growth.length > 0;
@@ -206,12 +200,14 @@ const check = async ({ committed, current, diagnostics }) => {
     printGrowth({ growth, diagnostics });
   }
   const base = baseRef ? await committedAt({ ref: baseRef }) : null;
-  if (base && !(await configChangedSince({ ref: baseRef }))) {
+  if (base && !args.includes('--allow-base-growth')) {
     const baselineGrowth = findGrowth({ current: committed.counts, allowed: base.counts });
     const prettierGrowth = committed.unformatted.filter((file) => !base.unformatted.includes(file));
     if (baselineGrowth.length > 0 || prettierGrowth.length > 0) {
       failed = true;
-      process.stderr.write(`\nThe baseline grew compared to ${baseRef} without a rule change:\n`);
+      process.stderr.write(
+        `\nThe baseline grew compared to ${baseRef}. If that is intended (a newly enabled rule), add the lint-baseline-growth label:\n`
+      );
       baselineGrowth.forEach(({ rule, file, count, allowed }) => {
         process.stderr.write(`  ${COUNTS} ${file}: ${rule} ${allowed} -> ${count}\n`);
       });
