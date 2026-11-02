@@ -58,6 +58,7 @@
       }
     ],
     "no-cond-assign": ["error", "always"],
+    "no-constant-condition": ["error", { "checkLoops": "all" }], // Oxlint's default (ESLint 9's) skips while (true)
     "no-else-return": ["error", { "allowElseIf": false }],
     "no-empty-function": ["error", { "allow": ["arrowFunctions", "functions", "methods"] }],
     "no-global-assign": ["error", { "exceptions": [] }],
