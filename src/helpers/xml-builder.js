@@ -107,7 +107,7 @@ const isColorCode = (colorCode) =>
   hexRegex.test(colorCode) ||
   hex3Regex.test(colorCode);
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 const fixupColorCode = (colorCodeString) => {
   if (Object.prototype.hasOwnProperty.call(colorNames, colorCodeString.toLowerCase())) {
     const [red, green, blue] = colorNames[colorCodeString.toLowerCase()];
@@ -328,7 +328,7 @@ const buildTextShadow = () =>
     .att('@w', 'val', true)
     .up();
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 const fixupLineHeight = (lineHeight, fontSize) => {
   // FIXME: If line height is anything other than a number
   // eslint-disable-next-line no-restricted-globals
@@ -362,7 +362,7 @@ const fixupLineHeight = (lineHeight, fontSize) => {
   }
 };
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
   if (pointRegex.test(fontSizeString)) {
     const matchedParts = fontSizeString.match(pointRegex);
@@ -385,7 +385,7 @@ const fixupFontSize = (fontSizeString, docxDocumentInstance) => {
   }
 };
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
   if (pointRegex.test(rowHeightString)) {
     const matchedParts = rowHeightString.match(pointRegex);
@@ -407,7 +407,7 @@ const fixupRowHeight = (rowHeightString, parentHeight = 0) => {
   }
 };
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 const fixupColumnWidth = (columnWidthString, parentWidth = 0) => {
   if (pointRegex.test(columnWidthString)) {
     const matchedParts = columnWidthString.match(pointRegex);
@@ -427,7 +427,7 @@ const fixupColumnWidth = (columnWidthString, parentWidth = 0) => {
   }
 };
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 const fixupMargin = (marginString) => {
   if (pointRegex.test(marginString)) {
     const matchedParts = marginString.match(pointRegex);
@@ -3340,7 +3340,7 @@ const buildTableRow = async (
     );
     const maximumColumnWidth = docxDocumentInstance.availableDocumentSpace / tableColumns.length;
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line eslint-js/no-restricted-syntax
     for (const column of tableColumns) {
       const rowSpanCellFragments = buildRowSpanCell(
         rowSpanMap,
