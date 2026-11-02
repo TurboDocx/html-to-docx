@@ -154,7 +154,27 @@ function resolverExtensions(settings, sourceFile) {
   return isTypeScript(sourceFile) ? [...extensions, ".ts", ".tsx", ".d.ts"] : extensions;
 }
 
-const cache = new Map();
+// eslint-module-utils' ModuleCache: entries expire after its default lifetime of 30 seconds, so a
+// long-lived process (an editor's language server) notices files created or deleted since.
+const CACHE_LIFETIME_MS = 30_000;
+function createCache() {
+  const entries = new Map();
+  return {
+    get(key) {
+      const entry = entries.get(key);
+      if (entry === undefined || Date.now() - entry.at > CACHE_LIFETIME_MS) return undefined;
+      return entry.value;
+    },
+    set(key, value) {
+      entries.set(key, { value, at: Date.now() });
+    },
+  };
+}
+
+// Resolved paths; a miss is not cached, as upstream does not (its `cache(undefined)` is commented out).
+const resolveCache = createCache();
+// fileExistsWithCaseSync results per path, as upstream's fileExistsCache.
+const fileExistsCache = createCache();
 
 // eslint-module-utils/resolve: the absolute path a module specifier resolves to, null for a core
 // module, undefined when it does not resolve.
@@ -168,7 +188,8 @@ function resolve(modulePath, context) {
   const root = path.resolve(context.cwd || process.cwd());
   const typescript = isTypeScript(sourceFile);
   const key = `${root}\0${basedir}\0${extensions.join(",")}\0${modulePath}`;
-  if (cache.has(key)) return cache.get(key);
+  const cached = resolveCache.get(key);
+  if (cached !== undefined) return cached;
   let resolved;
   if (isBuiltin(modulePath)) {
     resolved = null;
@@ -178,21 +199,28 @@ function resolve(modulePath, context) {
       selfReference: typescript,
     });
   }
-  cache.set(key, resolved);
+  if (resolved !== undefined) resolveCache.set(key, resolved);
   return resolved;
 }
 
-// eslint-module-utils/resolve.js fileExistsWithCaseSync, without the cache settings.
+// eslint-module-utils/resolve.js fileExistsWithCaseSync, with its per-path cache (default lifetime).
 function fileExistsWithCaseSync(filepath, strict) {
   if (CASE_SENSITIVE_FS) return true;
   if (filepath === null) return true;
   if (filepath.toLowerCase() === process.cwd().toLowerCase() && !strict) return true;
   const parsedPath = path.parse(filepath);
   const dir = parsedPath.dir;
-  if (dir === "" || parsedPath.root === filepath) return true;
-  const filenames = fs.readdirSync(dir);
-  if (!filenames.includes(parsedPath.base)) return false;
-  return fileExistsWithCaseSync(dir, strict);
+  const cached = fileExistsCache.get(filepath);
+  if (cached !== undefined) return cached;
+  let result;
+  if (dir === "" || parsedPath.root === filepath) {
+    result = true;
+  } else {
+    const filenames = fs.readdirSync(dir);
+    result = filenames.includes(parsedPath.base) ? fileExistsWithCaseSync(dir, strict) : false;
+  }
+  fileExistsCache.set(filepath, result);
+  return result;
 }
 
 module.exports = { CASE_SENSITIVE_FS, fileExistsWithCaseSync, resolve };

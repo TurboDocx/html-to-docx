@@ -16,6 +16,7 @@ module.exports = {
         "no-dupe-args": require("./rules/no-dupe-args.cjs"),
         "no-octal": require("./rules/no-octal.cjs"),
         "no-octal-escape": require("./rules/no-octal-escape.cjs"),
+        "no-undef-init": require("./rules/no-undef-init.cjs"),
         "no-restricted-syntax": require("./rules/no-restricted-syntax.cjs"),
         "no-return-await": require("./rules/no-return-await.cjs"),
         "spaced-comment": require("./rules/spaced-comment.cjs"),

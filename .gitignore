@@ -109,4 +109,4 @@ temp/
 # macOS
 .DS_Store
 # Temporary config written by scripts/oxlint-baseline.mjs
-.oxlintrc.unbaselined.json
+.oxlintrc.unbaselined-*.json

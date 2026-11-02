@@ -1,7 +1,8 @@
 {
   // Everything is on by default: every category below is an error, for every file, for new code.
-  // A rule is off here only for a stated reason. Existing violations live in .oxlint-baseline.json,
-  // a per-file allowlist that only ever shrinks (see scripts/oxlint-baseline.mjs).
+  // A rule is off here only for a stated reason. Existing violations live in .oxlint-baseline-counts.json
+  // (exact counts per rule and file) and .oxlint-baseline.json (derived), a ratchet that only ever
+  // shrinks (see scripts/oxlint-baseline.mjs).
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./.oxlint-baseline.json"],
   "plugins": [
@@ -106,7 +107,8 @@
       "error",
       { "allowShortCircuit": false, "allowTernary": false, "allowTaggedTemplates": false, "enforceForJSX": false }
     ],
-    "no-unused-vars": ["error", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
+    "no-unused-vars": ["error", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true, "caughtErrors": "none" }], // caughtErrors: ESLint 7's default
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }], // an `import type` beside a value import is not a duplicate
     "no-use-before-define": ["error", { "functions": true, "classes": true, "variables": true }],
     "no-useless-rename": ["error", { "ignoreDestructuring": false, "ignoreImport": false, "ignoreExport": false }],
     "object-shorthand": ["error", "always", { "ignoreConstructors": false, "avoidQuotes": true }],
@@ -128,7 +130,6 @@
     "node/global-require": "error",
     "node/no-new-require": "error",
     "node/no-path-concat": "error",
-    "unicorn/no-useless-undefined": "error", // covers no-undef-init
 
     // airbnb-base rules from the vendored plugins, with airbnb's options.
     "eslint-js/camelcase": [
@@ -144,6 +145,7 @@
     "eslint-js/no-dupe-args": "error",
     "eslint-js/no-octal": "error",
     "eslint-js/no-octal-escape": "error",
+    "eslint-js/no-undef-init": "error",
     "eslint-js/no-restricted-syntax": [
       "error",
       {
@@ -222,6 +224,11 @@
     "import/no-named-export": "off", // contradicts import/prefer-default-export (airbnb)
     "sort-imports": ["error", { "ignoreDeclarationSort": true }], // import-js/order owns declaration order
     "unicorn/no-array-for-each": "off", // asks for for..of, which eslint-js/no-restricted-syntax bans (airbnb)
+    "typescript/prefer-for-of": "off", // the same contradiction: asks for for..of
+    "unicorn/no-useless-undefined": "off", // contradicts eslint-js/consistent-return: only `return null` would satisfy both
+    // Every file Oxlint parses as a script here is CommonJS, where Node's module wrapper makes top-level
+    // declarations module-scoped; Oxlint does not model the wrapper, so they would read as globals.
+    "no-implicit-globals": "off",
     "unicorn/prefer-top-level-await": "off", // contradicts node/no-top-level-await, which keeps modules loadable with require(esm)
     "no-ternary": "off", // contradicts unicorn/prefer-ternary
     "no-negated-condition": "off", // duplicate of unicorn/no-negated-condition
@@ -296,6 +303,11 @@
         "**/*.test.*"
       ],
       "rules": { "import/no-nodejs-modules": "off" }
+    },
+    {
+      // Node ESM resolves a relative import only with its extension, so .mjs files spell it out.
+      "files": ["**/*.mjs"],
+      "rules": { "import/extensions": ["error", "always", { "ignorePackages": true }] }
     },
     {
       // The Next.js example's client components run in the browser.

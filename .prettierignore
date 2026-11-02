@@ -2,3 +2,6 @@
 dist/
 # Vendored third-party code, kept close to upstream
 oxlint-plugins/
+# Generated and gitignored: test coverage and the Next.js example's build
+coverage/
+.next/

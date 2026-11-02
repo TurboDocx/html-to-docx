@@ -60,14 +60,6 @@
     },
     {
       "files": [
-        "src/helpers/xml-builder.js"
-      ],
-      "rules": {
-        "eslint-js/consistent-return": "off"
-      }
-    },
-    {
-      "files": [
         "index.js"
       ],
       "rules": {
@@ -79,7 +71,6 @@
         "scripts/diff-docx.js",
         "scripts/diff-utils.js",
         "src/helpers/xml-builder.js",
-        "src/vdom/index.js",
         "tests/rpr-child-order.test.js",
         "tests/table-cell-borders.test.js"
       ],
@@ -488,21 +479,6 @@
     },
     {
       "files": [
-        ".github/scripts/update-contributors.js",
-        "example/comprehensive-svg-test.js",
-        "example/example-inline-svg.js",
-        "example/example-rtl.js",
-        "example/example-svg.js",
-        "scripts/diff-docx.js",
-        "scripts/diff-utils.js",
-        "scripts/postinstall.js"
-      ],
-      "rules": {
-        "no-implicit-globals": "off"
-      }
-    },
-    {
-      "files": [
         "scripts/diff-utils.js",
         "src/helpers/xml-builder.js"
       ],
@@ -556,9 +532,6 @@
     {
       "files": [
         "example/typescript/type-test.ts",
-        "index.js",
-        "scripts/postinstall.js",
-        "src/utils/image.js",
         "tests/helpers/docx-assertions.js",
         "tests/image-processing.test.js",
         "tests/nested-tables.test.js"
@@ -854,16 +827,6 @@
     },
     {
       "files": [
-        "scripts/diff-utils.js",
-        "src/helpers/render-document-file.js",
-        "src/helpers/xml-builder.js"
-      ],
-      "rules": {
-        "typescript/prefer-for-of": "off"
-      }
-    },
-    {
-      "files": [
         "example/typescript/typescript-example.ts"
       ],
       "rules": {
@@ -1038,16 +1001,6 @@
       ],
       "rules": {
         "unicorn/no-useless-switch-case": "off"
-      }
-    },
-    {
-      "files": [
-        "tests/svg-handling.test.js",
-        "tests/svg-sanitization.test.js",
-        "tests/vdom.test.js"
-      ],
-      "rules": {
-        "unicorn/no-useless-undefined": "off"
       }
     },
     {

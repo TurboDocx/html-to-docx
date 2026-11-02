@@ -86,7 +86,7 @@
     "test:browser": "npm run build && npx -y serve . -l 8080 --no-clipboard",
     "prerelease": "npm run build:prod",
     "release": "standard-version",
-    "lint": "oxlint .",
+    "lint": "node scripts/oxlint-baseline.mjs --check --fast",
     "lint:fix": "oxlint --fix -A all .",
     "lint:ci": "node scripts/oxlint-baseline.mjs --check",
     "lint:baseline": "node scripts/oxlint-baseline.mjs",
@@ -208,11 +208,11 @@
     "*.js": [
       "oxlint --fix -A all --no-error-on-unmatched-pattern",
       "prettier --write",
-      "oxlint --no-error-on-unmatched-pattern"
+      "node scripts/oxlint-baseline.mjs --check --fast"
     ],
     "*.{mjs,cjs,ts,tsx}": [
       "oxlint --fix -A all --no-error-on-unmatched-pattern",
-      "oxlint --no-error-on-unmatched-pattern"
+      "node scripts/oxlint-baseline.mjs --check --fast"
     ]
   }
 }

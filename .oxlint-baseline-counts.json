@@ -27,17 +27,13 @@
     "tests/inline-image-caching.test.js": 5,
     "tests/nested-tables.test.js": 2
   },
-  "eslint-js/consistent-return": {
-    "src/helpers/xml-builder.js": 4
-  },
   "eslint-js/dot-notation": {
     "index.js": 6
   },
   "eslint-js/no-restricted-syntax": {
     "scripts/diff-docx.js": 8,
     "scripts/diff-utils.js": 1,
-    "src/helpers/xml-builder.js": 7,
-    "src/vdom/index.js": 1,
+    "src/helpers/xml-builder.js": 6,
     "tests/rpr-child-order.test.js": 25,
     "tests/table-cell-borders.test.js": 6
   },
@@ -265,16 +261,6 @@
     "src/helpers/xml-builder.js": 2,
     "src/utils/truthy-check.js": 1
   },
-  "no-implicit-globals": {
-    ".github/scripts/update-contributors.js": 4,
-    "example/comprehensive-svg-test.js": 1,
-    "example/example-inline-svg.js": 1,
-    "example/example-rtl.js": 1,
-    "example/example-svg.js": 1,
-    "scripts/diff-docx.js": 2,
-    "scripts/diff-utils.js": 8,
-    "scripts/postinstall.js": 3
-  },
   "no-lonely-if": {
     "scripts/diff-utils.js": 1,
     "src/helpers/xml-builder.js": 1
@@ -299,9 +285,6 @@
   },
   "no-unused-vars": {
     "example/typescript/type-test.ts": 7,
-    "index.js": 1,
-    "scripts/postinstall.js": 2,
-    "src/utils/image.js": 1,
     "tests/helpers/docx-assertions.js": 1,
     "tests/image-processing.test.js": 2,
     "tests/nested-tables.test.js": 2
@@ -466,11 +449,6 @@
     "tests/nested-tables.test.js": 2,
     "tests/svg-sanitization.test.js": 2
   },
-  "typescript/prefer-for-of": {
-    "scripts/diff-utils.js": 1,
-    "src/helpers/render-document-file.js": 4,
-    "src/helpers/xml-builder.js": 18
-  },
   "typescript/prefer-ts-expect-error": {
     "example/typescript/typescript-example.ts": 1
   },
@@ -548,11 +526,6 @@
   },
   "unicorn/no-useless-switch-case": {
     "src/utils/list.js": 1
-  },
-  "unicorn/no-useless-undefined": {
-    "tests/svg-handling.test.js": 1,
-    "tests/svg-sanitization.test.js": 1,
-    "tests/vdom.test.js": 2
   },
   "unicorn/prefer-at": {
     "src/helpers/render-document-file.js": 3,

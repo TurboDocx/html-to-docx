@@ -1,7 +1,8 @@
 "use strict";
 
 // eslint-plugin-import 2.31.0 src/core/importType.js (MIT, see LICENSE). is-core-module is replaced
-// by Node's own module.isBuiltin.
+// by Node's own module.isBuiltin, and typeTest no longer passes settings and path to the helpers that
+// only take the name.
 const { isBuiltin: isCoreModule } = require("node:module");
 const { isAbsolute: nodeIsAbsolute, relative, resolve: nodeResolve } = require("node:path");
 
@@ -91,11 +92,11 @@ function isExternalLookingName(name) {
 function typeTest(name, context, path) {
   const { settings } = context;
   if (isInternalRegexMatch(name, settings)) { return "internal"; }
-  if (isAbsolute(name, settings, path)) { return "absolute"; }
+  if (isAbsolute(name)) { return "absolute"; }
   if (isBuiltIn(name, settings, path)) { return "builtin"; }
-  if (isRelativeToParent(name, settings, path)) { return "parent"; }
-  if (isIndex(name, settings, path)) { return "index"; }
-  if (isRelativeToSibling(name, settings, path)) { return "sibling"; }
+  if (isRelativeToParent(name)) { return "parent"; }
+  if (isIndex(name)) { return "index"; }
+  if (isRelativeToSibling(name)) { return "sibling"; }
   if (isExternalPath(path, context)) { return "external"; }
   if (isInternalPath(path, context)) { return "internal"; }
   if (isExternalLookingName(name)) { return "external"; }

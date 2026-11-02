@@ -2,6 +2,9 @@
 dist/
 # Vendored third-party code, kept close to upstream
 oxlint-plugins/
+# Generated and gitignored: test coverage and the Next.js example's build
+coverage/
+.next/
 # Not yet formatted, see scripts/oxlint-baseline.mjs
 .github/scripts/update-contributors.js
 example/example-alignments.js
