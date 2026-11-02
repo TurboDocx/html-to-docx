@@ -19,7 +19,7 @@ import {
 // convertSVGtoPNG will throw a helpful error if sharp is needed but missing
 let sharp;
 try {
-  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+  // eslint-disable-next-line global-require, import-js/no-extraneous-dependencies
   sharp = require('sharp');
 } catch (e) {
   // Sharp not installed - will use native SVG mode
@@ -447,7 +447,7 @@ export const downloadAndCacheImage = async (docxDocumentInstance, imageSource, o
   return null;
 };
 
-// eslint-disable-next-line consistent-return, no-shadow
+// eslint-disable-next-line eslint-js/consistent-return, no-shadow
 export const buildImage = async (
   docxDocumentInstance,
   vNode,

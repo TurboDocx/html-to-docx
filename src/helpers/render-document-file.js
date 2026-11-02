@@ -609,7 +609,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
   }
 }
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 export async function convertVTreeToXML(
   docxDocumentInstance,
   vTree,

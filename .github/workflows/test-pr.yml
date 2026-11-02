@@ -31,3 +31,51 @@ jobs:
       - name: Run all tests
         # Runs: unit tests (Jest), integration tests, heading styles examples, and TypeScript tests
         run: npm run test:all
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        # Fails on any violation or unformatted file the baselines do not cover, on fixes not locked in
+        # and, on a pull request, on baselines that grew or lint rules that changed compared to the base
+        # branch. A pull request that turns a rule on or off opts in with the lint-baseline-growth label.
+        env:
+          # The exact commit the pull request's merge commit was built on, not the branch tip, which may
+          # have moved.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          base_args=""
+          # A develop to main release carries changes that were already reviewed (and labeled) on develop.
+          if [ -n "$BASE_SHA" ] && [ "$HEAD_REF" != "develop" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            base_args="--base FETCH_HEAD"
+            # Read live rather than from the event payload, so adding the label and re-running works.
+            labels=$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels")
+            if grep -q '"name": *"lint-baseline-growth"' <<<"$labels"; then
+              base_args="$base_args --allow-base-growth"
+            fi
+          fi
+          npm run -s lint:ci -- $base_args
+
+      - name: Check formatting
+        # Runs even when lint fails, so one CI run reports both.
+        if: success() || failure()
+        run: npm run prettier:check

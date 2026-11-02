@@ -66,7 +66,7 @@ export class VNode {
     let hooks;
 
     // Check properties for hooks
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line eslint-js/no-restricted-syntax
     for (const propName in properties) {
       if (Object.prototype.hasOwnProperty.call(properties, propName)) {
         const property = properties[propName];
