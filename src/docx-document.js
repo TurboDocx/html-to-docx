@@ -275,18 +275,17 @@ class DocxDocument {
   }
 
   generateCoreXML() {
-    return generateXMLString(
-      generateCoreXML(
-        this.title,
-        this.subject,
-        this.creator,
-        this.keywords,
-        this.description,
-        this.lastModifiedBy,
-        this.revision,
-        this.createdAt,
-        this.modifiedAt
-      )
+    // Already serialized XML: running it through generateXMLString would escape its entities again.
+    return generateCoreXML(
+      this.title,
+      this.subject,
+      this.creator,
+      this.keywords,
+      this.description,
+      this.lastModifiedBy,
+      this.revision,
+      this.createdAt,
+      this.modifiedAt
     );
   }
 
