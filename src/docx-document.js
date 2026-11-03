@@ -248,6 +248,13 @@ class DocxDocument {
     this.direction = properties.direction || 'ltr';
     this.tableRowCantSplit =
       (properties.table && properties.table.row && properties.table.row.cantSplit) || false;
+    // A list level's indent and its marker's hanging, in twips: Word's 720 and
+    // 360 unless the document names its own (the document editor's 45px level
+    // and 25px marker column).
+    this.listLevelIndent =
+      (properties.numbering && Number(properties.numbering.levelIndent)) || 720;
+    this.listHangingIndent =
+      (properties.numbering && Number(properties.numbering.hangingIndent)) || 360;
     this.tableBorders =
       (properties.table && properties.table.borderOptions) ||
       defaultDocumentOptions.table.borderOptions;
@@ -290,7 +297,12 @@ class DocxDocument {
     this.generateFooterXML = this.generateFooterXML.bind(this);
     this.generateSectionXML = generateSectionXML.bind(this);
 
-    this.ListStyleBuilder = new ListStyleBuilder(properties.numbering);
+    // The list options merge over the defaults: a document that names only
+    // its indents keeps the default ordered-list style.
+    this.ListStyleBuilder = new ListStyleBuilder({
+      ...defaultDocumentOptions.numbering,
+      ...(properties.numbering || {}),
+    });
   }
 
   generateContentTypesXML() {
@@ -503,7 +515,8 @@ class DocxDocument {
                 properties.attributes
               );
         // "01." is as wide as an outline "1.1.": hang it as far so it clears its text.
-        let hangingIndent = numberFormat === 'decimalZero' ? 540 : 360;
+        const baseHanging = this.listHangingIndent;
+        let hangingIndent = numberFormat === 'decimalZero' ? baseHanging + 180 : baseHanging;
         if (type === 'ol' && outline) {
           // Outline levels are all decimal; only the list's own first level
           // honours its start value, deeper levels restart at 1 under their parent.
@@ -511,7 +524,7 @@ class DocxDocument {
           numberFormat = 'decimal';
           levelText = this.ListStyleBuilder.getOutlineListLevelText(level, baseLevel);
           // "1.1.1." is wider than "1.": give each deeper level 180 more twips.
-          hangingIndent = 360 + 180 * Math.max(0, level - baseLevel);
+          hangingIndent = baseHanging + 180 * Math.max(0, level - baseLevel);
         }
 
         const levelFragment = fragment({ namespaceAlias: { w: namespaces.w } })
@@ -533,11 +546,11 @@ class DocxDocument {
           .ele('@w', 'tabs')
           .ele('@w', 'tab')
           .att('@w', 'val', 'num')
-          .att('@w', 'pos', (level + 1) * 720)
+          .att('@w', 'pos', (level + 1) * this.listLevelIndent)
           .up()
           .up()
           .ele('@w', 'ind')
-          .att('@w', 'left', (level + 1) * 720)
+          .att('@w', 'left', (level + 1) * this.listLevelIndent)
           .att('@w', 'hanging', hangingIndent)
           .up()
           .up()

@@ -408,6 +408,8 @@ Full examples can be found under `example/`, including a complete
     - `restart` <"continuous"|"newPage"|"newSection"> numbering restart strategy. Defaults to `continuous`.
   - `numbering` <?[Object]>
     - `defaultOrderedListStyleType` <?[String]> default ordered list style type. Defaults to `decimal`.
+    - `levelIndent` <?[Number]> each list level's indent, in twips. Defaults to `720` (0.5in).
+    - `hangingIndent` <?[Number]> how far a list marker or checkbox hangs before its text, in twips. Defaults to `360`.
   - `heading` <?[Object]> custom heading styles configuration
   - `heading1`-`heading6` <?[Object]> heading style configuration
     - `font` <?[String]> font family

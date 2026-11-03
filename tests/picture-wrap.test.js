@@ -102,6 +102,46 @@ describe('a picture against its text', () => {
     );
   });
 
+  // The editor draws a picture's line outside it and keeps its whole width
+  // clear — a wrapped picture's line starts at its line's top, the picture
+  // its width below (pageBlockEditor.css margin) — where Word draws the line
+  // outside the picture's place. Placed at the line's top, a 3px line reached
+  // up into the line before, and Word narrowed it a word short (page 6 of the
+  // parity draft, 2026-11-03). So a lined picture is placed its line's width
+  // further in, as the editor draws it.
+  it('sets a wrapped picture with a line its width below its line', async () => {
+    const anchor = anchorOf(
+      await documentXml(
+        `<p><img src="${PIXEL}" width="80" height="40" data-wrap="right" data-wrap-gap="12" data-border-width="3" data-border-color="#000000">Text</p>`
+      )
+    );
+
+    expect(anchor).toMatch(
+      new RegExp(
+        `<wp:positionV relativeFrom="line">\\s*<wp:posOffset>${3 * EMU_PER_PX}</wp:posOffset>`
+      )
+    );
+  });
+
+  it('moves a placed picture with a line its width in, both ways', async () => {
+    const anchor = anchorOf(
+      await documentXml(
+        `<p>Signed <img src="${PIXEL}" width="120" height="40" data-wrap="behind" data-position="text" data-x="30" data-y="-6" data-border-width="2" data-border-color="#000000"></p>`
+      )
+    );
+
+    expect(anchor).toMatch(
+      new RegExp(
+        `<wp:positionH relativeFrom="column">\\s*<wp:posOffset>${32 * EMU_PER_PX}</wp:posOffset>`
+      )
+    );
+    expect(anchor).toMatch(
+      new RegExp(
+        `<wp:positionV relativeFrom="line">\\s*<wp:posOffset>${-4 * EMU_PER_PX}</wp:posOffset>`
+      )
+    );
+  });
+
   it('gives each anchored picture its own place in the stack', async () => {
     const xml = await documentXml(
       `<p><img src="${PIXEL}" width="10" height="10" data-wrap="front" data-position="text" data-x="0" data-y="0"><img src="${PIXEL}" width="10" height="10" data-wrap="behind" data-position="text" data-x="0" data-y="0"></p>`
