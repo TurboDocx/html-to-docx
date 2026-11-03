@@ -93,6 +93,10 @@ declare namespace HTMLtoDOCX {
         lineNumberOptions?: LineNumberOptions;
         numbering?: {
             defaultOrderedListStyleType?: string;
+            /** Each list level's indent, in twips (Word's 720). */
+            levelIndent?: number;
+            /** How far a list marker hangs before the text, in twips (Word's 360). */
+            hangingIndent?: number;
         };
         heading?: HeadingConfig;
         decodeUnicode?: boolean;

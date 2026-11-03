@@ -309,13 +309,19 @@ const buildTextElement = (text) => {
   return textFragment;
 };
 
+// An underline, named a colour only when the CSS names one: unnamed, Word
+// draws the line in the text's colour, as CSS does (currentColor).
+const appendUnderline = (parent, value) => {
+  const underline = parent.ele('@w', 'u').att('@w', 'val', value.style ? value.style : 'single');
+  if (value.color) {
+    underline.att('@w', 'color', value.color);
+  }
+  return underline.up();
+};
+
 const buildTextDecoration = (value) => {
   if (value.line === 'underline') {
-    return fragment({ namespaceAlias: { w: namespaces.w } })
-      .ele('@w', 'u')
-      .att('@w', 'val', value.style ? value.style : 'single')
-      .att('@w', 'color', value.color ? value.color : '000000')
-      .up();
+    return appendUnderline(fragment({ namespaceAlias: { w: namespaces.w } }), value);
   } else if (value.line === 'line-through') {
     return fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'strike')
@@ -327,14 +333,13 @@ const buildTextDecoration = (value) => {
   // (spec slot 9) then <w:u> (slot 27) so the resulting <w:rPr> child
   // sequence stays valid per ECMA-376 EG_RPrBase. Word silently drops
   // out-of-order children.
-  return fragment({ namespaceAlias: { w: namespaces.w } })
-    .ele('@w', 'strike')
-    .att('@w', 'val', true)
-    .up()
-    .ele('@w', 'u')
-    .att('@w', 'val', value.style ? value.style : 'single')
-    .att('@w', 'color', value.color ? value.color : '000000')
-    .up();
+  return appendUnderline(
+    fragment({ namespaceAlias: { w: namespaces.w } })
+      .ele('@w', 'strike')
+      .att('@w', 'val', true)
+      .up(),
+    value
+  );
 };
 
 // maps html text-decoration-style attribute values to ooxml values
@@ -1939,8 +1944,12 @@ const buildListContinuationIndent = (level) => {
 };
 
 // Hanging indent of a checklist item at `level`, matching list numbering
-// (numbering.xml uses left=(level+1)*720, hanging=360).
-const checklistIndentLeft = (level) => ((level || 0) + 1) * 720;
+// (numbering.xml uses left=(level+1)*levelIndent, hanging=hangingIndent —
+// Word's 720 and 360 unless the document names its own).
+const checklistIndentLeft = (level, docxDocumentInstance) =>
+  ((level || 0) + 1) * ((docxDocumentInstance && docxDocumentInstance.listLevelIndent) || 720);
+const checklistHanging = (docxDocumentInstance) =>
+  (docxDocumentInstance && docxDocumentInstance.listHangingIndent) || 360;
 
 // The checkbox glyph run and the tab that moves the item text to the indent.
 const buildChecklistMarkerRuns = (checked, fontSize) => {
@@ -2143,7 +2152,10 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
         case 'checklist':
           // Checklist items are indented like list items, with the checkbox
           // glyph in the hanging indent; later blocks align with the text.
-          const checklistLeft = checklistIndentLeft(attributes.checklist.level);
+          const checklistLeft = checklistIndentLeft(
+            attributes.checklist.level,
+            docxDocumentInstance
+          );
           if (attributes.isContinuation) {
             addChild(
               'ind',
@@ -2169,7 +2181,7 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
               fragment({ namespaceAlias: { w: namespaces.w } })
                 .ele('@w', 'ind')
                 .att('@w', 'left', String(checklistLeft))
-                .att('@w', 'hanging', '360')
+                .att('@w', 'hanging', String(checklistHanging(docxDocumentInstance)))
                 .up()
             );
           }
@@ -5512,8 +5524,14 @@ const buildExtent = ({ width, height }) =>
 // Where a placed picture sits (imagePlacementOf). A wrap: at the column's
 // left or right edge, level with the line it belongs to. Behind or in front:
 // its offsets from the column and that line, or from the page when it is
-// fixed there — what the editor measures them from.
-const buildPositionH = (placement) => {
+// fixed there — what the editor measures them from. A picture with a line is
+// set that line's width further in: the editor keeps the line inside the
+// place it measures (a margin of the line's width, pageBlockEditor.css), Word
+// draws it outside the picture's — a wrapped picture's 3px line reached into
+// the line above, and Word narrowed it a word short (2026-11-03).
+const lineReachOf = (border) => (border ? border.width : 0);
+
+const buildPositionH = (placement, border) => {
   const positionFragment = fragment({ namespaceAlias: { wp: namespaces.wp } }).ele(
     '@wp',
     'positionH'
@@ -5524,19 +5542,20 @@ const buildPositionH = (placement) => {
     positionFragment
       .att('relativeFrom', placement.position === 'page' ? 'page' : 'column')
       .ele('@wp', 'posOffset')
-      .txt(String(pixelToEMU(placement.x)))
+      .txt(String(pixelToEMU(placement.x + lineReachOf(border))))
       .up();
   }
   return positionFragment.up();
 };
 
-const buildPositionV = (placement) => {
+const buildPositionV = (placement, border) => {
   const wrapped = placement.wrap === 'left' || placement.wrap === 'right';
+  const reach = lineReachOf(border);
   return fragment({ namespaceAlias: { wp: namespaces.wp } })
     .ele('@wp', 'positionV')
     .att('relativeFrom', !wrapped && placement.position === 'page' ? 'page' : 'line')
     .ele('@wp', 'posOffset')
-    .txt(String(wrapped ? 0 : pixelToEMU(placement.y)))
+    .txt(String(pixelToEMU(wrapped ? reach : placement.y + reach)))
     .up()
     .up();
 };
@@ -5583,8 +5602,8 @@ const buildAnchoredDrawing = (graphicType, attributes) => {
   // Required by the schema even though nothing reads it while simplePos="0".
   const simplePosFragment = buildSimplePos();
   anchoredDrawingFragment.import(simplePosFragment);
-  anchoredDrawingFragment.import(buildPositionH(placement));
-  anchoredDrawingFragment.import(buildPositionV(placement));
+  anchoredDrawingFragment.import(buildPositionH(placement, attributes.border));
+  anchoredDrawingFragment.import(buildPositionV(placement, attributes.border));
   const extentFragment = buildExtent({ width: attributes.width, height: attributes.height });
   anchoredDrawingFragment.import(extentFragment);
   const effectExtentFragment = buildEffectExtentFragment(attributes.border);
