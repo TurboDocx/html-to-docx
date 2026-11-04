@@ -43,6 +43,18 @@ describe("a paragraph's mark", () => {
     expect(markOf(paragraphs[0])).toBeNull();
   });
 
+  // Word reads <w:rPr> children as an ordered sequence (EG_RPrBase) and drops what is out of
+  // place: the mark's strike came after its size, so Word let it go.
+  test('lists its formatting in the order the schema gives it', async () => {
+    const { paragraphs } = await convert(
+      '<p style="font-size: 20px; color: #ff0000; text-decoration: line-through">Struck</p>'
+    );
+    const mark = markOf(paragraphs[0]);
+    expect(mark).toContain('<w:strike');
+    expect(mark.indexOf('<w:strike')).toBeLessThan(mark.indexOf('<w:color'));
+    expect(mark.indexOf('<w:color')).toBeLessThan(mark.indexOf('<w:sz'));
+  });
+
   test('sits after the spacing and the alignment, as the schema orders them', async () => {
     const { paragraphs } = await convert(
       '<p style="font-size: 20px; line-height: 1.15; text-align: center">x</p>'

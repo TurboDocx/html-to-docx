@@ -1131,33 +1131,30 @@ const rprElementSortIndex = (name) => {
   const idx = RPR_ELEMENT_ORDER.indexOf(name);
   return idx === -1 ? RPR_ELEMENT_ORDER.length : idx;
 };
-// Read every direct child element of <w:rPr> in source order, sort them
-// by spec slot, and return a fresh fragment with the sorted XML. Idempotent:
-// applying twice produces the same output.
+// Puts the direct children of <w:rPr> in spec slot order, in place, and hands
+// the same element back. Idempotent: applying twice produces the same output.
+//
+// It sorts the element's own nodes. It used to serialize the fragment and match
+// `<w:rPr>` in the text — but a fragment on its own serializes as
+// `<rPr xmlns="…"><color xmlns:ns1="…" ns1:val="…"/>`, unprefixed, so nothing
+// ever matched and no <w:rPr> was ever sorted: a strike came out after its
+// size, and Word dropped it.
 const sortRprChildren = (rprFragment) => {
-  const xmlString = rprFragment.end({ headless: true, prettyPrint: false });
-  const innerMatch = xmlString.match(/<w:rPr\b[^>]*>([\s\S]*)<\/w:rPr>/);
-  if (!innerMatch || !innerMatch[1].trim()) return rprFragment;
-  const inner = innerMatch[1];
-  // Match each child element: either self-closing <w:foo .../> or paired
-  // <w:foo>...</w:foo>. Children that nest other elements with the same
-  // namespace are matched greedily up to their own closing tag.
-  const childRe = /<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*\/>|<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>[\s\S]*?<\/w:\2>/g;
+  const element = rprFragment && rprFragment.node;
+  if (!element || !element.childNodes || element.childNodes.length <= 1) return rprFragment;
   const children = [];
-  let m;
-  while ((m = childRe.exec(inner)) !== null) {
-    const name = m[1] || m[2];
-    children.push({ name, xml: m[0], originalIndex: children.length });
+  for (let index = 0; index < element.childNodes.length; index += 1) {
+    children.push({ node: element.childNodes.item(index), originalIndex: index });
   }
-  if (children.length <= 1) return rprFragment;
   // Stable sort: equal slots preserve original order so multiple runs of
   // (e.g.) <w:b/> never get scrambled.
   children.sort((a, b) => {
-    const slotDiff = rprElementSortIndex(a.name) - rprElementSortIndex(b.name);
+    const slotDiff = rprElementSortIndex(a.node.localName) - rprElementSortIndex(b.node.localName);
     return slotDiff !== 0 ? slotDiff : a.originalIndex - b.originalIndex;
   });
-  const sortedXml = `<w:rPr>${children.map((c) => c.xml).join('')}</w:rPr>`;
-  return fragment(sortedXml);
+  // Appending a child that is already there moves it to the end: in turn, the sorted order.
+  children.forEach(({ node }) => element.appendChild(node));
+  return rprFragment;
 };
 
 // Collects the children of a properties element under their element names so
@@ -2229,7 +2226,8 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
         case 'paragraphMark':
           // The paragraph's own type, on its mark: Word lays the last line off
           // the mark too, and an empty paragraph off nothing else (buildParagraph).
-          addChild('rPr', buildRunProperties(attributes.paragraphMark));
+          // In schema order, as a run's are (sortRprChildren): Word drops an out-of-place child.
+          addChild('rPr', sortRprChildren(buildRunProperties(attributes.paragraphMark)));
           delete attributes.paragraphMark;
           break;
         case 'paragraphStyle':
