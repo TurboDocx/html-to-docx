@@ -48,7 +48,10 @@ export const EIPToPoint = (EIPValue) => Math.round(EIPValue / 8);
 
 export const pointToEIP = (PointValue) => Math.round(PointValue * 8);
 
-export const pixelToEIP = (pixelValue) => pointToEIP(pixelToPoint(pixelValue));
+// A CSS pixel is 3/4 of a point: 6 eighths, exactly. Through pixelToPoint it
+// went by half points and then whole points, so 1px came out as 1pt and 3px
+// as 3pt — borders heavier in Word than on screen (2026-11-03).
+export const pixelToEIP = (pixelValue) => Math.round(Number(pixelValue) * 6);
 
 export const EIPToPixel = (EIPValue) => pointToPixel(EIPToPoint(EIPValue));
 

@@ -102,6 +102,12 @@ function getAllRprFragments(xml) {
   return [...xml.matchAll(/<w:rPr>([\s\S]*?)<\/w:rPr>/g)].map((m) => m[1]);
 }
 
+// A run's own properties, leaving out a paragraph mark's (inside <w:pPr>):
+// the mark takes the paragraph's type, not what an inner <strong> adds.
+function getRunRprFragments(xml) {
+  return [...xml.matchAll(/<w:r>\s*<w:rPr>([\s\S]*?)<\/w:rPr>/g)].map((m) => m[1]);
+}
+
 describe('<w:rPr> child element order (ECMA-376 EG_RPrBase)', () => {
   test('deeply-nested span color + size + font emits children in spec order', async () => {
     const html =
@@ -332,6 +338,21 @@ describe('<w:rPr> child element order (ECMA-376 EG_RPrBase)', () => {
       }
     });
 
+    // A CSS line-through comes in as text-decoration, which sorted with the underline — after the
+    // size. Only the post-sort of the run's own children puts its strike where Word reads it.
+    test('size + CSS line-through (text-decoration) on a span', async () => {
+      const html = '<p><span style="font-size: 14pt; text-decoration: line-through">gone</span></p>';
+      const { xml } = await parseDOCX(
+        await HTMLtoDOCX(html, null, { deterministicIds: true })
+      );
+      const struck = getAllRprFragments(xml).filter((rpr) => rpr.includes('<w:strike'));
+      expect(struck.length).toBeGreaterThan(0);
+      struck.forEach((rpr) => {
+        assertElementPresent(rpr, 'sz');
+        assertRprInSpecOrder(rpr);
+      });
+    });
+
     test('underline + strikethrough (combined text-decoration)', async () => {
       const html = '<p><u><del>both</del></u></p>';
       const { xml } = await parseDOCX(
@@ -382,6 +403,11 @@ describe('<w:rPr> child element order (ECMA-376 EG_RPrBase)', () => {
         await HTMLtoDOCX(html, null, { deterministicIds: true })
       );
       for (const rpr of getAllRprFragments(xml)) {
+        if (rpr.includes('Arial')) {
+          assertRprInSpecOrder(rpr);
+        }
+      }
+      for (const rpr of getRunRprFragments(xml)) {
         if (rpr.includes('Arial')) {
           assertRprInSpecOrder(rpr);
           assertElementPresent(rpr, 'rFonts');
