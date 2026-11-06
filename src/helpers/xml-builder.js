@@ -4084,9 +4084,22 @@ const buildTableCell = async (
         tableCellFragment.import(nestedTableFragment);
         cellHasContent = true;
       } else {
+        // A heading in a cell is a Word heading, as one in the body is
+        // (render-document-file), where the document asks for it
+        // (table.cellHeadings): its style, so Word's navigation pane and table
+        // of contents list it. Its own spacing and type, written on it, still
+        // win over the style's. Otherwise a plain paragraph, as it always was.
+        const headingLevel =
+          docxDocumentInstance.tableCellHeadings &&
+          isVNode(childVNode) &&
+          /^h[1-6]$/.test(childVNode.tagName)
+            ? childVNode.tagName[1]
+            : null;
         const paragraphFragment = await buildParagraph(
           childVNode,
-          modifiedAttributes,
+          headingLevel
+            ? { ...modifiedAttributes, paragraphStyle: `Heading${headingLevel}` }
+            : modifiedAttributes,
           docxDocumentInstance
         );
 

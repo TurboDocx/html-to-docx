@@ -248,6 +248,9 @@ class DocxDocument {
     this.direction = properties.direction || 'ltr';
     this.tableRowCantSplit =
       (properties.table && properties.table.row && properties.table.row.cantSplit) || false;
+    // A heading in a table cell built as a Word heading — its HeadingN style —
+    // rather than a plain paragraph; off unless asked for (table.cellHeadings).
+    this.tableCellHeadings = Boolean(properties.table && properties.table.cellHeadings);
     // A list level's indent and its marker's hanging, in twips: Word's 720 and
     // 360 unless the document names its own (the document editor's 45px level
     // and 25px marker column).
