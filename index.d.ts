@@ -28,6 +28,8 @@ declare namespace HTMLtoDOCX {
             color?: string;
         };
         addSpacingAfter?: boolean;
+        /** A heading in a table cell as a Word heading (its HeadingN style); off by default. */
+        cellHeadings?: boolean;
     }
 
     interface LineNumberOptions {
