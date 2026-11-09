@@ -371,10 +371,13 @@ describe('HTML Parser - Edge Cases', () => {
     expect(result.tagName).toBe('script');
   });
 
-  test('should handle style tags', () => {
+  test('should consume <style> tags as CSS instead of emitting them as nodes', () => {
+    // <style> tags are now extracted by the CSS resolver and removed from the
+    // tree so their raw text never renders as document content.
     const result = convertHTML('<style>.test { color: red; }</style>');
 
-    expect(result.tagName).toBe('style');
+    expect(isVText(result)).toBe(true);
+    expect(result.tagName).toBeUndefined();
   });
 
   test('should preserve case in attribute names', () => {
