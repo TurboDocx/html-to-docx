@@ -86,9 +86,12 @@
     "test:browser": "npm run build && npx -y serve . -l 8080 --no-clipboard",
     "prerelease": "npm run build:prod",
     "release": "standard-version",
-    "lint": "eslint --fix .",
-    "prettier:check": "prettier --check '**/*.{js}'",
-    "validate": "run-s lint prettier:check",
+    "lint": "node scripts/oxlint-baseline.mjs --check --fast",
+    "lint:fix": "oxlint --fix -A all .",
+    "lint:ci": "node scripts/oxlint-baseline.mjs --check",
+    "lint:baseline": "node scripts/oxlint-baseline.mjs",
+    "prettier:check": "prettier --check --ignore-path .prettier-baseline \"**/*.js\"",
+    "validate": "npm run lint && npm run prettier:check",
     "build": "rollup -c",
     "build:dev": "NODE_ENV=development rollup -c",
     "build:prod": "NODE_ENV=production rollup -c",
@@ -156,15 +159,11 @@
     "babel-jest": "^30.2.0",
     "cross-env": "^7.0.3",
     "diff": "^5.2.0",
-    "eslint": "^7.32.0",
-    "eslint-config-airbnb-base": "^14.2.1",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-import": "^2.24.2",
-    "eslint-plugin-prettier": "^4.0.0",
     "husky": "^7.0.0",
     "jest": "^29.7.0",
     "lint-staged": "^11.1.2",
     "lodash-es": "^4.17.21",
+    "oxlint": "1.89.0",
     "prettier": "^2.4.1",
     "rollup": "^2.62.0",
     "rollup-plugin-cleaner": "^1.0.0",
@@ -206,9 +205,14 @@
     "semver": "^7.6.0"
   },
   "lint-staged": {
-    "src/**/*.js": [
+    "*.js": [
+      "oxlint --fix -A all --no-error-on-unmatched-pattern",
       "prettier --write",
-      "eslint --fix"
+      "node scripts/oxlint-baseline.mjs --check --fast"
+    ],
+    "*.{mjs,cjs,ts,tsx}": [
+      "oxlint --fix -A all --no-error-on-unmatched-pattern",
+      "node scripts/oxlint-baseline.mjs --check --fast"
     ]
   }
 }

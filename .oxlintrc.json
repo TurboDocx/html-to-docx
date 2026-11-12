@@ -1,0 +1,332 @@
+{
+  // Everything is on by default: every category below is an error, for every file, for new code.
+  // A rule is off here only for a stated reason. Existing violations live in .oxlint-baseline-counts.json
+  // (exact counts per rule and file) and .oxlint-baseline.json (derived), a ratchet that only ever
+  // shrinks (see scripts/oxlint-baseline.mjs).
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": ["./.oxlint-baseline.json"],
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "jest",
+    "promise",
+    "node",
+    "jsdoc",
+    "react",
+    "react-perf",
+    "jsx-a11y",
+    "nextjs"
+  ],
+  // ESLint and eslint-plugin-import rules that Oxlint has no version of, vendored (MIT) so the
+  // airbnb-base checks keep running without ESLint installed.
+  "jsPlugins": ["./oxlint-plugins/eslint-js/index.cjs", "./oxlint-plugins/import-js/index.cjs"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "error",
+    "style": "error",
+    "restriction": "error"
+  },
+  "env": { "node": true, "es2021": true },
+  "settings": {
+    "import/resolver": { "node": { "extensions": [".mjs", ".js", ".json"] } },
+    "import/extensions": [".js", ".mjs", ".jsx"]
+  },
+  // dist is the build output; oxlint-plugins is vendored third-party code, kept close to upstream.
+  "ignorePatterns": ["dist/**", "oxlint-plugins/**"],
+  "rules": {
+    // airbnb-base, with its options (ESLint parity). Rules without options come from the categories.
+    "array-callback-return": ["error", { "allowImplicit": true, "checkForEach": false }],
+    "arrow-body-style": ["error", "as-needed", { "requireReturnForObjectLiteral": false }],
+    "class-methods-use-this": ["error", { "exceptMethods": [] }],
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "getter-return": ["error", { "allowImplicit": true }],
+    "import/export": "error", // nursery in Oxlint
+    "import/extensions": ["error", "ignorePackages", { "js": "never", "mjs": "never", "jsx": "never" }],
+    "import/named": "error", // nursery in Oxlint
+    "max-classes-per-file": ["error", 1],
+    "new-cap": [
+      "error",
+      {
+        "newIsCap": true,
+        "newIsCapExceptions": [],
+        "capIsNew": false,
+        "capIsNewExceptions": ["Immutable.Map", "Immutable.Set", "Immutable.List"],
+        "properties": true
+      }
+    ],
+    "no-cond-assign": ["error", "always"],
+    "no-constant-condition": ["error", { "checkLoops": "all" }], // Oxlint's default (ESLint 9's) skips while (true)
+    "no-else-return": ["error", { "allowElseIf": false }],
+    "no-empty-function": ["error", { "allow": ["arrowFunctions", "functions", "methods"] }],
+    "no-global-assign": ["error", { "exceptions": [] }],
+    "no-labels": ["error", { "allowLoop": false, "allowSwitch": false }],
+    "no-restricted-globals": [
+      "error",
+      { "name": "isFinite", "message": "Use Number.isFinite instead https://github.com/airbnb/javascript#standard-library--isfinite" },
+      { "name": "isNaN", "message": "Use Number.isNaN instead https://github.com/airbnb/javascript#standard-library--isnan" },
+      "addEventListener", "blur", "close", "closed", "confirm", "defaultStatus", "defaultstatus", "event", "external", "find",
+      "focus", "frameElement", "frames", "history", "innerHeight", "innerWidth", "length", "location", "locationbar", "menubar",
+      "moveBy", "moveTo", "name", "onblur", "onerror", "onfocus", "onload", "onresize", "onunload", "open", "opener", "opera",
+      "outerHeight", "outerWidth", "pageXOffset", "pageYOffset", "parent", "print", "removeEventListener", "resizeBy",
+      "resizeTo", "screen", "screenLeft", "screenTop", "screenX", "screenY", "scroll", "scrollbars", "scrollBy", "scrollTo",
+      "scrollX", "scrollY", "self", "status", "statusbar", "stop", "toolbar", "top"
+    ],
+    "no-restricted-properties": [
+      "error",
+      { "object": "arguments", "property": "callee", "message": "arguments.callee is deprecated" },
+      { "object": "global", "property": "isFinite", "message": "Please use Number.isFinite instead" },
+      { "object": "self", "property": "isFinite", "message": "Please use Number.isFinite instead" },
+      { "object": "window", "property": "isFinite", "message": "Please use Number.isFinite instead" },
+      { "object": "global", "property": "isNaN", "message": "Please use Number.isNaN instead" },
+      { "object": "self", "property": "isNaN", "message": "Please use Number.isNaN instead" },
+      { "object": "window", "property": "isNaN", "message": "Please use Number.isNaN instead" },
+      { "property": "__defineGetter__", "message": "Please use Object.defineProperty instead." },
+      { "property": "__defineSetter__", "message": "Please use Object.defineProperty instead." },
+      { "object": "Math", "property": "pow", "message": "Use the exponentiation operator (**) instead." }
+    ],
+    "no-return-assign": ["error", "always"],
+    "no-self-assign": ["error", { "props": true }],
+    "no-undef": "error", // nursery in Oxlint
+    "no-underscore-dangle": [
+      "error",
+      {
+        "allow": ["_imageCache", "_retryStats"],
+        "allowAfterThis": false,
+        "allowAfterSuper": false,
+        "allowAfterThisConstructor": false,
+        "enforceInMethodNames": false,
+        "allowFunctionParams": true
+      }
+    ],
+    "no-unneeded-ternary": ["error", { "defaultAssignment": false }],
+    "no-unused-expressions": [
+      "error",
+      { "allowShortCircuit": false, "allowTernary": false, "allowTaggedTemplates": false, "enforceForJSX": false }
+    ],
+    "no-unused-vars": ["error", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true, "caughtErrors": "none" }], // caughtErrors: ESLint 7's default
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }], // an `import type` beside a value import is not a duplicate
+    "no-use-before-define": ["error", { "functions": true, "classes": true, "variables": true }],
+    "no-useless-rename": ["error", { "ignoreDestructuring": false, "ignoreImport": false, "ignoreExport": false }],
+    "object-shorthand": ["error", "always", { "ignoreConstructors": false, "avoidQuotes": true }],
+    "one-var": ["error", "never"],
+    "operator-assignment": ["error", "always"],
+    "prefer-arrow-callback": ["error", { "allowNamedFunctions": false, "allowUnboundThis": true }],
+    "prefer-const": ["error", { "destructuring": "any", "ignoreReadBeforeAssign": true }],
+    "prefer-destructuring": [
+      "error",
+      { "VariableDeclarator": { "array": false, "object": true }, "AssignmentExpression": { "array": true, "object": false } },
+      { "enforceForRenamedProperties": false }
+    ],
+    "prefer-promise-reject-errors": ["error", { "allowEmptyReject": true }],
+    "valid-typeof": ["error", { "requireStringLiterals": true }],
+
+    // airbnb-base rules Oxlint has under another name.
+    "no-object-constructor": "error", // was no-new-object, which it replaces
+    "no-new-native-nonconstructor": "error", // was no-new-symbol, which it extends to BigInt
+    "node/global-require": "error",
+    "node/no-new-require": "error",
+    "node/no-path-concat": "error",
+
+    // airbnb-base rules from the vendored plugins, with airbnb's options.
+    "eslint-js/camelcase": [
+      "error",
+      { "properties": "never", "ignoreDestructuring": false, "ignoreImports": false, "ignoreGlobals": false }
+    ],
+    "eslint-js/consistent-return": "error",
+    "eslint-js/dot-notation": ["error", { "allowKeywords": true, "allowPattern": "" }],
+    "eslint-js/lines-around-directive": ["error", { "before": "always", "after": "always" }],
+    "eslint-js/lines-between-class-members": ["error", "always", { "exceptAfterSingleLine": false }],
+    "eslint-js/no-buffer-constructor": "error",
+    // Oxlint parses a file without import/export as a script, where its parser accepts these.
+    "eslint-js/no-dupe-args": "error",
+    "eslint-js/no-octal": "error",
+    "eslint-js/no-octal-escape": "error",
+    "eslint-js/no-undef-init": "error",
+    "eslint-js/no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ForInStatement",
+        "message": "for..in loops iterate over the entire prototype chain, which is virtually never what you want. Use Object.{keys,values,entries}, and iterate over the resulting array."
+      },
+      {
+        "selector": "ForOfStatement",
+        "message": "iterators/generators require regenerator-runtime, which is too heavyweight for this guide to allow them. Separately, loops should be avoided in favor of array iterations."
+      },
+      {
+        "selector": "LabeledStatement",
+        "message": "Labels are a form of GOTO; using them makes code confusing and hard to maintain and understand."
+      },
+      {
+        "selector": "WithStatement",
+        "message": "`with` is disallowed in strict mode because it makes code impossible to predict and optimize."
+      }
+    ],
+    "eslint-js/no-return-await": "error",
+    "eslint-js/spaced-comment": [
+      "error",
+      "always",
+      {
+        "line": { "exceptions": ["-", "+"], "markers": ["=", "!", "/"] },
+        "block": { "exceptions": ["-", "+"], "markers": ["=", "!", ":", "::"], "balanced": true }
+      }
+    ],
+    "eslint-js/strict": ["error", "never"],
+    // Oxlint's import/no-duplicates misses a duplicate in a file that also has an unresolved import
+    // after a builtin one; this is eslint-plugin-import's rule, which does not.
+    "import-js/no-duplicates": "error",
+    "import/no-duplicates": "off", // duplicate of import-js/no-duplicates
+    "import-js/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": [
+          "test/**", "tests/**", "spec/**", "**/__tests__/**", "**/__mocks__/**", "test.{js,jsx}", "test-*.{js,jsx}",
+          "**/*{.,_}{test,spec}.{js,jsx}", "**/jest.config.js", "**/jest.setup.js", "**/vue.config.js",
+          "**/webpack.config.js", "**/webpack.config.*.js", "**/rollup.config.js", "**/rollup.config.*.js",
+          "**/gulpfile.js", "**/gulpfile.*.js", "**/Gruntfile{,.js}", "**/protractor.conf.js",
+          "**/protractor.conf.*.js", "**/karma.conf.js"
+        ],
+        "optionalDependencies": false
+      }
+    ],
+    // The examples import the build output, which exists only after a build, so its resolution
+    // depends on whether one ran. Lint must give the same answer either way.
+    "import-js/no-unresolved": [
+      "error",
+      { "commonjs": true, "caseSensitive": true, "caseSensitiveStrict": false, "ignore": ["^\\.\\./dist/"] }
+    ],
+    "import-js/no-useless-path-segments": ["error", { "commonjs": true }],
+    "import-js/order": [
+      "error",
+      { "groups": [["builtin", "external", "internal"]], "distinctGroup": true, "named": false, "warnOnUnassignedImports": false }
+    ],
+
+    // Size limits at a level a real module can meet; the defaults flag nearly every function.
+    "max-lines": ["error", { "max": 1000, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
+    "max-statements": ["error", { "max": 100 }],
+    "complexity": ["error", { "max": 30 }],
+    "max-depth": ["error", { "max": 5 }],
+    "import/max-dependencies": ["error", { "max": 40 }],
+
+    // Off in this repo's ESLint config, so documented conventions here.
+    "default-case": "off",
+    "import/no-cycle": "off",
+    "no-param-reassign": "off",
+    "no-nested-ternary": "off",
+    "unicorn/no-nested-ternary": "off", // same check as no-nested-ternary
+
+    // Mutually exclusive, or a duplicate of a rule that stays on.
+    "import/no-default-export": "off", // contradicts import/prefer-default-export (airbnb)
+    "import/no-named-export": "off", // contradicts import/prefer-default-export (airbnb)
+    "sort-imports": ["error", { "ignoreDeclarationSort": true }], // import-js/order owns declaration order
+    "unicorn/no-array-for-each": "off", // asks for for..of, which eslint-js/no-restricted-syntax bans (airbnb)
+    "typescript/prefer-for-of": "off", // the same contradiction: asks for for..of
+    "unicorn/no-useless-undefined": "off", // contradicts eslint-js/consistent-return: only `return null` would satisfy both
+    // Every file Oxlint parses as a script here is CommonJS, where Node's module wrapper makes top-level
+    // declarations module-scoped; Oxlint does not model the wrapper, so they would read as globals.
+    "no-implicit-globals": "off",
+    "unicorn/prefer-top-level-await": "off", // contradicts node/no-top-level-await, which keeps modules loadable with require(esm)
+    "no-ternary": "off", // contradicts unicorn/prefer-ternary
+    "no-negated-condition": "off", // duplicate of unicorn/no-negated-condition
+    "curly": "off", // Prettier owns this layout
+    "unicorn/number-literal-case": "off", // Prettier owns this
+
+    // Ban language features the code relies on.
+    "import/no-relative-parent-imports": "off", // ../ is the only way to import across folders, there are no path aliases
+    "promise/avoid-new": "off", // wrapping callback APIs needs new Promise
+    "oxc/no-async-await": "off",
+    "oxc/no-optional-chaining": "off",
+    "oxc/no-rest-spread-properties": "off",
+    "no-undefined": "off",
+    "unicorn/no-null": "off", // the XML builder and parsed HTML values are null
+
+    // Opinion with no defect signal.
+    "func-style": "off",
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+    "sort-keys": "off",
+    "sort-vars": "off",
+    "no-magic-numbers": "off",
+    "capitalized-comments": "off",
+    "id-length": "off",
+    "no-inline-comments": "off",
+    "init-declarations": "off",
+    "require-unicode-regexp": "off",
+    "prefer-named-capture-group": "off",
+    "no-warning-comments": "off", // TODO comments are allowed
+    "unicorn/numeric-separators-style": "off",
+    "jest/prefer-expect-assertions": "off",
+    "jest/no-hooks": "off",
+    "jest/prefer-lowercase-title": "off",
+    "jest/consistent-test-it": "off",
+    "jest/prefer-called-with": "off",
+    "jest/max-expects": "off",
+    "jest/prefer-ending-with-an-expect": "off",
+    "jest/no-untyped-mock-factory": "off",
+    "jest/prefer-importing-jest-globals": "off", // Jest injects its globals
+    "jest/require-hook": "off",
+    "react/jsx-no-literals": "off", // there is no i18n layer
+    "react/jsx-max-depth": "off",
+
+    // The Next.js example: these contradict how React and TypeScript work today.
+    "react/react-in-jsx-scope": "off", // the automatic JSX runtime needs no React import
+    "react/jsx-filename-extension": "off", // TypeScript JSX files are .tsx
+    "react/todo": "off" // reports React Compiler limitations, not defects in the code
+  },
+  "overrides": [
+    {
+      // Jest injects its globals into test files, and a test file is a long list of statements.
+      "files": ["tests/**", "**/*.test.*", "**/*.spec.*"],
+      "env": { "jest": true },
+      "rules": {
+        "node/no-sync": "off",
+        "max-lines": "off",
+        "max-lines-per-function": "off",
+        "max-statements": "off",
+        "unicorn/consistent-function-scoping": "off"
+      }
+    },
+    {
+      // Tests, scripts, examples and build config run in Node and read files. src stays free of Node
+      // built-ins, since it also ships as a browser build.
+      "files": [
+        "tests/**",
+        "scripts/**",
+        "example/*.js",
+        "example/typescript/**",
+        "example/nextjs-example/next.config.ts",
+        "*.config.js",
+        "**/*.test.*"
+      ],
+      "rules": { "import/no-nodejs-modules": "off" }
+    },
+    {
+      // Node ESM resolves a relative import only with its extension, so .mjs files spell it out.
+      "files": ["**/*.mjs"],
+      "rules": { "import/extensions": ["error", "always", { "ignorePackages": true }] }
+    },
+    {
+      // The Next.js example's client components run in the browser.
+      "files": ["example/nextjs-example/app/**"],
+      "env": { "browser": true }
+    },
+    {
+      // The Next.js example installs its own dependencies (its own package.json), so whether they
+      // resolve depends on whether that install ran. Lint must give the same answer either way.
+      "files": ["example/nextjs-example/**"],
+      "rules": { "import-js/no-unresolved": "off" }
+    },
+    {
+      // TypeScript owns the types in .ts files, so JSDoc need not repeat them.
+      "files": ["**/*.ts", "**/*.tsx"],
+      "rules": {
+        "jsdoc/require-param-type": "off",
+        "jsdoc/require-returns-type": "off"
+      }
+    }
+  ]
+}

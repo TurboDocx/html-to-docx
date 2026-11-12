@@ -635,6 +635,8 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 Please make sure to branch new branches off of develop for contribution.
 
+Before you open a pull request, run `npm run lint:ci` and `npm run prettier:check`; CI runs both, and `npm run lint` checks staged files on commit. Linting is [Oxlint](https://oxc.rs/docs/guide/usage/linter) with every rule category on, configured in `.oxlintrc.json`. Code that predates a rule is counted per rule and file in `.oxlint-baseline-counts.json` (and listed in `.prettier-baseline` for formatting), and new code gets every rule: the checks fail when a count goes up or a new file is unformatted. After you fix old violations or format a listed file, run `npm run lint:baseline` to lock that in; it refuses to grow the lists, and a file renamed with `git mv` keeps its allowance. A pull request that turns a rule on or off, or changes the lint scripts, needs the `lint-baseline-growth` label.
+
 ## Support
 **Proudly Sponsored by TurboDocx** 
 [!["Proudly Sponsored by TurboDocx"](https://image.typedream.com/cdn-cgi/image/width=1920,format=auto,fit=scale-down,quality=100/https://api.typedream.com/v0/document/public/de39171b-a5c9-49c5-bd9c-c2dfd5d632a2/2PZxyx12UwC5HrIA3p6lo16fCms_Group_16_1_.png)](https://www.TurboDocx.com)

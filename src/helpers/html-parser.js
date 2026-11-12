@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-syntax, no-continue, import/extensions, prefer-destructuring */
+/* eslint-disable eslint-js/no-restricted-syntax, no-continue, import/extensions, prefer-destructuring */
 /**
  * HTML to Virtual DOM Parser
  *
