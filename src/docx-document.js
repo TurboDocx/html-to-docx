@@ -197,6 +197,7 @@ class DocxDocument {
         : defaultDocumentOptions.table.addSpacingAfter;
     this.heading = properties.heading || defaultDocumentOptions.heading;
     this.imageProcessing = properties.imageProcessing || defaultDocumentOptions.imageProcessing;
+    this.math = properties.math || {};
     this.lastNumberingId = 0;
     this.lastMediaId = 0;
     this.lastHeaderId = 0;

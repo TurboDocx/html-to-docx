@@ -592,6 +592,16 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
         console.log(`[DEBUG] findXMLEquivalent: buildSVGElement returned null/undefined`);
       }
       return;
+    case 'math': {
+      // A <math> outside of any paragraph (typically display="block") gets its own paragraph
+      const mathParagraphFragment = await xmlBuilder.buildParagraph(
+        vNode,
+        {},
+        docxDocumentInstance
+      );
+      xmlFragment.import(mathParagraphFragment);
+      return;
+    }
     case 'br':
       const linebreakFragment = await xmlBuilder.buildParagraph(null, {});
       xmlFragment.import(linebreakFragment);
