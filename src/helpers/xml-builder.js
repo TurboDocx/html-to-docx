@@ -11,6 +11,7 @@ import { isVNode, isVText } from '../vdom/index';
 import { parseDataUrl, downloadAndCacheImage, buildImage, measureImage } from '../utils/image';
 
 import namespaces from '../namespaces';
+import { buildMath } from '../utils/math';
 import {
   rgbToHex,
   hslToHex,
@@ -1026,12 +1027,13 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
           // do not slice and concat children since this is already accounted for in the buildRunOrRuns function
           // eslint-disable-next-line no-continue
           continue;
-        } else if (tempVNode.tagName === 'img') {
+        } else if (tempVNode.tagName === 'img' || tempVNode.tagName === 'math') {
           // Handles the cases like
           // <strong>Inside strong <img src=""/></strong>
           // <strong><img src=""/></strong>
           // <pre>Inside Pre<img src=""/></pre>
           // <pre><img src=""/></pre>
+          // <strong>Let <math>…</math></strong> (the MathML children must not be walked as text)
 
           // Wrap the image node in a lookalike span node to render the image
           const coveringNode = {
@@ -1192,6 +1194,10 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 };
 
 const buildRunOrRuns = async (vNode, attributes, docxDocumentInstance) => {
+  // MathML equation: emitted as <m:oMath> / <m:oMathPara> next to the surrounding runs
+  if (isVNode(vNode) && vNode.tagName === 'math') {
+    return buildMath(vNode, docxDocumentInstance, buildRunProperties({ ...attributes }));
+  }
   if ((isVNode(vNode) || vNode?.isCoveringNode) && vNode.tagName === 'span' && vNode.children) {
     let runFragments = [];
 
@@ -1757,7 +1763,9 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
     docxDocumentInstance
   );
   paragraphFragment.import(paragraphPropertiesFragment);
-  if (isVNode(vNode) && vNodeHasChildren(vNode)) {
+  // <math> children are MathML, not paragraph content: equations take the single-node
+  // path below, which hands the whole element to buildRunOrRuns -> buildMath.
+  if (isVNode(vNode) && vNodeHasChildren(vNode) && vNode.tagName !== 'math') {
     if (
       [
         'span',

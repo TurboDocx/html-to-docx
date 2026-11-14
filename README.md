@@ -438,6 +438,8 @@ Full examples can be found under `example/`, including a complete
     - `svgHandling` <?[String]> strategy for handling SVG images. Defaults to `'convert'`. Options:
       - `'convert'` - Converts SVG to PNG for maximum compatibility with all Word versions (requires `sharp` package)
       - `'native'` - Embeds SVG natively for Office 2019+ (preserves vector quality)
+  - `math` <?[Object]>
+    - `converter` <?[Function]> `(mathml: string, context: { display: boolean }) => string | Promise<string>` converts one MathML equation to OMML (must return markup starting with `<m:oMath>` or `<m:oMathPara>`). Without it, `<math>` elements are exported as plain text. See [Math (MathML) Support](#math-mathml-support).
 - `footerHTMLString` <[String]> clean html string equivalent of footer. Defaults to `<p></p>` if footer flag is `true`.
 
 ### Returns
@@ -620,6 +622,46 @@ const docx = await HTMLtoDOCX(htmlString, null, {
 ```
 
 For more RTL examples, check `example/react-example/src/example-rtl.js`.
+
+## Math (MathML) Support
+
+`<math>` elements are exported as **native Word equations** (OMML), editable in Word's equation editor. Inline equations stay in the flow of their paragraph; `display="block"` equations become centered equation paragraphs (`<m:oMathPara>`). Equations work inside paragraphs, inline formatting (`<strong>`, `<span>`, `<a>`…), lists, table cells and right-to-left text.
+
+Word does not read MathML, so each equation has to be converted to OMML. No converter is bundled with this package: you choose one and pass it as `math.converter`. For example with [`mathml2omml`](https://www.npmjs.com/package/mathml2omml):
+
+```bash
+npm install mathml2omml
+```
+
+```javascript
+import HTMLtoDOCX from '@turbodocx/html-to-docx';
+import { mml2omml } from 'mathml2omml';
+
+const htmlString = `
+  <p>The roots of <math xmlns="http://www.w3.org/1998/Math/MathML"><mi>a</mi><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>b</mi><mi>x</mi><mo>+</mo><mi>c</mi></math> are:</p>
+  <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+    <mi>x</mi><mo>=</mo>
+    <mfrac>
+      <mrow><mo>-</mo><mi>b</mi><mo>±</mo><msqrt><msup><mi>b</mi><mn>2</mn></msup><mo>-</mo><mn>4</mn><mi>a</mi><mi>c</mi></msqrt></mrow>
+      <mrow><mn>2</mn><mi>a</mi></mrow>
+    </mfrac>
+  </math>
+`;
+
+const docx = await HTMLtoDOCX(htmlString, null, {
+  math: {
+    converter: (mathml) => mml2omml(mathml),
+  },
+});
+```
+
+How the converter is called:
+
+- It receives one `<math>` element serialized as XML, with the MathML namespace, entities decoded and HTML-only attributes (`class`, `style`, `data-*`…) removed, plus `{ display }` (`true` for `display="block"`).
+- It may return a string or a Promise. The output is normalized: missing namespace declarations are added, raw `<`/`>`/`&` inside `<m:t>` are escaped, and inline output is wrapped in `<m:oMathPara>` for display equations.
+- If no converter is configured, if it throws, or if it returns something that is not well-formed OMML, the equation falls back to its plain text content (and a warning is logged). Equation content is never silently dropped.
+
+> **Note:** the license of the converter you pick applies to your application. `mathml2omml` is LGPL-3.0, which is why it is not a dependency of this package.
 
 ## Font Compatibility
 

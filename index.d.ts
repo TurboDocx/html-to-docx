@@ -109,6 +109,17 @@ declare namespace HTMLtoDOCX {
             svgHandling?: "convert" | "native" | "auto";
             suppressSharpWarning?: boolean;
         };
+        math?: {
+            /**
+             * Converts one MathML equation (a `<math>` element serialized as XML) to OMML.
+             * Must return a string starting with `<m:oMath>` or `<m:oMathPara>`.
+             * Without a converter, equations are exported as plain text.
+             */
+            converter?: (
+                mathml: string,
+                context: { display: boolean },
+            ) => string | Promise<string>;
+        };
     }
 }
 
