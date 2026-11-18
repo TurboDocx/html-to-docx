@@ -28,6 +28,8 @@ declare namespace HTMLtoDOCX {
             color?: string;
         };
         addSpacingAfter?: boolean;
+        /** A heading in a table cell as a Word heading (its HeadingN style); off by default. */
+        cellHeadings?: boolean;
     }
 
     interface LineNumberOptions {
@@ -60,6 +62,14 @@ declare namespace HTMLtoDOCX {
         heading6?: HeadingStyle;
     }
 
+    interface SectionOptions {
+        orientation?: "portrait" | "landscape";
+        pageSize?: PageSize;
+        margins?: Margins;
+        headerHTML?: string | null;
+        footerHTML?: string | null;
+    }
+
     interface DocumentOptions {
         orientation?: "portrait" | "landscape";
         pageSize?: PageSize;
@@ -83,10 +93,28 @@ declare namespace HTMLtoDOCX {
         table?: Table;
         pageNumber?: boolean;
         skipFirstHeaderFooter?: boolean;
+        /**
+         * Word's "Different first page": page 1's own header and footer, written
+         * as the first section's first-page parts. An empty one leaves page 1's
+         * band blank.
+         */
+        firstPage?: { headerHTML?: string | null; footerHTML?: string | null };
+        /** Every page section but the last, which is the document's own. */
+        sections?: SectionOptions[];
+        /**
+         * The document editor's layout rules: pictures held inside their box,
+         * borders at their exact pixel weight, a cell's content box. Off by default,
+         * which keeps the stock output.
+         */
+        editorLayout?: boolean;
         lineNumber?: boolean;
         lineNumberOptions?: LineNumberOptions;
         numbering?: {
             defaultOrderedListStyleType?: string;
+            /** Each list level's indent, in twips (Word's 720). */
+            levelIndent?: number;
+            /** How far a list marker hangs before the text, in twips (Word's 360). */
+            hangingIndent?: number;
         };
         heading?: HeadingConfig;
         decodeUnicode?: boolean;
