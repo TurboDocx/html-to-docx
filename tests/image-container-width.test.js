@@ -25,7 +25,7 @@ const EMU_PER_TWIP = 635;
 
 /** Every drawn image's size, in px, and the XML of the cells, in order. */
 const render = async (html) => {
-  const docx = await HTMLtoDOCX(html);
+  const docx = await HTMLtoDOCX(html, undefined, { editorLayout: true });
   const xml = await (await JSZip.loadAsync(docx)).file('word/document.xml').async('string');
   const sizes = [...xml.matchAll(/<wp:extent cx="(\d+)" cy="(\d+)"/g)].map((match) => ({
     width: Number(match[1]) / EMU_PER_PX,

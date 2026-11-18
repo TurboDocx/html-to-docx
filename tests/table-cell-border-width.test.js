@@ -19,7 +19,7 @@ const cellBorderSizes = (xml) =>
 
 const sizesFor = async (border) => {
   const html = `<table style="border-collapse: collapse;"><tr><td style="border-top: ${border}; border-bottom: ${border}; border-left: ${border}; border-right: ${border}">A</td></tr></table>`;
-  const { xml } = await parseDOCX(await HTMLtoDOCX(html, {}));
+  const { xml } = await parseDOCX(await HTMLtoDOCX(html, undefined, { editorLayout: true }));
   return cellBorderSizes(xml);
 };
 

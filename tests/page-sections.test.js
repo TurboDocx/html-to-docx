@@ -43,7 +43,13 @@ describe('a document of several sections', () => {
   it('ends each wrapped section with a break that sets its pages up', async () => {
     const { document } = await render(
       '<div data-docx-section="0"><p>Wide page</p></div><p>Tall page</p>',
-      { orientation: 'portrait', pageSize: LETTER, margins: MARGINS, sections: [landscapeSection] }
+      {
+        orientation: 'portrait',
+        pageSize: LETTER,
+        margins: MARGINS,
+        sections: [landscapeSection],
+        editorLayout: true,
+      }
     );
 
     const [first, last] = sectPrs(document);
@@ -107,7 +113,13 @@ describe('a document of several sections', () => {
     const { document } = await render(
       `<div data-docx-section="0"><p><img src="${PIXEL}" width="2000" height="100"></p></div>` +
         `<p><img src="${PIXEL}" width="2000" height="100"></p>`,
-      { orientation: 'portrait', pageSize: LETTER, margins: MARGINS, sections: [landscapeSection] }
+      {
+        orientation: 'portrait',
+        pageSize: LETTER,
+        margins: MARGINS,
+        sections: [landscapeSection],
+        editorLayout: true,
+      }
     );
 
     const widths = [...document.matchAll(/<wp:extent cx="(\d+)"/g)].map((m) =>

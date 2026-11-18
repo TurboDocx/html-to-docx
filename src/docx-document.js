@@ -251,6 +251,8 @@ class DocxDocument {
     // A heading in a table cell built as a Word heading — its HeadingN style —
     // rather than a plain paragraph; off unless asked for (table.cellHeadings).
     this.tableCellHeadings = Boolean(properties.table && properties.table.cellHeadings);
+    // The document editor's layout rules (image caps, exact px borders, cell boxes); stock output when off.
+    this.editorLayout = Boolean(properties.editorLayout);
     // A list level's indent and its marker's hanging, in twips: Word's 720 and
     // 360 unless the document names its own (the document editor's 45px level
     // and 25px marker column).

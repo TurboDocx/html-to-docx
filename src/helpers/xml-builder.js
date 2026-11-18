@@ -31,6 +31,7 @@ import {
   pixelToHIP,
   pixelToTWIP,
   pixelToEIP,
+  pixelToEIPExact,
   pointToEIP,
   cmToTWIP,
   cmRegex,
@@ -709,14 +710,14 @@ const borderStyleParser = (style) => {
   return 'single';
 };
 
-const borderSizeParser = (borderSize) => {
+const borderSizeParser = (borderSize, exactPixelBorders = false) => {
   if (pointRegex.test(borderSize)) {
     const matchedParts = borderSize.match(pointRegex);
     return pointToEIP(matchedParts[1]);
   } else if (pixelRegex.test(borderSize)) {
     const matchedParts = borderSize.match(pixelRegex);
     // convert pixels to eighth of a point
-    return pixelToEIP(matchedParts[1]);
+    return (exactPixelBorders ? pixelToEIPExact : pixelToEIP)(matchedParts[1]);
   }
 
   return borderSize;
@@ -724,7 +725,8 @@ const borderSizeParser = (borderSize) => {
 
 const cssBorderParser = (
   borderString,
-  defaultBorderOptions = { ...defaultTableBorderOptions, stroke: 'single' }
+  defaultBorderOptions = { ...defaultTableBorderOptions, stroke: 'single' },
+  exactPixelBorders = false
 ) => {
   const tokens = borderString.split(' ');
 
@@ -757,7 +759,7 @@ const cssBorderParser = (
     } else if (pixelRegex.test(token)) {
       const matchedParts = token.match(pixelRegex);
       // convert pixels to eighth of a point
-      size = pixelToEIP(matchedParts[1]);
+      size = (exactPixelBorders ? pixelToEIPExact : pixelToEIP)(matchedParts[1]);
     } else {
       color = fixupColorCode(token).toUpperCase();
     }
@@ -1120,12 +1122,45 @@ const rprAttributeSortIndex = (key) => {
 // runPropertiesFragment (e.g. the phrasing-tag branch in buildRun, where
 // imports happen in HTML source order rather than spec slot order).
 const RPR_ELEMENT_ORDER = [
-  'rStyle', 'rFonts', 'b', 'bCs', 'i', 'iCs', 'caps', 'smallCaps',
-  'strike', 'dstrike', 'outline', 'shadow', 'emboss', 'imprint',
-  'noProof', 'snapToGrid', 'vanish', 'webHidden', 'color', 'spacing',
-  'w', 'kern', 'position', 'sz', 'szCs', 'highlight', 'u', 'effect',
-  'bdr', 'shd', 'fitText', 'vertAlign', 'rtl', 'cs', 'em', 'lang',
-  'eastAsianLayout', 'specVanish', 'oMath',
+  'rStyle',
+  'rFonts',
+  'b',
+  'bCs',
+  'i',
+  'iCs',
+  'caps',
+  'smallCaps',
+  'strike',
+  'dstrike',
+  'outline',
+  'shadow',
+  'emboss',
+  'imprint',
+  'noProof',
+  'snapToGrid',
+  'vanish',
+  'webHidden',
+  'color',
+  'spacing',
+  'w',
+  'kern',
+  'position',
+  'sz',
+  'szCs',
+  'highlight',
+  'u',
+  'effect',
+  'bdr',
+  'shd',
+  'fitText',
+  'vertAlign',
+  'rtl',
+  'cs',
+  'em',
+  'lang',
+  'eastAsianLayout',
+  'specVanish',
+  'oMath',
 ];
 const rprElementSortIndex = (name) => {
   const idx = RPR_ELEMENT_ORDER.indexOf(name);
@@ -1800,7 +1835,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
         attributes.originalWidth = imageProperties.width;
         attributes.originalHeight = imageProperties.height;
 
-        computeImageDimensions(vNode, attributes);
+        computeImageDimensions(vNode, attributes, docxDocumentInstance.editorLayout);
         // Placed against its text: an anchored picture, each its own place in
         // the stack, a later one over an earlier one.
         if (attributes.placement) {
@@ -2400,7 +2435,7 @@ const imageTransparencyOf = (vNode) => {
   return Number.isFinite(value) && value > 0 ? Math.min(100, value) : 0;
 };
 
-const computeImageDimensions = (vNode, attributes) => {
+const computeImageDimensions = (vNode, attributes, editorLayout = false) => {
   // Its crop and border ride along to the picture's markup (buildPicture).
   // eslint-disable-next-line no-param-reassign
   attributes.crop = imageCropOf(vNode);
@@ -2415,7 +2450,8 @@ const computeImageDimensions = (vNode, attributes) => {
   const aspectRatio = originalHeight > 0 ? originalWidth / originalHeight : 1;
   // Word lays a picture's line out OUTSIDE the picture (buildEffectExtentFragment),
   // so the picture and its line both sides are what has to fit.
-  const borderReachInEMU = attributes.border ? 2 * pixelToEMU(attributes.border.width) : 0;
+  const borderReachInEMU =
+    editorLayout && attributes.border ? 2 * pixelToEMU(attributes.border.width) : 0;
   const maximumWidthInEMU = Math.max(0, TWIPToEMU(maximumWidth) - borderReachInEMU);
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
@@ -2550,14 +2586,14 @@ const computeImageDimensions = (vNode, attributes) => {
   // in — keeping its proportions; one that fits keeps the size it was given. The cap on the natural size above is
   // replaced by any width the <img> names, so an image an editor sized went
   // past its cell and off the page; the box is held here, last.
-  if (maximumWidthInEMU > 0 && modifiedWidth > maximumWidthInEMU) {
+  if (editorLayout && maximumWidthInEMU > 0 && modifiedWidth > maximumWidthInEMU) {
     modifiedHeight = Math.round((modifiedHeight * maximumWidthInEMU) / modifiedWidth);
     modifiedWidth = maximumWidthInEMU;
   }
   // Nor taller than the page's text area: an image taller than a page runs
   // off it, in the line it sits in.
   const maximumHeightInEMU = Math.max(0, TWIPToEMU(maximumHeight) - borderReachInEMU);
-  if (maximumHeightInEMU > 0 && modifiedHeight > maximumHeightInEMU) {
+  if (editorLayout && maximumHeightInEMU > 0 && modifiedHeight > maximumHeightInEMU) {
     modifiedWidth = Math.round((modifiedWidth * maximumHeightInEMU) / modifiedHeight);
     modifiedHeight = maximumHeightInEMU;
   }
@@ -2785,7 +2821,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           modifiedAttributes.originalWidth = imageProperties.width;
           modifiedAttributes.originalHeight = imageProperties.height;
 
-          computeImageDimensions(childVNode, modifiedAttributes);
+          computeImageDimensions(childVNode, modifiedAttributes, docxDocumentInstance.editorLayout);
         }
         const runOrHyperlinkFragments = await buildRunOrHyperLink(
           childVNode,
@@ -2834,7 +2870,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       modifiedAttributes.originalWidth = imageProperties.width;
       modifiedAttributes.originalHeight = imageProperties.height;
 
-      computeImageDimensions(vNode, modifiedAttributes);
+      computeImageDimensions(vNode, modifiedAttributes, docxDocumentInstance.editorLayout);
     }
     const runFragments = await buildRunOrRuns(vNode, modifiedAttributes, docxDocumentInstance);
     if (Array.isArray(runFragments)) {
@@ -2964,14 +3000,12 @@ const buildTableCellProperties = (attributes, parentWidth) => {
     'tcPr'
   );
   const childFragments = [];
-  let hasCellMargin = false;
   if (attributes && attributes.constructor === Object) {
     Object.keys(attributes).forEach((key) => {
       switch (key) {
         case 'cellMargin':
           const cellMarginFragment = buildTableCellMarginFragment(attributes[key]);
           childFragments.push({ name: 'tcMar', fragment: cellMarginFragment });
-          hasCellMargin = true;
           // Dropped from the attributes so the cell's own padding does not
           // travel down into a nested table's cells.
           // eslint-disable-next-line no-param-reassign
@@ -3019,15 +3053,13 @@ const buildTableCellProperties = (attributes, parentWidth) => {
     });
   }
 
-  // <w:tcMar> has to land between <w:shd> and <w:vAlign>, which the order the
-  // attributes were set in cannot promise, so a cell that declared padding has
-  // its whole <w:tcPr> put in spec order. Cells that did not are emitted in
-  // the order they always were.
+  // Word reads <w:tcPr> as an ordered sequence (<w:tcW> before <w:gridSpan>,
+  // <w:tcMar> between <w:shd> and <w:vAlign>), so it is always put in spec order.
   return buildOrderedProperties(
     tableCellPropertiesFragment,
     childFragments,
     TCPR_ELEMENT_ORDER,
-    hasCellMargin
+    true
   );
 };
 
@@ -3044,7 +3076,8 @@ const fixupTableCellBorder = (
   attributes,
   tableBorderOptions = {},
   rowIndexEquivalent,
-  columnIndexEquivalent
+  columnIndexEquivalent,
+  exactPixelBorders = false
 ) => {
   const { color } = tableBorderOptions;
   const tableCellStyles = vNode.properties.style || {};
@@ -3111,17 +3144,18 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.top;
-      let borderColor =  attributes.tableCellBorder.colors.top;
+      let borderColor = attributes.tableCellBorder.colors.top;
       let borderStrike = attributes.tableCellBorder.strokes.top;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-top') {
           [borderSize, borderStrike, borderColor] = cssBorderParser(
             tableCellStyles[indexes[idxItem].type],
-            tableBorderOptions
+            tableBorderOptions,
+            exactPixelBorders
           );
         } else if (indexes[idxItem].type === 'border-top-width') {
-          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type]);
+          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type], exactPixelBorders);
         } else if (indexes[idxItem].type === 'border-top-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type]);
         } else {
@@ -3202,10 +3236,11 @@ const fixupTableCellBorder = (
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-bottom') {
           [borderSize, borderStrike, borderColor] = cssBorderParser(
             tableCellStyles[indexes[idxItem].type],
-            tableBorderOptions
+            tableBorderOptions,
+            exactPixelBorders
           );
         } else if (indexes[idxItem].type === 'border-bottom-width') {
-          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type]);
+          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type], exactPixelBorders);
         } else if (indexes[idxItem].type === 'border-bottom-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type]);
         } else {
@@ -3288,10 +3323,11 @@ const fixupTableCellBorder = (
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-left') {
           [borderSize, borderStrike, borderColor] = cssBorderParser(
             tableCellStyles[indexes[idxItem].type],
-            tableBorderOptions
+            tableBorderOptions,
+            exactPixelBorders
           );
         } else if (indexes[idxItem].type === 'border-left-width') {
-          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type]);
+          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type], exactPixelBorders);
         } else if (indexes[idxItem].type === 'border-left-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type]);
         } else {
@@ -3370,10 +3406,11 @@ const fixupTableCellBorder = (
         if (indexes[idxItem].type === 'border' || indexes[idxItem].type === 'border-right') {
           [borderSize, borderStrike, borderColor] = cssBorderParser(
             tableCellStyles[indexes[idxItem].type],
-            tableBorderOptions
+            tableBorderOptions,
+            exactPixelBorders
           );
         } else if (indexes[idxItem].type === 'border-right-width') {
-          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type]);
+          borderSize = borderSizeParser(tableCellStyles[indexes[idxItem].type], exactPixelBorders);
         } else if (indexes[idxItem].type === 'border-right-color') {
           borderColor = fixupColorCode(tableCellStyles[indexes[idxItem].type]);
         } else {
@@ -3437,7 +3474,8 @@ const fixupTableCellBorder = (
         // eslint-disable-next-line no-use-before-define
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           tableCellStyles[tableCellStyle],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
 
         const strokes = { ...setUpDirectionalBorderStroke(borderStroke) };
@@ -3508,7 +3546,8 @@ const fixupTableCellBorder = (
         // eslint-disable-next-line no-use-before-define
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           tableCellStyles[tableCellStyle],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         attributes.tableCellBorder = {
           ...attributes.tableCellBorder,
@@ -3530,7 +3569,8 @@ const fixupTableCellBorder = (
         // eslint-disable-next-line no-use-before-define
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           tableCellStyles[tableCellStyle],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         attributes.tableCellBorder = {
           ...attributes.tableCellBorder,
@@ -3552,7 +3592,8 @@ const fixupTableCellBorder = (
         // eslint-disable-next-line no-use-before-define
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           tableCellStyles[tableCellStyle],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         attributes.tableCellBorder = {
           ...attributes.tableCellBorder,
@@ -3575,7 +3616,8 @@ const fixupTableCellBorder = (
         // eslint-disable-next-line no-use-before-define
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           tableCellStyles[tableCellStyle],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         attributes.tableCellBorder = {
           ...attributes.tableCellBorder,
@@ -3673,7 +3715,7 @@ const fixupTableCellBorder = (
         bottom: borderStyleParser(tableCellStyles[tableCellStyle]),
       };
     } else if (tableCellStyle === 'border-width') {
-      const width = borderSizeParser(tableCellStyle[tableCellStyle]);
+      const width = borderSizeParser(tableCellStyle[tableCellStyle], exactPixelBorders);
       if (rowIndexEquivalentFirst === -1) {
         attributes.tableCellBorder.top = width;
       }
@@ -3689,19 +3731,31 @@ const fixupTableCellBorder = (
     } else if (tableCellStyle === 'border-left-width') {
       // processed already
       if (columnIndexEquivalentFirst !== -1) continue;
-      attributes.tableCellBorder.left = borderSizeParser(tableCellStyles[tableCellStyle]);
+      attributes.tableCellBorder.left = borderSizeParser(
+        tableCellStyles[tableCellStyle],
+        exactPixelBorders
+      );
     } else if (tableCellStyle === 'border-right-width') {
       // processed already
       if (columnIndexEquivalentLast !== -1) continue;
-      attributes.tableCellBorder.right = borderSizeParser(tableCellStyles[tableCellStyle]);
+      attributes.tableCellBorder.right = borderSizeParser(
+        tableCellStyles[tableCellStyle],
+        exactPixelBorders
+      );
     } else if (tableCellStyle === 'border-top-width') {
       // processed already
       if (rowIndexEquivalentFirst !== -1) continue;
-      attributes.tableCellBorder.top = borderSizeParser(tableCellStyles[tableCellStyle]);
+      attributes.tableCellBorder.top = borderSizeParser(
+        tableCellStyles[tableCellStyle],
+        exactPixelBorders
+      );
     } else if (tableCellStyle === 'border-bottom-width') {
       // processed already
       if (rowIndexEquivalentLast !== -1) continue;
-      attributes.tableCellBorder.bottom = borderSizeParser(tableCellStyles[tableCellStyle]);
+      attributes.tableCellBorder.bottom = borderSizeParser(
+        tableCellStyles[tableCellStyle],
+        exactPixelBorders
+      );
     }
   }
 };
@@ -3937,7 +3991,8 @@ const buildTableCell = async (
         modifiedAttributes,
         docxDocumentInstance.tableBorders,
         rowIndexEquivalent,
-        columnIndexEquivalent
+        columnIndexEquivalent,
+        docxDocumentInstance.editorLayout
       );
     } else {
       // no style attribute was given to the table cell
@@ -4010,7 +4065,11 @@ const buildTableCell = async (
   }
   // A fixed-layout table's cell declares the width of its columns, which is
   // what Word lays it out at; one that sets its own keeps that.
-  if (modifiedAttributes.tableLayout === 'fixed' && !modifiedAttributes.width) {
+  if (
+    docxDocumentInstance.editorLayout &&
+    modifiedAttributes.tableLayout === 'fixed' &&
+    !modifiedAttributes.width
+  ) {
     modifiedAttributes.width = modifiedAttributes.maximumWidth;
   }
   // What the cell lays its content out in: its width less its left and right
@@ -4019,7 +4078,7 @@ const buildTableCell = async (
   const contentWidth = cellContentWidth(modifiedAttributes);
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
-  if (contentWidth) {
+  if (docxDocumentInstance.editorLayout && contentWidth) {
     modifiedAttributes.maximumWidth = contentWidth;
   }
   // Track whether the next nested <w:tbl> needs a leading sentinel (without
@@ -4138,7 +4197,14 @@ const buildTableCell = async (
  * @param {number} parentWidth width of the parent element
  * @returns {any} Returns the row span cell fragment
  */
-const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOptions, parentWidth) => {
+const buildRowSpanCell = (
+  rowSpanMap,
+  columnIndex,
+  attributes,
+  tableBorderOptions,
+  parentWidth,
+  exactPixelBorders = false
+) => {
   const rowSpanCellFragments = [];
   let spanObject = rowSpanMap.get(columnIndex.index);
   while (spanObject && spanObject.rowSpan) {
@@ -4156,7 +4222,8 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       if (spanObject === 'border') {
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           spanObject[spanObjectKey],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         setUpDirectionalBorderSize(cellProperties.tableCellBorder, borderSize);
         cellProperties.tableCellBorder = {
@@ -4167,7 +4234,8 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       } else if (spanObjectKey === 'border-left') {
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           spanObject[spanObjectKey],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         cellProperties.tableCellBorder = {
           ...cellProperties.tableCellBorder,
@@ -4178,7 +4246,8 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       } else if (spanObjectKey === 'border-right') {
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           spanObject[spanObjectKey],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         cellProperties.tableCellBorder = {
           ...cellProperties.tableCellBorder,
@@ -4189,7 +4258,8 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       } else if (spanObjectKey === 'border-top') {
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           spanObject[spanObjectKey],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         cellProperties.tableCellBorder = {
           ...cellProperties.tableCellBorder,
@@ -4200,7 +4270,8 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       } else if (spanObjectKey === 'border-bottom') {
         const [borderSize, borderStroke, borderColor] = cssBorderParser(
           spanObject[spanObjectKey],
-          tableBorderOptions
+          tableBorderOptions,
+          exactPixelBorders
         );
         cellProperties.tableCellBorder = {
           ...cellProperties.tableCellBorder,
@@ -4258,17 +4329,29 @@ const buildRowSpanCell = (rowSpanMap, columnIndex, attributes, tableBorderOption
       } else if (spanObjectKey === 'border-width') {
         setUpDirectionalBorderSize(cellProperties.tableCellBorder, spanObject[spanObjectKey]);
       } else if (spanObjectKey === 'border-left-width') {
-        cellProperties.tableCellBorder.left = borderSizeParser(spanObject[spanObjectKey]);
+        cellProperties.tableCellBorder.left = borderSizeParser(
+          spanObject[spanObjectKey],
+          exactPixelBorders
+        );
       } else if (spanObjectKey === 'border-right-width') {
-        cellProperties.tableCellBorder.right = borderSizeParser(spanObject[spanObjectKey]);
+        cellProperties.tableCellBorder.right = borderSizeParser(
+          spanObject[spanObjectKey],
+          exactPixelBorders
+        );
       } else if (spanObjectKey === 'border-top-width') {
-        cellProperties.tableCellBorder.top = borderSizeParser(spanObject[spanObjectKey]);
+        cellProperties.tableCellBorder.top = borderSizeParser(
+          spanObject[spanObjectKey],
+          exactPixelBorders
+        );
       } else if (spanObjectKey === 'border-bottom-width') {
-        cellProperties.tableCellBorder.bottom = borderSizeParser(spanObject[spanObjectKey]);
+        cellProperties.tableCellBorder.bottom = borderSizeParser(
+          spanObject[spanObjectKey],
+          exactPixelBorders
+        );
       }
     }
 
-    if (attributes.tableLayout === 'fixed') {
+    if (exactPixelBorders && attributes.tableLayout === 'fixed') {
       const coveredWidth = gridSpanWidth(attributes, columnIndex.index, spanObject.colSpan || 1);
       if (coveredWidth) {
         cellProperties.width = coveredWidth;
@@ -4406,7 +4489,8 @@ const buildTableRow = async (
         modifiedAttributes,
         docxDocumentInstance.tableBorders,
         rowIndexEquivalent,
-        'na'
+        'na',
+        docxDocumentInstance.editorLayout
       );
 
       // if there are some styles provided to table row
@@ -4467,7 +4551,8 @@ const buildTableRow = async (
         columnIndex,
         modifiedAttributes,
         docxDocumentInstance.tableBorders,
-        tableWidth
+        tableWidth,
+        docxDocumentInstance.editorLayout
       );
       if (Array.isArray(rowSpanCellFragments)) {
         for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
@@ -4487,7 +4572,8 @@ const buildTableRow = async (
           // As wide as the grid columns it spans, from where it stands — the
           // even split is only the fallback for a table whose grid is unknown.
           maximumWidth:
-            gridSpanWidth(modifiedAttributes, columnIndex.index, columnSpanOf(column)) ||
+            (docxDocumentInstance.editorLayout &&
+              gridSpanWidth(modifiedAttributes, columnIndex.index, columnSpanOf(column))) ||
             maximumColumnWidth,
         },
         rowSpanMap,
@@ -4509,7 +4595,8 @@ const buildTableRow = async (
       columnIndex,
       modifiedAttributes,
       docxDocumentInstance.tableBorders,
-      tableWidth
+      tableWidth,
+      docxDocumentInstance.editorLayout
     );
     if (Array.isArray(rowSpanCellFragments)) {
       for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
@@ -4735,7 +4822,7 @@ const buildTableProperties = (attributes) => {
   childFragments.push({ name: 'tblCellMar', fragment: tableCellMarginFragment });
 
   // Use align attribute if provided, otherwise default to center
-  const tableAlignment = (attributes && attributes.tableAlign) ? attributes.tableAlign : 'center';
+  const tableAlignment = attributes && attributes.tableAlign ? attributes.tableAlign : 'center';
   const alignmentFragment = buildHorizontalAlignment(tableAlignment);
   childFragments.push({ name: 'jc', fragment: alignmentFragment });
   if (attributes && attributes.tableAlign) {
@@ -4831,6 +4918,10 @@ const tableGridColumnWidthsOf = (tableVNode, tableWidth, isFixedLayout) => {
 const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   const tableFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tbl');
   const modifiedAttributes = { ...attributes };
+  const exactPixelBorders = docxDocumentInstance.editorLayout;
+  // A nested table lays out on its own; it does not inherit its parent's fixed layout or grid.
+  delete modifiedAttributes.tableLayout;
+  delete modifiedAttributes.tableGridColumnWidths;
   if (isVNode(vNode) && vNode.properties) {
     const tableAttributes = vNode.properties.attributes || {};
     const tableStyles = vNode.properties.style || {};
@@ -4901,7 +4992,8 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         if (tableStyle === 'border') {
           const [cssSize, cssStroke, cssColor] = cssBorderParser(
             tableStyles.border,
-            docxDocumentInstance.tableBorders
+            docxDocumentInstance.tableBorders,
+            exactPixelBorders
           );
           borderSize = cssSize ?? borderSize;
           borderColor = cssColor || borderColor;
@@ -4929,7 +5021,10 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             tableBorders.insideH = 0;
           }
         } else if (tableStyle === 'border-width') {
-          setUpDirectionalBorderSize(tableBorders, borderSizeParser(tableStyles['border-width']));
+          setUpDirectionalBorderSize(
+            tableBorders,
+            borderSizeParser(tableStyles['border-width'], exactPixelBorders)
+          );
         } else if (tableStyle === 'border-style') {
           tableBorders.strokes = {
             ...setUpDirectionalBorderStroke(borderStyleParser(tableStyles['border-style'])),
@@ -4940,28 +5035,32 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
           };
         } else if (tableStyle === 'border-left') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
-            tableStyles['border-left']
+            tableStyles['border-left'],
+            exactPixelBorders
           );
           tableBorders.left = borderThickness;
           tableBorders.colors = { ...tableBorders.colors, left: borderStrokeColor };
           tableBorders.strokes = { ...tableBorders.strokes, left: borderStroke };
         } else if (tableStyle === 'border-right') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
-            tableStyles['border-right']
+            tableStyles['border-right'],
+            exactPixelBorders
           );
           tableBorders.right = borderThickness;
           tableBorders.colors = { ...tableBorders.colors, right: borderStrokeColor };
           tableBorders.strokes = { ...tableBorders.strokes, right: borderStroke };
         } else if (tableStyle === 'border-top') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
-            tableStyles['border-top']
+            tableStyles['border-top'],
+            exactPixelBorders
           );
           tableBorders.top = borderThickness;
           tableBorders.colors = { ...tableBorders.colors, top: borderStrokeColor };
           tableBorders.strokes = { ...tableBorders.strokes, top: borderStroke };
         } else if (tableStyle === 'border-bottom') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
-            tableStyles['border-bottom']
+            tableStyles['border-bottom'],
+            exactPixelBorders
           );
           tableBorders.bottom = borderThickness;
           tableBorders.colors = { ...tableBorders.colors, bottom: borderStrokeColor };
@@ -4987,13 +5086,13 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             bottom: fixupColorCode(tableStyles[tableStyle]),
           };
         } else if (tableStyle === 'border-left-width') {
-          tableBorders.left = borderSizeParser(tableStyles[tableStyle]);
+          tableBorders.left = borderSizeParser(tableStyles[tableStyle], exactPixelBorders);
         } else if (tableStyle === 'border-right-width') {
-          tableBorders.right = borderSizeParser(tableStyles[tableStyle]);
+          tableBorders.right = borderSizeParser(tableStyles[tableStyle], exactPixelBorders);
         } else if (tableStyle === 'border-top-width') {
-          tableBorders.top = borderSizeParser(tableStyles[tableStyle]);
+          tableBorders.top = borderSizeParser(tableStyles[tableStyle], exactPixelBorders);
         } else if (tableStyle === 'border-bottom-width') {
-          tableBorders.bottom = borderSizeParser(tableStyles[tableStyle]);
+          tableBorders.bottom = borderSizeParser(tableStyles[tableStyle], exactPixelBorders);
         } else if (tableStyle === 'border-left-style') {
           tableBorders.strokes = {
             ...tableBorders.strokes,

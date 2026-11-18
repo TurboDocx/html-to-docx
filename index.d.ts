@@ -62,6 +62,14 @@ declare namespace HTMLtoDOCX {
         heading6?: HeadingStyle;
     }
 
+    interface SectionOptions {
+        orientation?: "portrait" | "landscape";
+        pageSize?: PageSize;
+        margins?: Margins;
+        headerHTML?: string | null;
+        footerHTML?: string | null;
+    }
+
     interface DocumentOptions {
         orientation?: "portrait" | "landscape";
         pageSize?: PageSize;
@@ -91,6 +99,14 @@ declare namespace HTMLtoDOCX {
          * band blank.
          */
         firstPage?: { headerHTML?: string | null; footerHTML?: string | null };
+        /** Every page section but the last, which is the document's own. */
+        sections?: SectionOptions[];
+        /**
+         * The document editor's layout rules: pictures held inside their box,
+         * borders at their exact pixel weight, a cell's content box. Off by default,
+         * which keeps the stock output.
+         */
+        editorLayout?: boolean;
         lineNumber?: boolean;
         lineNumberOptions?: LineNumberOptions;
         numbering?: {

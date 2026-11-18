@@ -17,7 +17,9 @@ const PIXEL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
 
 const documentXml = async (html) =>
-  (await JSZip.loadAsync(await HTMLtoDOCX(html))).file('word/document.xml').async('string');
+  (await JSZip.loadAsync(await HTMLtoDOCX(html, undefined, { editorLayout: true })))
+    .file('word/document.xml')
+    .async('string');
 
 describe("a picture's crop and border", () => {
   it('cuts off what the crop names, each side its own', async () => {
@@ -53,7 +55,7 @@ describe("a picture's crop and border", () => {
     );
   });
 
-  it("keeps the picture its size and leaves room for its border outside it, as Word does", async () => {
+  it('keeps the picture its size and leaves room for its border outside it, as Word does', async () => {
     // Word paints a picture's line OUTSIDE the picture and says how far it
     // reaches in <wp:effectExtent>: a picture Word made itself, 150x75pt with
     // a 6pt line, came out extent 150x75pt and effectExtent 6pt every side,
@@ -83,7 +85,9 @@ describe("a picture's crop and border", () => {
   it('reaches no further than the picture without a border', async () => {
     const xml = await documentXml(`<p><img src="${PIXEL}" width="100" height="50"></p>`);
 
-    expect(xml).toMatch(/<wp:effectExtent b="0" l="0" r="0" t="0"\/>|<wp:effectExtent l="0" t="0" r="0" b="0"\/>/);
+    expect(xml).toMatch(
+      /<wp:effectExtent b="0" l="0" r="0" t="0"\/>|<wp:effectExtent l="0" t="0" r="0" b="0"\/>/
+    );
   });
 
   it('draws no border for a picture without one', async () => {
@@ -104,7 +108,9 @@ describe("a picture's crop and border", () => {
     // Word reads a picture's alt text off the drawing (<wp:docPr descr>), not
     // the picture inside it — with only the latter, Word showed none
     // (2026-10-23, checked through Word itself).
-    const xml = await documentXml(`<p><img src="${PIXEL}" width="100" height="50" alt="Samurai portrait"></p>`);
+    const xml = await documentXml(
+      `<p><img src="${PIXEL}" width="100" height="50" alt="Samurai portrait"></p>`
+    );
 
     expect(xml).toMatch(/<wp:docPr id="\d+" name="[^"]+" descr="Samurai portrait"\/>/);
   });
