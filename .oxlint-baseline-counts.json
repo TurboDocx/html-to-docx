@@ -794,7 +794,7 @@
     "tests/page-fields.test.js": 1,
     "tests/paragraph-borders.test.js": 3,
     "tests/paragraph-spacing.test.js": 1,
-    "tests/tab-characters.test.js": 2
+    "tests/tab-characters.test.js": 1
   },
   "unicorn/prefer-string-slice": {
     "src/helpers/xml-builder.js": 1,
