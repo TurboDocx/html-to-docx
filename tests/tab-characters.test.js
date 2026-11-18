@@ -19,8 +19,8 @@ const runsOf = (paragraph) => compact(paragraph.xml).match(/<w:r>[\s\S]*?<\/w:r>
 // Sequence of text/tab content in a run: ['a', TAB, 'b'].
 const TAB = '<tab>';
 const contentOf = (runXml) =>
-  (runXml.match(/<w:t [^>]*>[^<]*<\/w:t>|<w:tab\/>/g) || []).map((element) =>
-    element === '<w:tab/>' ? TAB : element.replace(/<[^>]+>/g, '')
+  [...runXml.matchAll(/<w:t [^>]*>([^<]*)<\/w:t>|<w:tab\/>/g)].map(([element, text]) =>
+    element === '<w:tab/>' ? TAB : text
   );
 
 const expectNoLiteralTabs = (parsed) => {
