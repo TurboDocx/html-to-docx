@@ -31,12 +31,17 @@ const runWithText = (parsed, text) => {
 };
 
 describe('font-style on a span', () => {
-  test.each(['italic', 'oblique', 'oblique 10deg'])('makes the run italic for %s', async (style) => {
-    const parsed = await convert(`<p>Plain <span style="font-style: ${style}">slanted</span></p>`);
+  test.each(['italic', 'oblique', 'oblique 10deg'])(
+    'makes the run italic for %s',
+    async (style) => {
+      const parsed = await convert(
+        `<p>Plain <span style="font-style: ${style}">slanted</span></p>`
+      );
 
-    expect(runWithText(parsed, 'slanted').rPr).toContain('<w:i/>');
-    expect(runWithText(parsed, 'Plain ').rPr).not.toContain('<w:i');
-  });
+      expect(runWithText(parsed, 'slanted').rPr).toContain('<w:i/>');
+      expect(runWithText(parsed, 'Plain ').rPr).not.toContain('<w:i');
+    }
+  );
 
   test('keeps the italic in its slot, after the bold and before the colour', async () => {
     const parsed = await convert(

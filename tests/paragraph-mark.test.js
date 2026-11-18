@@ -30,13 +30,11 @@ describe("a paragraph's mark", () => {
   });
 
   test("takes a heading's own size over its style's", async () => {
-    const { paragraphs } = await convert(
-      '<h1 style="font-size: 30px"><span>Title</span></h1>'
-    );
+    const { paragraphs } = await convert('<h1 style="font-size: 30px"><span>Title</span></h1>');
     expect(markOf(paragraphs[0])).toContain('<w:sz w:val="45"/>');
   });
 
-  test("is left to the style when the paragraph names no type of its own", async () => {
+  test('is left to the style when the paragraph names no type of its own', async () => {
     const { paragraphs } = await convert(
       '<p style="line-height: 1.15"><span style="font-size: 30px">Big</span></p>'
     );

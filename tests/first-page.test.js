@@ -108,7 +108,10 @@ describe('a different first page', () => {
         margins: MARGINS,
         header: true,
         footer: true,
-        firstPage: { headerHTML: `<p><img src="${PIXEL}" width="40" height="20">Cover</p>`, footerHTML: '' },
+        firstPage: {
+          headerHTML: `<p><img src="${PIXEL}" width="40" height="20">Cover</p>`,
+          footerHTML: '',
+        },
       },
       '<p>Running</p>',
       '<p>Running foot</p>'

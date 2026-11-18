@@ -20,9 +20,7 @@ const paragraphWith = (parsed, text) =>
 
 describe('Headings in table cells', () => {
   test.each([1, 2, 3, 4, 5, 6])('gives an <h%i> in a cell its heading style', async (level) => {
-    const parsed = await convert(
-      `<table><tr><td><h${level}>Title</h${level}></td></tr></table>`
-    );
+    const parsed = await convert(`<table><tr><td><h${level}>Title</h${level}></td></tr></table>`);
 
     expect(paragraphWith(parsed, 'Title').xml).toContain(`<w:pStyle w:val="Heading${level}"`);
   });
