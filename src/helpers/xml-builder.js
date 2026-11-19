@@ -1064,8 +1064,12 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
           // eslint-disable-next-line no-continue
           continue;
         } else if (tempVNode.tagName === 'br') {
-          const lineBreakFragment = buildLineBreak();
-          runFragmentsArray.push(lineBreakFragment);
+          // <w:br> is only valid inside a run.
+          const lineBreakRunFragment = fragment({ namespaceAlias: { w: namespaces.w } })
+            .ele('@w', 'r')
+            .import(buildLineBreak())
+            .up();
+          runFragmentsArray.push(lineBreakRunFragment);
         }
         // TODO: check if picture can occur inside inline elements(not span)
       }
