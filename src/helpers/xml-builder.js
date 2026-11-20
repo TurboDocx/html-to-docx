@@ -274,6 +274,17 @@ const buildTextElement = (text) =>
     .txt(text)
     .up();
 
+// Word shows a line feed inside <w:t> as a space, so each <pre> line gets its
+// own <w:t> with a <w:br/> between them.
+const buildTextElements = (text, preformatted) =>
+  preformatted
+    ? text
+        .split(/\r?\n/)
+        .flatMap((line, index) =>
+          index === 0 ? [buildTextElement(line)] : [buildLineBreak(), buildTextElement(line)]
+        )
+    : [buildTextElement(text)];
+
 const buildTextDecoration = (value) => {
   if (value.line === 'underline') {
     return fragment({ namespaceAlias: { w: namespaces.w } })
@@ -709,6 +720,7 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
       modifiedAttributes.highlightColor = 'lightGray';
     } else if (isVNode(vNode) && vNode.tagName === 'pre') {
       modifiedAttributes.font = 'Courier';
+      modifiedAttributes.preformatted = true;
     }
   }
 
@@ -920,11 +932,12 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
     while (vNodes.length) {
       const tempVNode = vNodes.shift();
       if (isVText(tempVNode)) {
-        const textFragment = buildTextElement(
+        const textFragments = buildTextElements(
           transformText(
             tempVNode.text,
             formattingFragmentAttributes.textTransform || tempAttributes.textTransform
-          )
+          ),
+          tempAttributes.preformatted
         );
         // formattingFragmentAttributes carries inline <strong>/<em>/<u>/<del>
         // overrides parsed from their `style` attributes (issue #200). Spreading
@@ -938,7 +951,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
           ...formattingFragmentAttributes,
         });
         tempRunFragment.import(tempRunPropertiesFragment);
-        tempRunFragment.import(textFragment);
+        textFragments.forEach((textFragment) => tempRunFragment.import(textFragment));
         runFragmentsArray.push(tempRunFragment);
 
         // re initialize temp run fragments with new fragment. formatting
@@ -989,6 +1002,9 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
             case 's':
             case 'strike':
               tempAttributes.strike = true;
+              break;
+            case 'pre':
+              tempAttributes.preformatted = true;
               break;
           }
           const formattingFragment = buildFormatting(tempVNode);
@@ -1090,8 +1106,10 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
   // (notably the phrasing-tag branch above).
   runFragment.import(sortRprChildren(runPropertiesFragment));
   if (isVText(vNode)) {
-    const textFragment = buildTextElement(transformText(vNode.text, attributes.textTransform));
-    runFragment.import(textFragment);
+    buildTextElements(
+      transformText(vNode.text, attributes.textTransform),
+      attributes.preformatted
+    ).forEach((textFragment) => runFragment.import(textFragment));
   } else if (attributes && attributes.type === 'picture') {
     const imageSource = vNode.properties.src;
 
