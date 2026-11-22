@@ -56,6 +56,7 @@ import {
   defaultTableBorderAttributeOptions,
 } from '../constants';
 import { vNodeHasChildren } from '../utils/vnode';
+import { applyInheritedStyles, pickInheritedStyles } from '../utils/style';
 import { isValidUrl } from '../utils/url';
 import { isZeroOrTruthy } from '../utils/truthy-check';
 
@@ -805,12 +806,45 @@ const rprAttributeSortIndex = (key) => {
 // runPropertiesFragment (e.g. the phrasing-tag branch in buildRun, where
 // imports happen in HTML source order rather than spec slot order).
 const RPR_ELEMENT_ORDER = [
-  'rStyle', 'rFonts', 'b', 'bCs', 'i', 'iCs', 'caps', 'smallCaps',
-  'strike', 'dstrike', 'outline', 'shadow', 'emboss', 'imprint',
-  'noProof', 'snapToGrid', 'vanish', 'webHidden', 'color', 'spacing',
-  'w', 'kern', 'position', 'sz', 'szCs', 'highlight', 'u', 'effect',
-  'bdr', 'shd', 'fitText', 'vertAlign', 'rtl', 'cs', 'em', 'lang',
-  'eastAsianLayout', 'specVanish', 'oMath',
+  'rStyle',
+  'rFonts',
+  'b',
+  'bCs',
+  'i',
+  'iCs',
+  'caps',
+  'smallCaps',
+  'strike',
+  'dstrike',
+  'outline',
+  'shadow',
+  'emboss',
+  'imprint',
+  'noProof',
+  'snapToGrid',
+  'vanish',
+  'webHidden',
+  'color',
+  'spacing',
+  'w',
+  'kern',
+  'position',
+  'sz',
+  'szCs',
+  'highlight',
+  'u',
+  'effect',
+  'bdr',
+  'shd',
+  'fitText',
+  'vertAlign',
+  'rtl',
+  'cs',
+  'em',
+  'lang',
+  'eastAsianLayout',
+  'specVanish',
+  'oMath',
 ];
 const rprElementSortIndex = (name) => {
   const idx = RPR_ELEMENT_ORDER.indexOf(name);
@@ -827,7 +861,8 @@ const sortRprChildren = (rprFragment) => {
   // Match each child element: either self-closing <w:foo .../> or paired
   // <w:foo>...</w:foo>. Children that nest other elements with the same
   // namespace are matched greedily up to their own closing tag.
-  const childRe = /<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*\/>|<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>[\s\S]*?<\/w:\2>/g;
+  const childRe =
+    /<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*\/>|<w:([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>[\s\S]*?<\/w:\2>/g;
   const children = [];
   let m;
   while ((m = childRe.exec(inner)) !== null) {
@@ -2081,7 +2116,7 @@ const fixupTableCellBorder = (
       indexes.sort((a, b) => a.index - b.index);
 
       let borderSize = attributes.tableCellBorder.top;
-      let borderColor =  attributes.tableCellBorder.colors.top;
+      let borderColor = attributes.tableCellBorder.colors.top;
       let borderStrike = attributes.tableCellBorder.strokes.top;
 
       for (let idxItem = 0; idxItem < indexes.length; idxItem++) {
@@ -3540,7 +3575,7 @@ const buildTableProperties = (attributes) => {
   tablePropertiesFragment.import(tableCellMarginFragment);
 
   // Use align attribute if provided, otherwise default to center
-  const tableAlignment = (attributes && attributes.tableAlign) ? attributes.tableAlign : 'center';
+  const tableAlignment = attributes && attributes.tableAlign ? attributes.tableAlign : 'center';
   const alignmentFragment = buildHorizontalAlignment(tableAlignment);
   tablePropertiesFragment.import(alignmentFragment);
   if (attributes && attributes.tableAlign) {
@@ -3820,6 +3855,20 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   }
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
   tableFragment.import(tablePropertiesFragment);
+
+  // Cascade the table's inheritable styles (its own, or ones it inherited from a
+  // container) onto its rows; buildTableRow already passes row styles to cells.
+  const tableInheritedStyles = pickInheritedStyles(vNode.properties && vNode.properties.style);
+  if (tableInheritedStyles && vNodeHasChildren(vNode)) {
+    vNode.children.forEach((childVNode) => {
+      const rows = ['thead', 'tbody'].includes(childVNode.tagName)
+        ? childVNode.children || []
+        : [childVNode];
+      rows
+        .filter((rowVNode) => rowVNode.tagName === 'tr')
+        .forEach((rowVNode) => applyInheritedStyles(rowVNode, tableInheritedStyles));
+    });
+  }
 
   // We need to avoid building table grid multiple times
   // So we use a bool variable to check if in for loop
