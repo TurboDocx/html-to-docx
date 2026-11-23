@@ -12,17 +12,20 @@ import { defaultDocumentOptions } from '../constants';
 import { buildImage } from '../utils/image';
 import { vNodeHasChildren } from '../utils/vnode';
 import { buildSVGElement } from '../utils/svg';
+import { applyInheritedStyles, pickInheritedStyles } from '../utils/style';
 
 const LRUCache = lruCache.default || lruCache.LRUCache || lruCache; // Support both ESM and CommonJS imports
 
 const convertHTML = createHTMLToVDOM();
 
-// Helper function to add lineRule attribute for image consistency
+// Helper function to add lineRule attribute for image consistency.
+// Targets <w:spacing> by name: <w:pPr> may start with another element (e.g.
+// <w:jc> for centered images), where lineRule is not a valid attribute.
 const addLineRuleToImageFragment = (imageFragment) => {
-  imageFragment
-    .first()
-    .first()
-    .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+  const spacing = imageFragment.first().find((child) => child.node.localName === 'spacing');
+  if (spacing) {
+    spacing.att(namespaces.w, 'lineRule', 'auto');
+  }
 };
 
 // Function to clear the image cache (useful for testing or memory management)
@@ -401,6 +404,20 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   return listElements;
 };
 
+// Returns the children of a container vNode (e.g. a wrapping <div>) with the
+// container's inheritable styles cascaded onto them (issue #268). Element
+// children are updated in place (see applyInheritedStyles); bare text is
+// wrapped in a new <p> carrying the inherited styles so its runs pick them up.
+const inheritContainerStyles = (vNode) => {
+  const inherited = pickInheritedStyles(vNode.properties && vNode.properties.style);
+  if (!inherited) return vNode.children;
+  return vNode.children.map((child) =>
+    isVText(child)
+      ? new VNode('p', { style: { ...inherited } }, [child])
+      : applyInheritedStyles(child, inherited)
+  );
+};
+
 async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, imageOptions = null) {
   // Use default options if not provided
   if (!imageOptions) {
@@ -443,9 +460,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
 
       // Process children normally (no content loss)
       if (vNodeHasChildren(vNode)) {
+        const children = inheritContainerStyles(vNode);
         // eslint-disable-next-line no-plusplus
-        for (let index = 0; index < vNode.children.length; index++) {
-          const childVNode = vNode.children[index];
+        for (let index = 0; index < children.length; index++) {
+          const childVNode = children[index];
           // eslint-disable-next-line no-use-before-define
           await convertVTreeToXML(docxDocumentInstance, childVNode, xmlFragment, imageOptions);
         }
@@ -600,9 +618,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
       return;
   }
   if (vNodeHasChildren(vNode)) {
+    const children = inheritContainerStyles(vNode);
     // eslint-disable-next-line no-plusplus
-    for (let index = 0; index < vNode.children.length; index++) {
-      const childVNode = vNode.children[index];
+    for (let index = 0; index < children.length; index++) {
+      const childVNode = children[index];
       // eslint-disable-next-line no-use-before-define
       await convertVTreeToXML(docxDocumentInstance, childVNode, xmlFragment, imageOptions);
     }
