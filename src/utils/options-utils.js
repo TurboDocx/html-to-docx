@@ -86,6 +86,20 @@ const createDocumentOptionsAndMergeWithDefaults = (documentOptions) => {
     }
   });
 
+  // Every section's own page size and margins are given in the same units.
+  if (Array.isArray(documentOptions.sections)) {
+    normalizedDocumentOptions.sections = documentOptions.sections.map((section) => {
+      if (typeof section !== 'object' || section === null) return section;
+      const normalizedSection = { ...section };
+      ['pageSize', 'margins'].forEach((key) => {
+        if (section[key] !== undefined) {
+          normalizedSection[key] = normalizeUnits(section[key], defaultDocumentOptions[key]);
+        }
+      });
+      return normalizedSection;
+    });
+  }
+
   // Merge the normalized options with the default options.
   // User-provided options take precedence over default options.
   return { ...defaultDocumentOptions, ...normalizedDocumentOptions };

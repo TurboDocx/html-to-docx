@@ -193,4 +193,15 @@ describe('a document of several sections', () => {
     );
     expect(counts).toStrictEqual([2, 2]);
   });
+
+  it('converts a sections margins and page size from units like the documents own', async () => {
+    const { document } = await render('<div data-docx-section="0"><p>a</p></div><p>b</p>', {
+      sections: [{ margins: { top: '1in', left: '2cm' }, pageSize: { width: '8in' } }],
+    });
+    const [first] = sectPrs(document);
+    expect(first).not.toContain('NaN');
+    expect(first).toContain('w:top="1440"');
+    expect(first).toContain('w:left="1140"');
+    expect(first).toContain('w:w="11520"');
+  });
 });
