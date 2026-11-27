@@ -191,6 +191,12 @@ function firstPageReferencesXML(document) {
 const hasFirstPage = (document) =>
   Boolean(document.firstPageHeaderRelationshipId || document.firstPageFooterRelationshipId);
 
+// A list indent in twips: the value given, zero included, when it is a number of 0 or more.
+const indentOrDefault = ({ value, fallback }) => {
+  const indent = value === null || value === undefined || value === '' ? Number.NaN : Number(value);
+  return Number.isFinite(indent) && indent >= 0 ? indent : fallback;
+};
+
 class DocxDocument {
   constructor(properties) {
     this.zip = properties.zip;
@@ -256,10 +262,14 @@ class DocxDocument {
     // A list level's indent and its marker's hanging, in twips: Word's 720 and
     // 360 unless the document names its own (the document editor's 45px level
     // and 25px marker column).
-    this.listLevelIndent =
-      (properties.numbering && Number(properties.numbering.levelIndent)) || 720;
-    this.listHangingIndent =
-      (properties.numbering && Number(properties.numbering.hangingIndent)) || 360;
+    this.listLevelIndent = indentOrDefault({
+      value: properties.numbering && properties.numbering.levelIndent,
+      fallback: 720,
+    });
+    this.listHangingIndent = indentOrDefault({
+      value: properties.numbering && properties.numbering.hangingIndent,
+      fallback: 360,
+    });
     this.tableBorders =
       (properties.table && properties.table.borderOptions) ||
       defaultDocumentOptions.table.borderOptions;

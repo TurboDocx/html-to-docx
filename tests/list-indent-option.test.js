@@ -60,4 +60,26 @@ describe('list indents', () => {
     expect(item).toContain('<w:ind w:left="675" w:hanging="375"/>');
     expect(item).toContain('<w:tab w:val="left" w:pos="675"/>');
   });
+
+  test('may be zero, which is a value and not a missing one', async () => {
+    const parsed = await parseDOCX(
+      await HTMLtoDOCX(LISTS, null, { numbering: { levelIndent: 0, hangingIndent: 0 } })
+    );
+    const indents = levelIndents(await parsed.zip.file('word/numbering.xml').async('string'));
+
+    expect(indents).toContainEqual({ level: 0, tab: '0', left: '0', hanging: '0' });
+    expect(indents).toContainEqual({ level: 1, tab: '0', left: '0', hanging: '0' });
+  });
+
+  test('may be zero for a checklist item too', async () => {
+    const { xml } = await parseDOCX(
+      await HTMLtoDOCX(LISTS, null, {
+        browserLayout: true,
+        numbering: { levelIndent: 0, hangingIndent: 0 },
+      })
+    );
+    const item = xml.slice(xml.lastIndexOf('<w:p>', xml.indexOf('>c<')), xml.indexOf('>c<'));
+
+    expect(item).toContain('<w:ind w:left="0" w:hanging="0"/>');
+  });
 });

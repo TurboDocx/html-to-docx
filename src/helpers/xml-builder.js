@@ -2064,9 +2064,9 @@ const buildListContinuationIndent = (level) => {
 // (numbering.xml uses left=(level+1)*levelIndent, hanging=hangingIndent —
 // Word's 720 and 360 unless the document names its own).
 const checklistIndentLeft = (level, docxDocumentInstance) =>
-  ((level || 0) + 1) * ((docxDocumentInstance && docxDocumentInstance.listLevelIndent) || 720);
+  ((level || 0) + 1) * ((docxDocumentInstance && docxDocumentInstance.listLevelIndent) ?? 720);
 const checklistHanging = (docxDocumentInstance) =>
-  (docxDocumentInstance && docxDocumentInstance.listHangingIndent) || 360;
+  (docxDocumentInstance && docxDocumentInstance.listHangingIndent) ?? 360;
 
 // The checkbox glyph run and the tab that moves the item text to the indent.
 const buildChecklistMarkerRuns = (checked, fontSize) => {
