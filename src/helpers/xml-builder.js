@@ -970,7 +970,20 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         if (isZeroOrTruthy(left) || isZeroOrTruthy(right)) {
           modifiedAttributes.indentation = indentation;
         }
-        if (isZeroOrTruthy(bottom)) {
+        if (browserLayout && paragraphLevelTags.includes(vNode.tagName)) {
+          // Like the margin-top / margin-bottom longhands: the top and bottom
+          // are the paragraph's spacing before and after.
+          const topPart = marginParts[0];
+          const bottomPart = marginParts.length >= 3 ? marginParts[2] : marginParts[0];
+          const beforeSpacing = fixupParagraphSpacing(topPart);
+          const afterSpacing = fixupParagraphSpacing(bottomPart);
+          if (isZeroOrTruthy(beforeSpacing)) {
+            modifiedAttributes.beforeSpacing = beforeSpacing;
+          }
+          if (isZeroOrTruthy(afterSpacing)) {
+            modifiedAttributes.afterSpacing = afterSpacing;
+          }
+        } else if (isZeroOrTruthy(bottom)) {
           modifiedAttributes.afterSpacing = bottom;
         }
       } else if (vNodeStyleKey === 'margin-left' || vNodeStyleKey === 'margin-right') {

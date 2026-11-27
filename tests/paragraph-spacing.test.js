@@ -122,7 +122,7 @@ describe('Paragraph spacing backward compatibility', () => {
   test('margin-bottom on <p> still maps to w:after without a w:before', async () => {
     const parsed = await convert('<p style="margin-bottom: 8px">Text</p>');
 
-    expect(spacingOf(parsed.paragraphs[0])).toEqual({ after: '120', lineRule: 'auto' });
+    expect(spacingOf(parsed.paragraphs[0])).toStrictEqual({ after: '120', lineRule: 'auto' });
   });
 
   test('a unitless zero margin-bottom on <p> is w:after 0 with browserLayout', async () => {
@@ -137,10 +137,14 @@ describe('Paragraph spacing backward compatibility', () => {
     expect(spacingOf(parsed.paragraphs[0]).after).toBeUndefined();
   });
 
-  test('margin shorthand keeps mapping only its bottom value to w:after', async () => {
+  test('margin shorthand maps its top to w:before and its bottom to w:after', async () => {
     const parsed = await convert('<p style="margin: 12pt 0 6pt 0">Text</p>');
 
-    expect(spacingOf(parsed.paragraphs[0])).toEqual({ after: '120', lineRule: 'auto' });
+    expect(spacingOf(parsed.paragraphs[0])).toStrictEqual({
+      before: '240',
+      after: '120',
+      lineRule: 'auto',
+    });
   });
 
   test('a <ul> margin-bottom still reaches <p> blocks inside its items', async () => {
@@ -227,5 +231,23 @@ describe('Line spacing (line-height)', () => {
 
     expect(spacingOf(parsed.paragraphs[0])).toEqual({ line: '300', lineRule: 'atLeast' });
     expect(spacingOf(parsed.paragraphs[1])).toEqual({ line: '276', lineRule: 'auto' });
+  });
+});
+
+describe('Paragraph spacing from the margin shorthand', () => {
+  test('maps the top and bottom of a three-value margin to w:before and w:after', async () => {
+    const parsed = await convert('<p style="margin:8px 0 12px">x</p>');
+    const spacing = spacingOf(parsed.paragraphs[0]);
+
+    expect(spacing.before).toBe('120');
+    expect(spacing.after).toBe('180');
+  });
+
+  test('maps a one-value margin to both sides and a later longhand still wins', async () => {
+    const parsed = await convert('<p style="margin:4px; margin-bottom: 8px">x</p>');
+    const spacing = spacingOf(parsed.paragraphs[0]);
+
+    expect(spacing.before).toBe('60');
+    expect(spacing.after).toBe('120');
   });
 });
