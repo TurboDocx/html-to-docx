@@ -433,6 +433,14 @@ class DocxDocument {
             .att('@w', 'restart', restart)
         );
     }
+    // After lnNumType, as CT_SectPr has it.
+    if (this.sections.length === 0 && hasFirstPage(this)) {
+      documentXML
+        .root()
+        .first()
+        .first()
+        .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPageTitle'));
+    }
 
     // The body's own section properties go last, as the schema has them
     // (CT_Body): the template opens the body with them, and with one section
@@ -456,7 +464,8 @@ class DocxDocument {
           ? '<w:titlePg/>'
           : ''
       )
-      .replace(/<w:tdxFirstPage\/>/g, () => `${firstPageReferencesXML(this)}<w:titlePg/>`);
+      .replace(/<w:tdxFirstPage\/>/g, () => firstPageReferencesXML(this))
+      .replaceAll('<w:tdxFirstPageTitle/>', '<w:titlePg/>');
   }
 
   // Whether the first page shows no running header or footer (skipFirstHeaderFooter).

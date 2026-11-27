@@ -143,3 +143,16 @@ describe('an odd entry in sections', () => {
     });
   });
 });
+
+describe('titlePg order with lineNumber', () => {
+  it('puts lnNumType before titlePg in the body sectPr', async () => {
+    const { document } = await render({
+      html: '<p>x</p>',
+      options: { footer: true, lineNumber: true, firstPage: { footerHTML: '<p>first</p>' } },
+      footer: '<p>F</p>',
+    });
+    const body = sectPrs(document).pop();
+    expect(body.indexOf('<w:lnNumType')).toBeGreaterThan(-1);
+    expect(body.indexOf('<w:lnNumType')).toBeLessThan(body.indexOf('<w:titlePg'));
+  });
+});
