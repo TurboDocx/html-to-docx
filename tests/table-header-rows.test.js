@@ -30,6 +30,19 @@ describe("a table's header rows", () => {
     expect(body).not.toContain('tblHeader');
   });
 
+  // CT_Tbl is tblPr, then one tblGrid, then the rows. A <thead> and a <tbody> each used to build
+  // the grid, so a second <w:tblGrid> landed between the rows: invalid, and Word on the web then
+  // refuses to edit some documents that hold such a table.
+  it('writes one <w:tblGrid>, before the rows, for a table with a <thead> and a <tbody>', async () => {
+    const xml = await documentXml(
+      '<table><thead><tr><th>Head</th><th>Head</th></tr></thead>' +
+        '<tbody><tr><td>Body</td><td>Body</td></tr></tbody></table>'
+    );
+
+    const children = [...xml.matchAll(/<w:(tblPr|tblGrid|tr)[\s>]/g)].map((m) => m[1]);
+    expect(children).toStrictEqual(['tblPr', 'tblGrid', 'tr', 'tr']);
+  });
+
   it('marks no row of a table that has no <thead>', async () => {
     const xml = await documentXml('<table><tr><th>Head</th></tr><tr><td>Body</td></tr></table>');
 
