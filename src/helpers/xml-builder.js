@@ -2805,8 +2805,12 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
   // taller in Word than in the HTML it came from.
   // The mark takes the rest of the paragraph's run formatting with them, as a
   // mark typed in Word does.
+  // A browserLayout feature: 1.23.3 left every mark to the paragraph style.
   const ownStyle = (isVNode(vNode) && vNode.properties && vNode.properties.style) || {};
-  if (ownStyle['font-family'] || ownStyle['font-size']) {
+  if (
+    layoutOf(docxDocumentInstance).browserLayout &&
+    (ownStyle['font-family'] || ownStyle['font-size'])
+  ) {
     const paragraphMark = {};
     paragraphMarkFormatting.forEach((key) => {
       if (modifiedAttributes[key] !== undefined) {
