@@ -107,3 +107,21 @@ describe('list indents', () => {
     expect(continuation).toContain('<w:ind w:left="1080" w:hanging="0"/>');
   });
 });
+
+// ST_TwipsMeasure takes whole twips: a fractional indent is rounded, never written as a decimal.
+describe('fractional list indents', () => {
+  test('are written as whole twips', async () => {
+    const parsed = await parseDOCX(
+      await HTMLtoDOCX(
+        '<ul><li>a<ul><li>b</li></ul></li><li><p>c</p><p>d</p></li></ul>' +
+          '<ul data-checklist="true"><li data-checked="false">e</li></ul>',
+        null,
+        { browserLayout: true, numbering: { levelIndent: 562.5, hangingIndent: 187.5 } }
+      )
+    );
+    const numbering = await parsed.zip.file('word/numbering.xml').async('string');
+
+    expect(`${numbering}${parsed.xml}`).not.toMatch(/w:(pos|left|hanging)="\d+\.\d+"/);
+    expect(numbering).toContain('w:left="563"');
+  });
+});

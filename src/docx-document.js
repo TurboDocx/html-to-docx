@@ -228,7 +228,8 @@ const hasFirstPage = (document) =>
 // A list indent in twips: the value given, zero included, when it is a number of 0 or more.
 const indentOrDefault = ({ value, fallback }) => {
   const indent = value === null || value === undefined || value === '' ? Number.NaN : Number(value);
-  return Number.isFinite(indent) && indent >= 0 ? indent : fallback;
+  // Whole twips: ST_TwipsMeasure takes no fractions.
+  return Number.isFinite(indent) && indent >= 0 ? Math.round(indent) : fallback;
 };
 
 class DocxDocument {
