@@ -35,7 +35,7 @@ function attributeOf(xml, elementPattern, attributeName) {
 }
 
 async function convertBody(html) {
-  const buffer = await HTMLtoDOCX(html, null, {}, null);
+  const buffer = await HTMLtoDOCX(html, null, { browserLayout: true }, null);
   const parsed = await parseDOCX(buffer);
   assertWellFormedXML(parsed.xml, 'document.xml');
 
@@ -285,11 +285,15 @@ describe('behind-text shapes', () => {
 
   describe('headers and footers', () => {
     it('should emit well-formed shapes in header1.xml and footer1.xml', async () => {
-      const { documentXml, headerXml, footerXml } = await renderParts(HTMLtoDOCX, {
-        body: `<p>${RECT_MARKER}body</p>`,
-        header: `<p>${RECT_MARKER}head</p>`,
-        footer: `<p>${LINE_MARKER}foot</p>`,
-      });
+      const { documentXml, headerXml, footerXml } = await renderParts(
+        HTMLtoDOCX,
+        {
+          body: `<p>${RECT_MARKER}body</p>`,
+          header: `<p>${RECT_MARKER}head</p>`,
+          footer: `<p>${LINE_MARKER}foot</p>`,
+        },
+        { browserLayout: true }
+      );
       assertWellFormedXML(documentXml, 'document.xml');
       assertWellFormedXML(headerXml, 'header1.xml');
       assertWellFormedXML(footerXml, 'footer1.xml');
@@ -298,10 +302,14 @@ describe('behind-text shapes', () => {
     });
 
     it('should bind the wps and a namespaces inside a header', async () => {
-      const { headerXml } = await renderParts(HTMLtoDOCX, {
-        body: '<p>body</p>',
-        header: `<p>${RECT_MARKER}head</p>`,
-      });
+      const { headerXml } = await renderParts(
+        HTMLtoDOCX,
+        {
+          body: '<p>body</p>',
+          header: `<p>${RECT_MARKER}head</p>`,
+        },
+        { browserLayout: true }
+      );
       // The header root declares neither `a` nor `wps`, so the fragment has to
       // carry its own declarations.
       expect(headerXml).toContain(WPS_URI);
@@ -310,10 +318,14 @@ describe('behind-text shapes', () => {
     });
 
     it('should not add an image relationship for a shape', async () => {
-      const { zip } = await renderParts(HTMLtoDOCX, {
-        body: '<p>body</p>',
-        header: `<p>${RECT_MARKER}head</p>`,
-      });
+      const { zip } = await renderParts(
+        HTMLtoDOCX,
+        {
+          body: '<p>body</p>',
+          header: `<p>${RECT_MARKER}head</p>`,
+        },
+        { browserLayout: true }
+      );
       const headerRels = zip.file('word/_rels/header1.xml.rels');
       if (headerRels) {
         expect(await headerRels.async('string')).not.toContain('/image');

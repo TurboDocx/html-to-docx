@@ -67,11 +67,18 @@ describe('header and footer parts', () => {
   it('should prefix what a band holds beyond text: tables, fields and shapes', async () => {
     const rect =
       '<span data-shape="rect" data-left="0" data-top="0" data-width="794" data-height="96" data-fill="#EEF2FF"></span>';
-    const { headerXml } = await renderBands(
-      '<table style="width: 602px; border-collapse: collapse"><tr>' +
-        '<td style="width: 546px"><p>{CompanyName}</p></td>' +
-        '<td style="width: 56px"><p><span data-field="page">1</span></p></td>' +
-        `</tr></table><p>${rect}</p>`
+    // Fields and shapes are browserLayout features.
+    const { headerXml } = await renderParts(
+      HTMLtoDOCX,
+      {
+        body: '<p>body</p>',
+        header:
+          '<table style="width: 602px; border-collapse: collapse"><tr>' +
+          '<td style="width: 546px"><p>{CompanyName}</p></td>' +
+          '<td style="width: 56px"><p><span data-field="page">1</span></p></td>' +
+          `</tr></table><p>${rect}</p>`,
+      },
+      { browserLayout: true }
     );
 
     assertWellFormedXML(headerXml, 'header1.xml');

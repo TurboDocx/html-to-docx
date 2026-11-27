@@ -39,7 +39,7 @@ function runProperties(run) {
 }
 
 async function convertBody(html) {
-  const buffer = await HTMLtoDOCX(html, null, {}, null);
+  const buffer = await HTMLtoDOCX(html, null, { browserLayout: true }, null);
   const parsed = await parseDOCX(buffer);
   assertWellFormedXML(parsed.xml, 'document.xml');
 
@@ -188,11 +188,15 @@ describe('inline page fields', () => {
 
   describe('headers and footers', () => {
     it('should emit a well-formed field in header1.xml and footer1.xml', async () => {
-      const { headerXml, footerXml } = await renderParts(HTMLtoDOCX, {
-        body: '<p>body</p>',
-        header: '<p>Page <span data-field="page">1</span></p>',
-        footer: '<p>of <span data-field="numpages">9</span></p>',
-      });
+      const { headerXml, footerXml } = await renderParts(
+        HTMLtoDOCX,
+        {
+          body: '<p>body</p>',
+          header: '<p>Page <span data-field="page">1</span></p>',
+          footer: '<p>of <span data-field="numpages">9</span></p>',
+        },
+        { browserLayout: true }
+      );
       assertWellFormedXML(headerXml, 'header1.xml');
       assertWellFormedXML(footerXml, 'footer1.xml');
       expect(headerXml).toContain('fldCharType="begin"');
@@ -211,10 +215,14 @@ describe('inline page fields', () => {
     });
 
     it('should carry header run properties onto the field runs', async () => {
-      const { headerXml } = await renderParts(HTMLtoDOCX, {
-        body: '<p>body</p>',
-        header: '<p><strong><span data-field="page" style="color: #112233">1</span></strong></p>',
-      });
+      const { headerXml } = await renderParts(
+        HTMLtoDOCX,
+        {
+          body: '<p>body</p>',
+          header: '<p><strong><span data-field="page" style="color: #112233">1</span></strong></p>',
+        },
+        { browserLayout: true }
+      );
       // The header is written with the w: prefix, as the body is
       // (header-footer-prefixes.test.js).
       const boldRuns = headerXml.match(/<w:b\/>/g) || [];

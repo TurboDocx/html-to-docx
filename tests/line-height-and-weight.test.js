@@ -9,7 +9,7 @@
 import HTMLtoDOCX from '../index.js';
 import { parseDOCX } from './helpers/docx-assertions.js';
 
-const convert = async (html) => parseDOCX(await HTMLtoDOCX(html, null, {}));
+const convert = async (html) => parseDOCX(await HTMLtoDOCX(html, null, { browserLayout: true }));
 
 const lineOf = (paragraph) => {
   const match = /<w:spacing\b[^>]*w:line="(\d+)"[^>]*w:lineRule="(\w+)"/.exec(paragraph.xml);

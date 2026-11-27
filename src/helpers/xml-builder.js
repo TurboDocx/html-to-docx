@@ -39,6 +39,7 @@ import {
   inchToTWIP,
   cmToHIP,
   inchToHIP,
+  HIPToTWIP,
 } from '../utils/unit-conversion';
 // FIXME: remove the cyclic dependency
 // eslint-disable-next-line import/no-cycle
@@ -146,13 +147,23 @@ const fixupColorCode = (colorCodeString) => {
   }
 };
 
-const transformText = (text, transformation) => {
+// Whether a conversion lays out as a browser does (the browserLayout option), for helpers that
+// otherwise only see the text or attributes they build.
+const layoutOf = (docxDocumentInstance) => ({
+  browserLayout: Boolean(docxDocumentInstance && docxDocumentInstance.browserLayout),
+});
+
+const transformText = (text, transformation, { browserLayout = false } = {}) => {
   switch (transformation) {
     case 'uppercase':
       return text.toUpperCase();
     case 'lowercase':
       return text.toLowerCase();
     case 'capitalize':
+      if (!browserLayout) {
+        // 1.23.3's capitalisation, kept for callers without browserLayout.
+        return text.replaceAll(/\b\w/g, (char) => char.toUpperCase());
+      }
       // The first letter of each word, as CSS capitalises: a word starts after
       // whitespace or at the start, never after an apostrophe or an accented
       // letter. `\b\w` is ASCII-only, so it made "don't" into "Don'T" and
@@ -287,8 +298,9 @@ const buildBorder = (
     .att('@w', 'color', borderColor)
     .up();
 
-const buildTextElement = (text) => {
-  if (typeof text !== 'string' || !text.includes('\t')) {
+const buildTextElement = (text, { browserLayout = false } = {}) => {
+  // Without browserLayout a tab stays inside <w:t>, as 1.23.3 wrote it.
+  if (!browserLayout || typeof text !== 'string' || !text.includes('\t')) {
     return fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 't')
       .att('@xml', 'space', 'preserve')
@@ -401,6 +413,37 @@ const fixupLineHeight = (lineHeight) => {
     // 240 TWIP or 12 point is default line height
     return 240;
   }
+};
+
+// 1.23.3's line height, kept for callers without browserLayout: a unitless value is
+// multiplied by the element's font size, a percentage likewise.
+const fixupLineHeightFor1233 = (lineHeight, fontSize) => {
+  if (!Number.isNaN(Number(lineHeight))) {
+    if (fontSize) {
+      const actualLineHeight = Number(lineHeight) * fontSize;
+
+      return HIPToTWIP(actualLineHeight);
+    }
+    // 240 TWIP or 12 point is default line height
+    return Number(lineHeight) * 240;
+  } else if (pointRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(pointRegex);
+    return pointToTWIP(matchedParts[1]);
+  } else if (pixelRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(pixelRegex);
+    return pixelToTWIP(matchedParts[1]);
+  } else if (cmRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(cmRegex);
+    return cmToTWIP(matchedParts[1]);
+  } else if (inchRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(inchRegex);
+    return inchToTWIP(matchedParts[1]);
+  } else if (percentageRegex.test(lineHeight)) {
+    const matchedParts = lineHeight.match(percentageRegex);
+    return HIPToTWIP((matchedParts[1] * fontSize) / 100);
+  }
+  // 240 TWIP or 12 point is default line height
+  return 240;
 };
 
 // eslint-disable-next-line eslint-js/consistent-return
@@ -776,6 +819,8 @@ const cssBorderParser = (
 
 const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes, options) => {
   const modifiedAttributes = { ...attributes };
+  // Without browserLayout every style keeps 1.23.3's meaning (see the zero-regression suite).
+  const browserLayout = Boolean(docxDocumentInstance && docxDocumentInstance.browserLayout);
 
   // styles
   if (isVNode(vNode) && vNode.properties && vNode.properties.style) {
@@ -804,6 +849,10 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         if (['left', 'right', 'center', 'justify'].includes(vNodeStyleValue)) {
           modifiedAttributes.textAlign = vNodeStyleValue;
         }
+      } else if (vNodeStyleKey === 'font-weight' && !browserLayout) {
+        if (vNodeStyleValue === 'bold') {
+          modifiedAttributes.strong = vNodeStyleValue;
+        }
       } else if (vNodeStyleKey === 'font-weight') {
         // Word has bold and not-bold. 600 and up is bold, as browsers draw it
         // when a family has no face in between. A weight that is NOT bold is
@@ -815,7 +864,7 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         } else if (weight === 'normal' || weight === 'lighter' || Number(weight) > 0) {
           modifiedAttributes.strong = false;
         }
-      } else if (vNodeStyleKey === 'font-style') {
+      } else if (vNodeStyleKey === 'font-style' && browserLayout) {
         // Word has italic and not; an oblique face draws as italic. `normal`
         // is kept as `false`, as font-weight's is, so it can switch off an
         // italic an enclosing <em> or span hands down. The document editor
@@ -829,6 +878,8 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         }
       } else if (vNodeStyleKey === 'font-family') {
         modifiedAttributes.font = docxDocumentInstance.createFont(vNodeStyleValue);
+      } else if (vNodeStyleKey === 'font-size' && !browserLayout) {
+        modifiedAttributes.fontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
       } else if (vNodeStyleKey === 'font-size') {
         const fontSize = resolveFontSize(
           vNodeStyleValue,
@@ -838,6 +889,13 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         if (fontSize !== undefined) {
           modifiedAttributes.fontSize = fontSize;
         }
+      } else if (vNodeStyleKey === 'line-height' && !browserLayout) {
+        modifiedAttributes.lineHeight = fixupLineHeightFor1233(
+          vNodeStyleValue,
+          vNodeStyle['font-size']
+            ? fixupFontSize(vNodeStyle['font-size'], docxDocumentInstance)
+            : null
+        );
       } else if (vNodeStyleKey === 'line-height') {
         modifiedAttributes.lineHeight = fixupLineHeight(vNodeStyleValue);
         // An absolute line-height is a height, not a multiple of a single line:
@@ -902,7 +960,7 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         if (isZeroOrTruthy(leftMargin) || isZeroOrTruthy(rightMargin)) {
           modifiedAttributes.indentation = indentation;
         }
-      } else if (vNodeStyleKey === 'margin-top') {
+      } else if (vNodeStyleKey === 'margin-top' && browserLayout) {
         if (paragraphLevelTags.includes(vNode.tagName)) {
           const beforeSpacing = fixupParagraphSpacing(vNodeStyleValue);
           if (isZeroOrTruthy(beforeSpacing)) {
@@ -912,13 +970,13 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
       } else if (vNodeStyleKey === 'margin-bottom') {
         if (vNode.tagName === 'p') {
           modifiedAttributes.afterSpacing = fixupMargin(vNodeStyle['margin-bottom']);
-        } else if (paragraphLevelTags.includes(vNode.tagName)) {
+        } else if (browserLayout && paragraphLevelTags.includes(vNode.tagName)) {
           const afterSpacing = fixupParagraphSpacing(vNodeStyleValue);
           if (isZeroOrTruthy(afterSpacing)) {
             modifiedAttributes.afterSpacing = afterSpacing;
           }
         }
-      } else if (tableCellPaddingProperties.includes(vNodeStyleKey)) {
+      } else if (browserLayout && tableCellPaddingProperties.includes(vNodeStyleKey)) {
         // Sides are merged one declaration at a time, in source order, so a
         // `padding-left: 0` after a `padding: 8px` cancels only the left side —
         // and a side nobody mentioned is left out of <w:tcMar> entirely so it
@@ -932,7 +990,10 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
             };
           }
         }
-      } else if (Object.prototype.hasOwnProperty.call(paragraphBorderProperties, vNodeStyleKey)) {
+      } else if (
+        browserLayout &&
+        Object.prototype.hasOwnProperty.call(paragraphBorderProperties, vNodeStyleKey)
+      ) {
         if (paragraphLevelTags.includes(vNode.tagName)) {
           const paragraphBorder = parseParagraphBorder(vNodeStyleValue);
           const paragraphBorders = { ...(modifiedAttributes.paragraphBorders || {}) };
@@ -1006,6 +1067,17 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         }
       }
     }
+  }
+
+  // 1.23.3 named every underline's colour, black when the CSS named none.
+  const { textDecoration } = modifiedAttributes;
+  if (
+    !browserLayout &&
+    textDecoration &&
+    (textDecoration.line === 'underline' || textDecoration.line === 'both') &&
+    !textDecoration.color
+  ) {
+    modifiedAttributes.textDecoration = { ...textDecoration, color: '000000' };
   }
 
   // Handle HTML align attribute (e.g., <p align="center">, <div align="right">)
@@ -1316,7 +1388,7 @@ const buildPageFieldRuns = (vNode, attributes, docxDocumentInstance) => {
       runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'separate').up()
     ),
     buildFieldRun(fieldAttributes, (runFragment) =>
-      runFragment.import(buildTextElement(cachedResult))
+      runFragment.import(buildTextElement(cachedResult, layoutOf(docxDocumentInstance)))
     ),
     buildFieldRun(fieldAttributes, (runFragment) =>
       runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'end').up()
@@ -1524,6 +1596,9 @@ const buildShapeMarkerRun = (vNode, docxDocumentInstance) => {
 // Intercepts the marker elements before they are treated as text. Returns the
 // runs they stand for, or null when the element is ordinary markup.
 const buildMarkerRuns = (vNode, attributes, docxDocumentInstance) => {
+  // Markers are a browserLayout feature: without it a data-shape or data-field element is
+  // ordinary markup and keeps its text, as in 1.23.3.
+  if (!layoutOf(docxDocumentInstance).browserLayout) return null;
   if (!isVNode(vNode) || !vNode.properties || !vNode.properties.attributes) return null;
   const markerAttributes = vNode.properties.attributes;
   if (markerAttributes['data-shape'] !== undefined) {
@@ -1582,8 +1657,10 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
         const textFragment = buildTextElement(
           transformText(
             tempVNode.text,
-            formattingFragmentAttributes.textTransform || tempAttributes.textTransform
-          )
+            formattingFragmentAttributes.textTransform || tempAttributes.textTransform,
+            layoutOf(docxDocumentInstance)
+          ),
+          layoutOf(docxDocumentInstance)
         );
         // formattingFragmentAttributes carries inline <strong>/<em>/<u>/<del>
         // overrides parsed from their `style` attributes (issue #200). Spreading
@@ -1749,7 +1826,10 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
   // (notably the phrasing-tag branch above).
   runFragment.import(sortRprChildren(runPropertiesFragment));
   if (isVText(vNode)) {
-    const textFragment = buildTextElement(transformText(vNode.text, attributes.textTransform));
+    const textFragment = buildTextElement(
+      transformText(vNode.text, attributes.textTransform, layoutOf(docxDocumentInstance)),
+      layoutOf(docxDocumentInstance)
+    );
     runFragment.import(textFragment);
   } else if (attributes && attributes.type === 'picture') {
     const imageSource = vNode.properties.src;

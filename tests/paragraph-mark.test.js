@@ -11,7 +11,7 @@
 import HTMLtoDOCX from '../index.js';
 import { parseDOCX } from './helpers/docx-assertions.js';
 
-const convert = async (html) => parseDOCX(await HTMLtoDOCX(html, null, {}));
+const convert = async (html) => parseDOCX(await HTMLtoDOCX(html, null, { browserLayout: true }));
 
 const markOf = (paragraph) => {
   const pPr = /<w:pPr>([\s\S]*?)<\/w:pPr>/.exec(paragraph.xml);

@@ -13,7 +13,7 @@ import { parseDOCX } from './helpers/docx-assertions.js';
 const CELL_HEADINGS = { table: { cellHeadings: true } };
 
 const convert = async (html, options = CELL_HEADINGS) =>
-  parseDOCX(await HTMLtoDOCX(html, null, options));
+  parseDOCX(await HTMLtoDOCX(html, null, { browserLayout: true, ...options }));
 
 const paragraphWith = (parsed, text) =>
   parsed.paragraphs.find((paragraph) => paragraph.text === text);

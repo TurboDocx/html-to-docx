@@ -7,7 +7,7 @@ import HTMLtoDOCX from '../index.js';
 import { parseDOCX, assertParagraphText } from './helpers/docx-assertions.js';
 
 const convert = async (html, options = {}) => {
-  const docx = await HTMLtoDOCX(html, null, options);
+  const docx = await HTMLtoDOCX(html, null, { browserLayout: true, ...options });
   return parseDOCX(docx);
 };
 

@@ -12,7 +12,7 @@ import HTMLtoDOCX from '../index.js';
 import { parseDOCX } from './helpers/docx-assertions.js';
 
 const underlines = async (html) => {
-  const { xml } = await parseDOCX(await HTMLtoDOCX(html, {}));
+  const { xml } = await parseDOCX(await HTMLtoDOCX(html, null, { browserLayout: true }));
   return [...xml.matchAll(/<w:u\b[^>]*\/>/g)].map((m) => m[0]);
 };
 

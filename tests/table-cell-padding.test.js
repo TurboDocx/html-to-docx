@@ -30,7 +30,12 @@ function parseCellMargin(tcPr) {
 }
 
 async function convertCell(cellHtml) {
-  const buffer = await HTMLtoDOCX(`<table><tr>${cellHtml}</tr></table>`, null, {}, null);
+  const buffer = await HTMLtoDOCX(
+    `<table><tr>${cellHtml}</tr></table>`,
+    null,
+    { browserLayout: true },
+    null
+  );
   const parsed = await parseDOCX(buffer);
   assertWellFormedXML(parsed.xml, 'document.xml');
   return parsed.xml;
@@ -98,7 +103,7 @@ describe('table cell padding', () => {
       const buffer = await HTMLtoDOCX(
         '<table><thead><tr><th style="padding: 6px">h</th></tr></thead></table>',
         null,
-        {},
+        { browserLayout: true },
         null
       );
       const parsed = await parseDOCX(buffer);
@@ -149,7 +154,12 @@ describe('table cell padding', () => {
     });
 
     it('should ignore padding on an element that is not a cell', async () => {
-      const buffer = await HTMLtoDOCX('<p style="padding: 8px">x</p>', null, {}, null);
+      const buffer = await HTMLtoDOCX(
+        '<p style="padding: 8px">x</p>',
+        null,
+        { browserLayout: true },
+        null
+      );
       const parsed = await parseDOCX(buffer);
       expect(parsed.xml).not.toContain('<w:tcMar>');
     });
@@ -178,7 +188,7 @@ describe('table cell padding', () => {
           '<table><tr><td>inner</td></tr></table>' +
           '</td></tr></table>',
         null,
-        {},
+        { browserLayout: true },
         null
       );
       const parsed = await parseDOCX(buffer);

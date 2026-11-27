@@ -22,7 +22,7 @@ const spacingOf = (paragraph) => {
 };
 
 const convert = async (html, options = {}) => {
-  const docx = await HTMLtoDOCX(html, null, options);
+  const docx = await HTMLtoDOCX(html, null, { browserLayout: true, ...options });
   return parseDOCX(docx);
 };
 
