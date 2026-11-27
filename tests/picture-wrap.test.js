@@ -19,7 +19,9 @@ const PIXEL =
 const EMU_PER_PX = 9525;
 
 const documentXml = async (html) =>
-  (await JSZip.loadAsync(await HTMLtoDOCX(html))).file('word/document.xml').async('string');
+  (await JSZip.loadAsync(await HTMLtoDOCX(html, null, { browserLayout: true })))
+    .file('word/document.xml')
+    .async('string');
 
 const anchorOf = (xml) => (xml.match(/<wp:anchor[\s\S]*?<\/wp:anchor>/) || [''])[0];
 

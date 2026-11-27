@@ -1928,7 +1928,12 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
 
       const { type, inlineOrAnchored, ...otherAttributes } = attributes;
       // eslint-disable-next-line no-use-before-define
-      const imageFragment = buildDrawing(inlineOrAnchored, type, otherAttributes);
+      const imageFragment = buildDrawing(inlineOrAnchored, type, {
+        ...otherAttributes,
+        // The alt text on the drawing itself (Word's Alt Text pane) is a browserLayout
+        // feature; 1.23.3 wrote it on the picture only.
+        descriptionOnDrawing: layoutOf(docxDocumentInstance).browserLayout,
+      });
       runFragment.import(imageFragment);
     }
   } else if (isVNode(vNode) && vNode.tagName === 'br') {
@@ -2516,16 +2521,18 @@ const imageTransparencyOf = (vNode) => {
 };
 
 const computeImageDimensions = (vNode, attributes, browserLayout = false) => {
-  // Its crop and border ride along to the picture's markup (buildPicture).
+  // Its crop and border ride along to the picture's markup (buildPicture), with where it sits
+  // against its text and its transparency. All four are browserLayout features: without it a
+  // picture is in line, uncropped, unbordered and opaque, as in 1.23.3.
+  const pictureOf = browserLayout ? vNode : null;
   // eslint-disable-next-line no-param-reassign
-  attributes.crop = imageCropOf(vNode);
+  attributes.crop = imageCropOf(pictureOf);
   // eslint-disable-next-line no-param-reassign
-  attributes.border = imageBorderOf(vNode);
-  // And where it sits against its text, and its transparency.
+  attributes.border = imageBorderOf(pictureOf);
   // eslint-disable-next-line no-param-reassign
-  attributes.placement = imagePlacementOf(vNode);
+  attributes.placement = imagePlacementOf(pictureOf);
   // eslint-disable-next-line no-param-reassign
-  attributes.transparency = imageTransparencyOf(vNode);
+  attributes.transparency = imageTransparencyOf(pictureOf);
   const { maximumWidth, maximumHeight, originalWidth, originalHeight } = attributes;
   const aspectRatio = originalHeight > 0 ? originalWidth / originalHeight : 1;
   // Word lays a picture's line out OUTSIDE the picture (buildEffectExtentFragment),
@@ -5812,7 +5819,7 @@ const buildAnchoredDrawing = (graphicType, attributes) => {
   const drawingObjectNonVisualPropertiesFragment = buildDrawingObjectNonVisualProperties(
     attributes.id,
     attributes.fileNameWithExtension,
-    attributes.description
+    attributes.descriptionOnDrawing ? attributes.description : undefined
   );
   anchoredDrawingFragment.import(drawingObjectNonVisualPropertiesFragment);
   const graphicFragment = buildGraphic(graphicType, attributes);
@@ -5838,7 +5845,7 @@ const buildInlineDrawing = (graphicType, attributes) => {
   const drawingObjectNonVisualPropertiesFragment = buildDrawingObjectNonVisualProperties(
     attributes.id,
     attributes.fileNameWithExtension,
-    attributes.description
+    attributes.descriptionOnDrawing ? attributes.description : undefined
   );
   inlineDrawingFragment.import(drawingObjectNonVisualPropertiesFragment);
   const graphicFragment = buildGraphic(graphicType, attributes);
