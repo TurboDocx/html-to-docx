@@ -275,6 +275,13 @@ class DocxDocument {
       value: properties.numbering && properties.numbering.levelIndent,
       fallback: 720,
     });
+    // Whether the document named a level indent at all: a list item's
+    // continuation paragraph then lines up with the item's text.
+    this.listLevelIndentIsSet =
+      indentOrDefault({
+        value: properties.numbering && properties.numbering.levelIndent,
+        fallback: null,
+      }) !== null;
     this.listHangingIndent = indentOrDefault({
       value: properties.numbering && properties.numbering.hangingIndent,
       fallback: 360,

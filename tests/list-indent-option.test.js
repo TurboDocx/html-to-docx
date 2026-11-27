@@ -82,4 +82,28 @@ describe('list indents', () => {
 
     expect(item).toContain('<w:ind w:left="0" w:hanging="0"/>');
   });
+
+  test("line a list item's continuation paragraph up with its text", async () => {
+    const html = '<ul><li>first<p>second</p></li></ul>';
+    const { xml } = await parseDOCX(
+      await HTMLtoDOCX(html, null, { numbering: { levelIndent: 400, hangingIndent: 200 } })
+    );
+    const continuation = xml.slice(
+      xml.lastIndexOf('<w:p>', xml.indexOf('>second<')),
+      xml.indexOf('>second<')
+    );
+
+    expect(continuation).toContain('<w:ind w:left="400" w:hanging="0"/>');
+  });
+
+  test("keep Word's continuation indent when the document names none", async () => {
+    const html = '<ul><li>first<p>second</p></li></ul>';
+    const { xml } = await parseDOCX(await HTMLtoDOCX(html, null, {}));
+    const continuation = xml.slice(
+      xml.lastIndexOf('<w:p>', xml.indexOf('>second<')),
+      xml.indexOf('>second<')
+    );
+
+    expect(continuation).toContain('<w:ind w:left="1080" w:hanging="0"/>');
+  });
 });

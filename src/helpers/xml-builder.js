@@ -2048,10 +2048,15 @@ const buildNumberingProperties = (levelId, numberingId) =>
 
 // Helper function to build list continuation paragraph indentation
 // Provides proper indent without showing bullet/number (for issue #145)
-const buildListContinuationIndent = (level) => {
+const buildListContinuationIndent = ({ level, docxDocumentInstance }) => {
   // Calculate indent: 720 TWIPs = 0.5 inch per level
   // Add extra indent to align with text after bullet (not with bullet itself)
-  const leftIndent = (level + 1) * 720 + 360; // Extra 360 TWIPs (0.25 inch) for text alignment
+  // A document that names its own level indent has the item's text at
+  // (level+1)*levelIndent, which is where a continuation lines up.
+  const leftIndent =
+    docxDocumentInstance && docxDocumentInstance.listLevelIndentIsSet
+      ? (level + 1) * docxDocumentInstance.listLevelIndent
+      : (level + 1) * 720 + 360; // Extra 360 TWIPs (0.25 inch) for text alignment
   return fragment({ namespaceAlias: { w: namespaces.w } })
     .ele('@w', 'ind')
     .att('@w', 'left', String(leftIndent))
@@ -2308,7 +2313,10 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           // Handle continuation paragraphs (issue #145)
           // Continuation paragraphs get indentation instead of numbering
           if (attributes.isContinuation) {
-            const indentationFragment = buildListContinuationIndent(attributes.indentLevel || 0);
+            const indentationFragment = buildListContinuationIndent({
+              level: attributes.indentLevel || 0,
+              docxDocumentInstance,
+            });
             addChild('ind', indentationFragment);
           } else {
             const { levelId, numberingId } = attributes[key];
