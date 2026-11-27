@@ -11,6 +11,7 @@ import { create } from 'xmlbuilder2';
  *   - the children of `w:rPr`, `w:pPr` and `w:tcPr` sorted (the schema fixes their order, and
  *     the converter now writes it);
  *   - each `w:tblGrid` as its column count and total width (see serializeGrid);
+ *   - a `w:lineRule` anywhere but `w:spacing` dropped (see isStrayLineRule);
  *   - indentation-only text dropped, but text inside `w:t`, `w:instrText` and `w:delText` kept
  *     exactly, since a lost space there is a real change.
  * `docProps/core.xml` (creation timestamps) is left out; other parts are compared byte for byte.
@@ -48,6 +49,12 @@ const attributeName = (attribute) =>
     ? `w:${attribute.name.split(':')[1]}`
     : qualified(attribute.namespaceURI, attribute.localName);
 
+// Only CT_Spacing has w:lineRule. 1.23.3 sometimes also left the paragraph's line rule on the
+// property written before its w:spacing (a w:jc, a w:ind); the converter now writes it on
+// w:spacing only, where 1.23.3 also had it. The stray copies are dropped.
+const isStrayLineRule = (node, attribute) =>
+  node.localName !== 'spacing' && attributeName(attribute) === 'w:lineRule';
+
 const isNamespaceDeclaration = (attribute) =>
   attribute.namespaceURI === XMLNS ||
   attribute.name === 'xmlns' ||
@@ -79,6 +86,7 @@ const serialize = (node, indent) => {
 
   const attributes = [...node.attributes]
     .filter((attribute) => !isNamespaceDeclaration(attribute))
+    .filter((attribute) => !isStrayLineRule(node, attribute))
     .map((attribute) => `${attributeName(attribute)}=${JSON.stringify(attribute.value)}`)
     .toSorted();
 
