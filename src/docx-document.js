@@ -142,7 +142,10 @@ async function generateSectionXML(vTree, type = 'header') {
  * One section's page, resolved the way the document's own is: the sheet turned
  * for landscape, and whatever margin it does not set taken from the document.
  */
-function resolveSection(section, documentPageSize, documentMargins) {
+function resolveSection(sectionOptions, documentPageSize, documentMargins) {
+  // An entry that is not an object is an empty section, so later indices hold.
+  const section =
+    typeof sectionOptions === 'object' && sectionOptions !== null ? sectionOptions : {};
   const pageSize = section.pageSize || documentPageSize;
   const isPortraitOrientation = (section.orientation || defaultOrientation) === defaultOrientation;
   const height = pageSize.height ? pageSize.height : landscapeHeight;

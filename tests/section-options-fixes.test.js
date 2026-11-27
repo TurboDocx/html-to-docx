@@ -126,3 +126,20 @@ describe('a first-type header together with firstPage', () => {
     expect(firstRefs({ sectPr: body, kind: 'header' })).toHaveLength(1);
   });
 });
+
+describe('an odd entry in sections', () => {
+  it('treats null as an empty section using the document page setup', async () => {
+    const { document } = await render({ html: sectionHtml, options: { sections: [null] } });
+    const plain = await render({ html: '<p>x</p>', options: {} });
+    const [first] = sectPrs(document);
+    const [body] = sectPrs(plain.document);
+    ['w', 'h'].forEach((name) => {
+      expect(attr({ xml: first, tag: 'pgSz', name })).toBe(attr({ xml: body, tag: 'pgSz', name }));
+    });
+    ['top', 'left', 'header'].forEach((name) => {
+      expect(attr({ xml: first, tag: 'pgMar', name })).toBe(
+        attr({ xml: body, tag: 'pgMar', name })
+      );
+    });
+  });
+});
