@@ -5496,9 +5496,11 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
           }
         }
       } else if (childVNode.tagName === 'tr') {
-        if (index === 0) {
+        if (index === 0 && !isTableGridBuilt) {
           const tableGridFragment = buildTableGridFromTableRow(childVNode, modifiedAttributes);
           tableFragment.import(tableGridFragment);
+          // One grid per table: a <thead> or <tbody> after this row must not build another.
+          isTableGridBuilt = true;
         }
         const tableRowFragment = await buildTableRow(
           childVNode,

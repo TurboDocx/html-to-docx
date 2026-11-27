@@ -57,6 +57,20 @@ describe("a table's header rows", () => {
     expect(children).toStrictEqual(['tblPr', 'tblGrid', 'tr', 'tr']);
   });
 
+  it.each(['tbody', 'thead'])(
+    'writes one <w:tblGrid> when a bare <tr> comes before a <%s>',
+    async (section) => {
+      const docx = await HTMLtoDOCX(
+        `<table><tr><td>1</td><td>2</td></tr><${section}><tr><td>3</td><td>4</td></tr></${section}></table>`
+      );
+      const zip = await JSZip.loadAsync(docx);
+      const xml = await zip.file('word/document.xml').async('string');
+
+      const children = [...xml.matchAll(/<w:(tblPr|tblGrid|tr)[\s>]/g)].map((m) => m[1]);
+      expect(children).toStrictEqual(['tblPr', 'tblGrid', 'tr', 'tr']);
+    }
+  );
+
   it('marks no row of a table that has no <thead>', async () => {
     const xml = await documentXml('<table><tr><th>Head</th></tr><tr><td>Body</td></tr></table>');
 
