@@ -537,7 +537,8 @@ class DocxDocument {
               );
         // "01." is as wide as an outline "1.1.": hang it as far so it clears its text.
         const baseHanging = this.listHangingIndent;
-        let hangingIndent = numberFormat === 'decimalZero' ? baseHanging + 180 : baseHanging;
+        let hangingIndent =
+          this.browserLayout && numberFormat === 'decimalZero' ? baseHanging + 180 : baseHanging;
         if (type === 'ol' && outline) {
           // Outline levels are all decimal; only the list's own first level
           // honours its start value, deeper levels restart at 1 under their parent.

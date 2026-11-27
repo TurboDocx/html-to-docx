@@ -149,7 +149,47 @@ const EXTRA_SETS = Object.entries(OPTION_SETS).filter(
   ([setName]) => setName !== 'defaults' && setName !== 'headerFooter'
 );
 
+// Probes that need their own 1.23.3 options (found by the code review of #256).
+const TARGETED = [
+  {
+    name: 'probe/rowFontSizeEm',
+    html: '<table><tr style="font-size: 1.5em"><td>a</td></tr></table>',
+    options: {},
+  },
+  {
+    name: 'probe/rowFontSizePercent',
+    html: '<table><tr style="font-size: 110%"><td>a</td></tr></table>',
+    options: {},
+  },
+  {
+    name: 'probe/rowFontSizeRem',
+    html: '<table><tr style="font-size: 2rem"><td>a</td></tr></table>',
+    options: {},
+  },
+  {
+    name: 'probe/prettyTableUnminified',
+    html: '<table>\n  <tr>\n    <td>A</td>\n    <td>B</td>\n  </tr>\n</table>',
+    options: { preprocessing: { skipHTMLMinify: true } },
+  },
+  {
+    name: 'probe/prettyTbodyUnminified',
+    html: '<table>\n  <tbody>\n    <tr>\n      <td>A</td>\n    </tr>\n  </tbody>\n</table>',
+    options: { preprocessing: { skipHTMLMinify: true } },
+  },
+  {
+    name: 'probe/prettyTheadUnminified',
+    html: '<table>\n  <thead>\n    <tr><th>H</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>A</td></tr>\n  </tbody>\n</table>',
+    options: { preprocessing: { skipHTMLMinify: true } },
+  },
+  {
+    name: 'probe/decimalZeroDefaultStyle',
+    html: '<ol><li>a</li><li>b</li></ol>',
+    options: { numbering: { defaultOrderedListStyleType: 'decimalZero' } },
+  },
+];
+
 const probes = [
+  ...TARGETED,
   ...Object.entries(html).flatMap(([name, value]) => [
     { name: `probe/${name}`, html: value, options: OPTION_SETS.defaults },
     withHeaderFooter(`probe/${name}+headerFooter`, value, OPTION_SETS.headerFooter),

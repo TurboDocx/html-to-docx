@@ -3913,13 +3913,13 @@ const gridSpanWidth = (attributes, start, span) => {
   return widths.slice(start, start + span).reduce((sum, width) => sum + width, 0);
 };
 
-// How many grid columns a row lays its cells over.
+// How many grid columns a row lays its cells over. Only its cells count: unminified HTML
+// (preprocessing.skipHTMLMinify) also gives a row whitespace text children.
 const gridColumnCountOfRow = (rowVNode) =>
   vNodeHasChildren(rowVNode)
-    ? rowVNode.children.reduce(
-        (accumulator, childVNode) => accumulator + columnSpanOf(childVNode),
-        0
-      )
+    ? rowVNode.children
+        .filter((childVNode) => isVNode(childVNode) && ['td', 'th'].includes(childVNode.tagName))
+        .reduce((accumulator, childVNode) => accumulator + columnSpanOf(childVNode), 0)
     : 0;
 
 // A cell's width less its horizontal margins, or undefined when its width is
@@ -4612,6 +4612,9 @@ const buildTableRow = async (
           if (!colorlessColors.includes(tableRowStyleValue)) {
             modifiedAttributes.color = fixupColorCode(tableRowStyleValue);
           }
+        } else if (tableRowStlyeKey === 'font-size' && !docxDocumentInstance.browserLayout) {
+          // 1.23.3's conversion: em, rem and keywords stay unresolved.
+          modifiedAttributes.fontSize = fixupFontSize(tableRowStyleValue, docxDocumentInstance);
         } else if (tableRowStlyeKey === 'font-size') {
           const fontSize = resolveFontSize(
             tableRowStyleValue,
