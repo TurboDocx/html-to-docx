@@ -156,3 +156,47 @@ describe('titlePg order with lineNumber', () => {
     expect(body.indexOf('<w:lnNumType')).toBeLessThan(body.indexOf('<w:titlePg'));
   });
 });
+
+describe('firstPage without a written section 0 break', () => {
+  const options = {
+    header: true,
+    firstPage: { headerHTML: '<p>FP</p>' },
+    skipFirstHeaderFooter: true,
+    sections: [{ orientation: 'landscape' }],
+  };
+  const count = ({ xml, re }) => (xml.match(re) || []).length;
+  const firstRefs = /<w:headerReference [^>]*w:type="first"/g;
+
+  it('falls back to the body sectPr when no section 0 div exists', async () => {
+    const { document } = await render({
+      html: '<p>x</p><p>last</p>',
+      options,
+      header: '<p>H</p>',
+    });
+    const body = sectPrs(document).pop();
+    expect(count({ xml: body, re: firstRefs })).toBe(1);
+    expect(count({ xml: body, re: /<w:titlePg\/>/g })).toBe(1);
+  });
+
+  it('falls back to the body sectPr when the section 0 div is inside a table cell', async () => {
+    const { document } = await render({
+      html: '<table><tr><td><div data-docx-section="0"><p>a</p></div></td></tr></table><p>last</p>',
+      options,
+      header: '<p>H</p>',
+    });
+    const all = sectPrs(document);
+    const written = all.filter((sectPr) => sectPr.includes('w:type="first"'));
+    expect(written).toHaveLength(1);
+    expect(count({ xml: document, re: /<w:titlePg\/>/g })).toBe(1);
+  });
+
+  it('writes first-page references and titlePg once for a repeated index 0', async () => {
+    const { document } = await render({
+      html: '<div data-docx-section="0"><p>a</p></div><div data-docx-section="0"><p>b</p></div><p>last</p>',
+      options,
+      header: '<p>H</p>',
+    });
+    expect(count({ xml: document, re: firstRefs })).toBe(1);
+    expect(count({ xml: document, re: /<w:titlePg\/>/g })).toBe(1);
+  });
+});

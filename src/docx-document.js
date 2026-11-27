@@ -175,11 +175,10 @@ function resolveSection(sectionOptions, documentPageSize, documentMargins) {
  */
 function sectionReferencesXML(section, document, index) {
   const reference = ({ type, ownId, objects, isEnabled, firstPageId }) => {
-    // The first section's first-page band, when firstPage supplies one, is its
-    // only 'first' reference, so the document's own of that type is passed over.
+    // The first-page band, when firstPage supplies one, is only ever named by
+    // the first section's break, so no break takes it as the document's own.
     const documentOwn = objects.find(
-      (object) =>
-        object.type !== 'sectionOnly' && !(index === 0 && firstPageId && object.type === 'first')
+      (object) => object.type !== 'sectionOnly' && !(firstPageId && object.type === 'first')
     );
     const id = ownId || (isEnabled && documentOwn ? documentOwn.relationshipId : null);
     // The document's own part keeps the type the document gave it (headerType /
@@ -378,6 +377,12 @@ class DocxDocument {
     );
     documentXML.root().first().import(this.documentXML);
 
+    // Whether section 0's break was actually written (a section div that is
+    // missing, or dropped inside a cell or list item, writes none): when it was
+    // not, the body's properties carry the first page, as without sections.
+    const hasSectionBreakZero = /<w:tdxSectionTitlePage w:val="0"\/>/.test(documentXML.toString());
+    const bodyCarriesFirstPage = this.sections.length === 0 || !hasSectionBreakZero;
+
     // A band that firstPage supplies for page 1 is that side's only 'first'
     // reference (at most one per type), so the document's own is left out.
     generateSectionReferenceXML({
@@ -397,7 +402,7 @@ class DocxDocument {
 
     // Page 1's own bands, in a document of one section: its first page is the
     // document's. With several, the first section's break names them instead.
-    if (this.sections.length === 0 && hasFirstPage(this)) {
+    if (bodyCarriesFirstPage && hasFirstPage(this)) {
       documentXML
         .root()
         .first()
@@ -408,7 +413,7 @@ class DocxDocument {
     // With sections, the first section's break carries it (tdxSectionTitlePage):
     // the body's properties are the last section's.
     if (
-      this.sections.length === 0 &&
+      bodyCarriesFirstPage &&
       (this.header || this.footer) &&
       this.skipFirstHeaderFooter &&
       !hasFirstPage(this)
@@ -434,7 +439,7 @@ class DocxDocument {
         );
     }
     // After lnNumType, as CT_SectPr has it.
-    if (this.sections.length === 0 && hasFirstPage(this)) {
+    if (bodyCarriesFirstPage && hasFirstPage(this)) {
       documentXML
         .root()
         .first()
@@ -453,17 +458,24 @@ class DocxDocument {
 
     // Each section break names its header and footer, which exist by now;
     // the first section — or the only one — whether its first page differs.
+    // Only the first break for index 0 carries them, so a repeated index never
+    // writes the first-page references or titlePg twice.
+    let referencesZeroSeen = false;
+    let titleZeroSeen = false;
     return documentXML
       .toString({ prettyPrint: true })
       .replace(/<w:tdxSectionReferences w:val="(\d+)"\/>/g, (_match, index) => {
         const section = this.sections[Number(index)];
-        return section ? sectionReferencesXML(section, this, Number(index)) : '';
+        if (!section) return '';
+        const isFirstZero = Number(index) === 0 && !referencesZeroSeen;
+        if (Number(index) === 0) referencesZeroSeen = true;
+        return sectionReferencesXML(section, this, isFirstZero ? 0 : -1);
       })
-      .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, (_match, index) =>
-        Number(index) === 0 && (hasFirstPage(this) || this.skipsFirstHeaderFooter())
-          ? '<w:titlePg/>'
-          : ''
-      )
+      .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, (_match, index) => {
+        if (Number(index) !== 0 || titleZeroSeen) return '';
+        titleZeroSeen = true;
+        return hasFirstPage(this) || this.skipsFirstHeaderFooter() ? '<w:titlePg/>' : '';
+      })
       .replace(/<w:tdxFirstPage\/>/g, () => firstPageReferencesXML(this))
       .replaceAll('<w:tdxFirstPageTitle/>', '<w:titlePg/>');
   }
