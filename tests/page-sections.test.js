@@ -204,4 +204,43 @@ describe('a document of several sections', () => {
     expect(first).toContain('w:left="1140"');
     expect(first).toContain('w:w="11520"');
   });
+
+  it('puts titlePg on the first section, not the body, for skipFirstHeaderFooter', async () => {
+    const { document } = await render('<div data-docx-section="0"><p>a</p></div><p>b</p>', {
+      header: true,
+      footer: true,
+      skipFirstHeaderFooter: true,
+      sections: [{ orientation: 'landscape' }],
+    });
+    const [first, body] = sectPrs(document);
+    expect(first.match(/<w:titlePg\/>/g)).toHaveLength(1);
+    expect(body).not.toContain('titlePg');
+  });
+
+  it("names the document's own header and footer type in a section break", async () => {
+    const { document } = await render('<div data-docx-section="0"><p>a</p></div><p>b</p>', {
+      header: true,
+      footer: true,
+      headerType: 'even',
+      footerType: 'even',
+      sections: [{ orientation: 'landscape' }],
+    });
+    const [first, body] = sectPrs(document);
+    expect(body).toMatch(/<w:headerReference r:id="rId\d+" w:type="even"\/>/);
+    expect(first).toMatch(/<w:headerReference r:id="rId\d+" w:type="even"\/>/);
+    expect(first).toMatch(/<w:footerReference r:id="rId\d+" w:type="even"\/>/);
+  });
+
+  it("carries the document's line numbering into a section break, in schema order", async () => {
+    const { document } = await render('<div data-docx-section="0"><p>a</p></div><p>b</p>', {
+      lineNumber: true,
+      lineNumberOptions: { countBy: 1, start: 1, restart: 'continuous' },
+      sections: [{ orientation: 'landscape' }],
+    });
+    const [first, body] = sectPrs(document);
+    const lineNumbers = '<w:lnNumType w:countBy="1" w:start="1" w:restart="continuous"/>';
+    expect(body).toContain(lineNumbers);
+    expect(first).toContain(lineNumbers);
+    expect(first.indexOf('<w:pgMar')).toBeLessThan(first.indexOf('<w:lnNumType'));
+  });
 });

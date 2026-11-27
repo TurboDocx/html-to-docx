@@ -567,7 +567,7 @@ const tableSuppressesSpacingAfter = (vNode, docxDocumentInstance) => {
  * page. Its header and footer are written in once they exist
  * (DocxDocument.generateDocumentXML).
  */
-const buildSectionBreak = (section, index) => {
+const buildSectionBreak = ({ section, index, lineNumber }) => {
   const { width, height, orientation, margins } = section;
   const paragraph = fragment({ namespaceAlias: { w: namespaces.w } });
   const paragraphProperties = paragraph.ele('@w', 'p').ele('@w', 'pPr');
@@ -590,6 +590,14 @@ const buildSectionBreak = (section, index) => {
   ['top', 'right', 'bottom', 'left', 'header', 'footer', 'gutter'].forEach((side) => {
     pageMargins.att('@w', side, String(Math.round(margins[side] || 0)));
   });
+  // Line numbering runs through the document, so each break carries it as the body does.
+  if (lineNumber) {
+    sectionProperties
+      .ele('@w', 'lnNumType')
+      .att('@w', 'countBy', lineNumber.countBy)
+      .att('@w', 'start', lineNumber.start)
+      .att('@w', 'restart', lineNumber.restart);
+  }
   // Whether its first page differs (titlePg), which follows the page's setup.
   sectionProperties.ele('@w', 'tdxSectionTitlePage').att('@w', 'val', String(index));
   return paragraph;
@@ -635,7 +643,13 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
         // eslint-disable-next-line no-param-reassign
         docxDocumentInstance.availableDocumentHeight = availableDocumentHeight;
       }
-      xmlFragment.import(buildSectionBreak(section, Number(sectionIndex)));
+      xmlFragment.import(
+        buildSectionBreak({
+          section,
+          index: Number(sectionIndex),
+          lineNumber: docxDocumentInstance.lineNumber,
+        })
+      );
       return;
     }
 

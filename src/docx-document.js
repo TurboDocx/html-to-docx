@@ -168,7 +168,10 @@ function sectionReferencesXML(section, document, index) {
   const reference = (type, ownId, objects, isEnabled) => {
     const documentOwn = objects.find((object) => object.type !== 'sectionOnly');
     const id = ownId || (isEnabled && documentOwn ? documentOwn.relationshipId : null);
-    return id ? `<w:${type}Reference r:id="rId${id}" w:type="default"/>` : '';
+    // The document's own part keeps the type the document gave it (headerType /
+    // footerType); a section's own part is its default.
+    const partType = !ownId && documentOwn && documentOwn.type ? documentOwn.type : 'default';
+    return id ? `<w:${type}Reference r:id="rId${id}" w:type="${partType}"/>` : '';
   };
   return (
     reference('header', section.headerRelationshipId, document.headerObjects, document.header) +
@@ -355,7 +358,14 @@ class DocxDocument {
         .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPage'));
     }
 
-    if ((this.header || this.footer) && this.skipFirstHeaderFooter && !hasFirstPage(this)) {
+    // With sections, the first section's break carries it (tdxSectionTitlePage):
+    // the body's properties are the last section's.
+    if (
+      this.sections.length === 0 &&
+      (this.header || this.footer) &&
+      this.skipFirstHeaderFooter &&
+      !hasFirstPage(this)
+    ) {
       documentXML
         .root()
         .first()
@@ -395,9 +405,16 @@ class DocxDocument {
         return section ? sectionReferencesXML(section, this, Number(index)) : '';
       })
       .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, (_match, index) =>
-        Number(index) === 0 && hasFirstPage(this) ? '<w:titlePg/>' : ''
+        Number(index) === 0 && (hasFirstPage(this) || this.skipsFirstHeaderFooter())
+          ? '<w:titlePg/>'
+          : ''
       )
       .replace(/<w:tdxFirstPage\/>/g, () => `${firstPageReferencesXML(this)}<w:titlePg/>`);
+  }
+
+  // Whether the first page shows no running header or footer (skipFirstHeaderFooter).
+  skipsFirstHeaderFooter() {
+    return Boolean((this.header || this.footer) && this.skipFirstHeaderFooter);
   }
 
   generateCoreXML() {
