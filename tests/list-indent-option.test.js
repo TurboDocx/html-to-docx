@@ -48,8 +48,12 @@ describe('list indents', () => {
   });
 
   test('hold a checklist item where a list item stands', async () => {
+    // Checklists are a browserLayout feature.
     const { xml } = await parseDOCX(
-      await HTMLtoDOCX(LISTS, null, { numbering: { levelIndent: 675, hangingIndent: 375 } })
+      await HTMLtoDOCX(LISTS, null, {
+        browserLayout: true,
+        numbering: { levelIndent: 675, hangingIndent: 375 },
+      })
     );
     const item = xml.slice(xml.lastIndexOf('<w:p>', xml.indexOf('>c<')), xml.indexOf('>c<'));
 

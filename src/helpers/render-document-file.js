@@ -179,6 +179,14 @@ const joinsOutlineList = (listNode) => {
  * the list's items belong to, or null) and `checklist`.
  */
 const allocateListNumbering = (docxDocumentInstance, listNode, level, parentOutline) => {
+  // Checklists and outline numbering are browserLayout features: without it every list gets
+  // its own definition, as in 1.23.3.
+  if (!docxDocumentInstance.browserLayout) {
+    return {
+      numberingId: docxDocumentInstance.createNumbering(listNode.tagName, listNode.properties),
+      outline: null,
+    };
+  }
   if (isChecklist(listNode)) {
     return { numberingId: null, outline: null, checklist: true };
   }

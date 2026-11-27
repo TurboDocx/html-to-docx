@@ -58,8 +58,10 @@ const getUnorderedListBullet = (style, attributes) => {
 class ListStyleBuilder {
   // defaults is an object passed in from constants.js / numbering with the following properties:
   // defaultOrderedListStyleType: 'decimal' (unless otherwise specified)
-  constructor(defaults) {
+  // Without browserLayout the bullets, formats and suffixes are 1.23.3's.
+  constructor(defaults, { browserLayout = false } = {}) {
     this.defaults = defaults || { defaultOrderedListStyleType: 'decimal' };
+    this.browserLayout = browserLayout;
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -76,7 +78,7 @@ class ListStyleBuilder {
       case 'lower-alpha-bracket-end':
         return 'lowerLetter';
       case 'decimal-leading-zero':
-        return 'decimalZero';
+        return this.browserLayout ? 'decimalZero' : this.defaults.defaultOrderedListStyleType;
       case 'decimal':
       case 'decimal-bracket':
         return 'decimal';
@@ -93,7 +95,8 @@ class ListStyleBuilder {
     if (style && style['list-style-type']) {
       listType = style['list-style-type'];
     }
-    const suffix = attributes && attributes['data-suffix'] === ')' ? ')' : '.';
+    const suffix =
+      this.browserLayout && attributes && attributes['data-suffix'] === ')' ? ')' : '.';
 
     switch (listType) {
       case 'upper-roman':
@@ -128,16 +131,22 @@ class ListStyleBuilder {
 
   // A data-bullet glyph, else an explicit disc/circle/square, as a Unicode glyph
   // in a font that has it (see unorderedListBullets and getDataBullet). Lists
-  // with neither keep the Symbol-font private-use bullet.
-  // eslint-disable-next-line class-methods-use-this
+  // with neither keep the Symbol-font private-use bullet. Without browserLayout,
+  // 1.23.3's Symbol-font glyphs.
   getUnorderedListPrefixSuffix(style, attributes) {
+    if (!this.browserLayout) {
+      const listType = style && style['list-style-type'] ? style['list-style-type'] : '';
+      if (listType === 'square') return '\uF0A7';
+      if (listType === 'circle') return 'o';
+      return '\uF0B7';
+    }
     const bullet = getUnorderedListBullet(style, attributes);
     return bullet ? bullet.glyph : '\uF0B7';
   }
 
   // Font for the bullet glyph returned by getUnorderedListPrefixSuffix.
-  // eslint-disable-next-line class-methods-use-this
   getUnorderedListFont(style, attributes) {
+    if (!this.browserLayout) return 'Symbol';
     const bullet = getUnorderedListBullet(style, attributes);
     return bullet ? bullet.font : 'Symbol';
   }

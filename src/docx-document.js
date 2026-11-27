@@ -304,10 +304,10 @@ class DocxDocument {
 
     // The list options merge over the defaults: a document that names only
     // its indents keeps the default ordered-list style.
-    this.ListStyleBuilder = new ListStyleBuilder({
-      ...defaultDocumentOptions.numbering,
-      ...(properties.numbering || {}),
-    });
+    this.ListStyleBuilder = new ListStyleBuilder(
+      { ...defaultDocumentOptions.numbering, ...(properties.numbering || {}) },
+      { browserLayout: this.browserLayout }
+    );
   }
 
   generateContentTypesXML() {

@@ -19,7 +19,7 @@ const UNCHECKED = '☐';
 const CHECKED = '☑';
 
 const convert = async (html) => {
-  const docx = await HTMLtoDOCX(html, null, {});
+  const docx = await HTMLtoDOCX(html, null, { browserLayout: true });
   const parsed = await parseDOCX(docx);
   const numberingXml = await parsed.zip.file('word/numbering.xml').async('string');
   return { ...parsed, numberingXml };
