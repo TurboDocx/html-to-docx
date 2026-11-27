@@ -71,14 +71,32 @@ const render = async (convert, entry) => {
   }
 };
 
-// Both renders as one comparable value: the error each threw (or null), and the parts that differ.
+const DOCUMENT = 'word/document.xml';
+const NULL_NUMBERING = '<w:numId w:val="null">';
+
+// A list item whose text follows a nested paragraph (`<li><p>a</p>tail</li>`) made 1.23.3 write
+// numId="null", which is invalid (numId is an integer), so the converter now writes a valid
+// continuation paragraph. For a document 1.23.3 wrote that way, the document part may differ but
+// must hold no null numId; every other part must still match.
+const withValidityFixes = (expected, actual) => {
+  const fixesNullNumbering = expected.parts[DOCUMENT]?.includes(NULL_NUMBERING) ?? false;
+  if (!fixesNullNumbering) return differences(expected.parts, actual.parts);
+  const { [DOCUMENT]: expectedDocument, ...expectedRest } = expected.parts;
+  const { [DOCUMENT]: actualDocument, ...actualRest } = actual.parts;
+  const stillNull = actualDocument?.includes(NULL_NUMBERING)
+    ? [`${DOCUMENT}: still has numId="null"`]
+    : [];
+  return [...differences(expectedRest, actualRest), ...stillNull];
+};
+
+// Both renders as one comparable value: whether they threw alike, and the parts that differ.
 const compare = async (entry) => {
   const expected = await render(baseline, entry);
   const actual = await render(HTMLtoDOCX, entry);
   return {
     error:
       actual.error === expected.error ? 'same' : { expected: expected.error, actual: actual.error },
-    differences: differences(expected.parts, actual.parts),
+    differences: withValidityFixes(expected, actual),
   };
 };
 

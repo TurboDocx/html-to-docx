@@ -10,6 +10,7 @@ import { create } from 'xmlbuilder2';
  *   - the body's `w:sectPr` last (the schema's place for it);
  *   - the children of `w:rPr`, `w:pPr` and `w:tcPr` sorted (the schema fixes their order, and
  *     the converter now writes it);
+ *   - each `w:tblGrid` as its column count and total width (see serializeGrid);
  *   - indentation-only text dropped, but text inside `w:t`, `w:instrText` and `w:delText` kept
  *     exactly, since a lost space there is a real change.
  * `docProps/core.xml` (creation timestamps) is left out; other parts are compared byte for byte.
@@ -30,6 +31,7 @@ const PREFIXES = {
   'http://www.w3.org/XML/1998/namespace': 'xml',
 };
 const XMLNS = 'http://www.w3.org/2000/xmlns/';
+const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const SORTED_CHILDREN = new Set(['rPr', 'pPr', 'tcPr']);
 const LITERAL_TEXT = new Set(['t', 'instrText', 'delText']);
 const SKIPPED_PARTS = new Set(['docProps/core.xml']);
@@ -59,9 +61,21 @@ const serializeText = (node, indent) => {
   return text ? `${indent}${JSON.stringify(text)}\n` : '';
 };
 
+// A grid column's width is a whole number of twips (ST_TwipsMeasure is an unsigned integer or a
+// measure with a unit). 1.23.3 wrote fractions, which is invalid; the converter now writes whole
+// numbers with the remainder on the last column. A grid compares by column count and total width.
+const serializeGrid = (node, indent) => {
+  const widths = [...node.childNodes]
+    .filter((child) => child.localName === 'gridCol')
+    .map((child) => Number(child.getAttributeNS(W, 'w')) || 0);
+  const total = Math.round(widths.reduce((sum, width) => sum + width, 0));
+  return `${indent}<w:tblGrid columns="${widths.length}" total="${total}">\n`;
+};
+
 const serialize = (node, indent) => {
   if (node.nodeType === 3 || node.nodeType === 4) return serializeText(node, indent);
   if (node.nodeType !== 1) return '';
+  if (node.localName === 'tblGrid' && node.namespaceURI === W) return serializeGrid(node, indent);
 
   const attributes = [...node.attributes]
     .filter((attribute) => !isNamespaceDeclaration(attribute))
