@@ -80,6 +80,9 @@ const sectionValueToTWIP = ({ value }) => {
   return unit ? sectionUnitToTWIP[unit](amount) : amount;
 };
 
+// Margins that are ST_TwipsMeasure (unsigned) in the schema; top and bottom are signed.
+const unsignedSectionKeys = new Set(['left', 'right', 'header', 'footer', 'gutter']);
+
 /**
  * A section's page size or margins in twips. Unlike the document's own, a 0 is
  * kept, and a value that is not a size is dropped, so the section takes the
@@ -93,7 +96,10 @@ const normalizeSectionUnits = ({ dimensions }) => {
   const normalized = {};
   Object.keys(dimensions).forEach((key) => {
     const twips = sectionValueToTWIP({ value: dimensions[key] });
-    if (twips !== null) normalized[key] = twips;
+    // Those that are unsigned in the schema cannot be negative; top and bottom can.
+    if (twips !== null && !(twips < 0 && unsignedSectionKeys.has(key))) {
+      normalized[key] = twips;
+    }
   });
   return normalized;
 };

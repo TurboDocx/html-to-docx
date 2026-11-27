@@ -244,3 +244,30 @@ describe('section pageSize and orientation inherit the document', () => {
     );
   });
 });
+
+describe('section margins that cannot be negative', () => {
+  it('drops a negative unsigned margin and keeps a negative top', async () => {
+    const { document } = await render({
+      html: sectionHtml,
+      options: { margins: { left: 1000 }, sections: [{ margins: { left: -100, top: -100 } }] },
+    });
+    const [first] = sectPrs(document);
+    expect(attr({ xml: first, tag: 'pgMar', name: 'left' })).toBe('1000');
+    expect(attr({ xml: first, tag: 'pgMar', name: 'top' })).toBe('-100');
+  });
+
+  it('drops negative unsigned margins given as strings', async () => {
+    const { document } = await render({
+      html: sectionHtml,
+      options: {
+        margins: { right: 900, header: 500 },
+        sections: [{ margins: { right: '-10pt', header: '-1in', footer: -5, gutter: -5 } }],
+      },
+    });
+    const [first] = sectPrs(document);
+    expect(attr({ xml: first, tag: 'pgMar', name: 'right' })).toBe('900');
+    expect(attr({ xml: first, tag: 'pgMar', name: 'header' })).toBe('500');
+    expect(attr({ xml: first, tag: 'pgMar', name: 'footer' })).not.toMatch(/^-/);
+    expect(attr({ xml: first, tag: 'pgMar', name: 'gutter' })).not.toMatch(/^-/);
+  });
+});
