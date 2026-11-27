@@ -43,6 +43,20 @@ describe("a table's header rows", () => {
     expect(children).toStrictEqual(['tblPr', 'tblGrid', 'tr', 'tr']);
   });
 
+  // The same schema fix applies without browserLayout: 1.23.3's second grid is invalid for every
+  // caller, as the other schema fixes that stay on for everyone are.
+  it('writes one <w:tblGrid> for a <thead> table without browserLayout too', async () => {
+    const docx = await HTMLtoDOCX(
+      '<table><thead><tr><th>Head</th><th>Head</th></tr></thead>' +
+        '<tbody><tr><td>Body</td><td>Body</td></tr></tbody></table>'
+    );
+    const zip = await JSZip.loadAsync(docx);
+    const xml = await zip.file('word/document.xml').async('string');
+
+    const children = [...xml.matchAll(/<w:(tblPr|tblGrid|tr)[\s>]/g)].map((m) => m[1]);
+    expect(children).toStrictEqual(['tblPr', 'tblGrid', 'tr', 'tr']);
+  });
+
   it('marks no row of a table that has no <thead>', async () => {
     const xml = await documentXml('<table><tr><th>Head</th></tr><tr><td>Body</td></tr></table>');
 

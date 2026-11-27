@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 * the body's `w:sectPr` is written last, as the schema requires
 * table grid column widths are written as whole twips
+* a table with a `<thead>` and a `<tbody>` writes one `<w:tblGrid>`, not a second one between its rows (Word on the web could refuse to edit such a document)
 * `<li><p>..</p>tail</li>` no longer writes `w:numId w:val="null"`
 * `w:lineRule` is written only on `w:spacing`
 * header and footer parts are written with `w:` prefixes, so template engines such as docxtemplater find their text

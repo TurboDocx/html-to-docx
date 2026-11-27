@@ -5456,8 +5456,8 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
               );
               tableFragment.import(tableGridFragment);
               // One grid per table (CT_Tbl). 1.23.3 let the <tbody> build a second one between
-              // the rows; without browserLayout that output is kept as it was.
-              isTableGridBuilt = browserLayout;
+              // the rows, which is invalid for every caller (Word on the web can refuse to edit it).
+              isTableGridBuilt = true;
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,

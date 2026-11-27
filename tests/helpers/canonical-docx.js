@@ -10,7 +10,8 @@ import { create } from 'xmlbuilder2';
  *   - the body's `w:sectPr` last (the schema's place for it);
  *   - the children of `w:rPr`, `w:pPr` and `w:tcPr` sorted (the schema fixes their order, and
  *     the converter now writes it);
- *   - each `w:tblGrid` as its column count and total width (see serializeGrid);
+ *   - each `w:tblGrid` as its column count and total width (see serializeGrid), and a second
+ *     grid after a table's first row dropped (see withoutLateGrids);
  *   - a `w:lineRule` anywhere but `w:spacing` dropped (see isStrayLineRule);
  *   - indentation-only text dropped, but text inside `w:t`, `w:instrText` and `w:delText` kept
  *     exactly, since a lost space there is a real change.
@@ -79,6 +80,26 @@ const serializeGrid = (node, indent) => {
   return `${indent}<w:tblGrid columns="${widths.length}" total="${total}">\n`;
 };
 
+// CT_Tbl is tblPr, one tblGrid, then rows. 1.23.3 built a second grid between the rows of a table
+// with a <thead> and a <tbody>, which is invalid; the converter now writes one. A grid after the
+// first row is dropped (tests/table-header-rows.test.js requires the converter to write one).
+const withoutLateGrids = (children) => {
+  const firstRow = children.findIndex((child) => child.localName === 'tr');
+  return firstRow === -1
+    ? children
+    : children.filter((child, index) => index < firstRow || child.localName !== 'tblGrid');
+};
+
+const orderedChildren = (node, children) => {
+  if (node.localName === 'body') {
+    return [
+      ...children.filter((child) => child.localName !== 'sectPr'),
+      ...children.filter((child) => child.localName === 'sectPr'),
+    ];
+  }
+  return node.localName === 'tbl' ? withoutLateGrids(children) : children;
+};
+
 const serialize = (node, indent) => {
   if (node.nodeType === 3 || node.nodeType === 4) return serializeText(node, indent);
   if (node.nodeType !== 1) return '';
@@ -91,13 +112,7 @@ const serialize = (node, indent) => {
     .toSorted();
 
   const children = [...node.childNodes];
-  const ordered =
-    node.localName === 'body'
-      ? [
-          ...children.filter((child) => child.localName !== 'sectPr'),
-          ...children.filter((child) => child.localName === 'sectPr'),
-        ]
-      : children;
+  const ordered = orderedChildren(node, children);
   const inner = ordered.map((child) => serialize(child, `${indent}  `));
   const body = SORTED_CHILDREN.has(node.localName) ? inner.toSorted() : inner;
 
