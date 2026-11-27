@@ -227,4 +227,20 @@ describe('section pageSize and orientation inherit the document', () => {
     expect(attr({ xml: first, tag: 'pgSz', name: 'w' })).toBe('11906');
     expect(attr({ xml: first, tag: 'pgSz', name: 'h' })).toBe('16838');
   });
+
+  it('keeps a landscape document landscape in a section without an orientation', async () => {
+    const { document } = await render({
+      html: '<div data-docx-section="0"><p>s0</p></div><p>last</p>',
+      options: { orientation: 'landscape', header: true, sections: [{ headerHTML: '<p>S0H</p>' }] },
+      header: '<p>H</p>',
+    });
+    const [first, body] = sectPrs(document);
+    expect(attr({ xml: first, tag: 'pgSz', name: 'orient' })).toBe('landscape');
+    expect(attr({ xml: first, tag: 'pgSz', name: 'w' })).toBe(
+      attr({ xml: body, tag: 'pgSz', name: 'w' })
+    );
+    expect(attr({ xml: first, tag: 'pgSz', name: 'h' })).toBe(
+      attr({ xml: body, tag: 'pgSz', name: 'h' })
+    );
+  });
 });

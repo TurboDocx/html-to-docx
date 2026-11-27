@@ -142,13 +142,18 @@ async function generateSectionXML(vTree, type = 'header') {
  * One section's page, resolved the way the document's own is: the sheet turned
  * for landscape, and whatever margin it does not set taken from the document.
  */
-function resolveSection(sectionOptions, documentPageSize, documentMargins) {
+function resolveSection({
+  sectionOptions,
+  documentPageSize,
+  documentMargins,
+  documentOrientation,
+}) {
   // An entry that is not an object is an empty section, so later indices hold.
   const section =
     typeof sectionOptions === 'object' && sectionOptions !== null ? sectionOptions : {};
   // A side the section leaves out is the document's, not a default.
   const pageSize = { ...documentPageSize, ...section.pageSize };
-  const isPortraitOrientation = (section.orientation || defaultOrientation) === defaultOrientation;
+  const isPortraitOrientation = (section.orientation || documentOrientation) === defaultOrientation;
   const height = pageSize.height ? pageSize.height : landscapeHeight;
   const width = pageSize.width ? pageSize.width : landscapeWidth;
   const sectionWidth = isPortraitOrientation ? width : height;
@@ -261,7 +266,12 @@ class DocxDocument {
     // the document's own (page sections — a landscape page in a portrait
     // document, a page with its own margins or colour).
     this.sections = (properties.sections || []).map((section) =>
-      resolveSection(section, this.pageSize, this.margins)
+      resolveSection({
+        sectionOptions: section,
+        documentPageSize: this.pageSize,
+        documentMargins: this.margins,
+        documentOrientation: this.orientation,
+      })
     );
     this.title = properties.title || '';
     this.subject = properties.subject || '';
