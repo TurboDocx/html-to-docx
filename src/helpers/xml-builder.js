@@ -414,6 +414,22 @@ const fixupLineHeight = (lineHeight) => {
   }
 };
 
+// An em or rem line-height. `Nem` is relative to the element's own font size,
+// which for one element is what a unitless multiple already is: N lines.
+// `Nrem` is N times the document's default font size, a height like an
+// absolute px or pt one, so it is a minimum height. Returns undefined for any
+// other value.
+const emLineHeightRegex = /^\s*(\d*\.?\d+)\s*(r?em)\s*$/i;
+const resolveEmLineHeight = ({ lineHeight, documentFontSize }) => {
+  const matchedParts = emLineHeightRegex.exec(String(lineHeight));
+  if (!matchedParts) return undefined;
+  const size = Number(matchedParts[1]);
+  if (matchedParts[2].toLowerCase() === 'em') {
+    return { line: Math.round(size * 240), lineRule: 'auto' };
+  }
+  return { line: HIPToTWIP(size * documentFontSize), lineRule: 'atLeast' };
+};
+
 // 1.23.3's line height, kept for callers without browserLayout: a unitless value is
 // multiplied by the element's font size, a percentage likewise.
 const fixupLineHeightFor1233 = (lineHeight, fontSize) => {
@@ -896,11 +912,22 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
             : null
         );
       } else if (vNodeStyleKey === 'line-height') {
-        modifiedAttributes.lineHeight = fixupLineHeight(vNodeStyleValue);
+        const emLineHeight = resolveEmLineHeight({
+          lineHeight: vNodeStyleValue,
+          documentFontSize:
+            (docxDocumentInstance && docxDocumentInstance.fontSize) ||
+            defaultDocumentOptions.fontSize,
+        });
+        modifiedAttributes.lineHeight = emLineHeight
+          ? emLineHeight.line
+          : fixupLineHeight(vNodeStyleValue);
         // An absolute line-height is a height, not a multiple of a single line:
         // emit it as a minimum line height. Unitless and percentage values keep
         // the "auto" rule, and an inherited "atLeast" rule must not leak onto them.
-        if (absoluteLineHeightRegex.test(vNodeStyleValue)) {
+        if (
+          absoluteLineHeightRegex.test(vNodeStyleValue) ||
+          (emLineHeight && emLineHeight.lineRule === 'atLeast')
+        ) {
           modifiedAttributes.lineRule = 'atLeast';
         } else {
           delete modifiedAttributes.lineRule;

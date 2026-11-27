@@ -41,6 +41,20 @@ describe('line-height as a multiple', () => {
     expect(lineOf(paragraphs[1])).toEqual({ line: 360, rule: 'auto' });
   });
 
+  test('an em line-height is a multiple of the line, whatever the font size', async () => {
+    const { paragraphs } = await convert(
+      '<p style="line-height: 1.5em; font-size: 20px">a</p><p style="line-height: 2em">b</p>'
+    );
+    expect(lineOf(paragraphs[0])).toStrictEqual({ line: 360, rule: 'auto' });
+    expect(lineOf(paragraphs[1])).toStrictEqual({ line: 480, rule: 'auto' });
+  });
+
+  test('a rem line-height is a minimum height of that many default font sizes', async () => {
+    // The document's default font is 11pt (220 twips): 1.5rem is 330 twips.
+    const { paragraphs } = await convert('<p style="line-height: 1.5rem">a</p>');
+    expect(lineOf(paragraphs[0])).toStrictEqual({ line: 330, rule: 'atLeast' });
+  });
+
   test('an absolute line-height is still a minimum height', async () => {
     const { paragraphs } = await convert('<p style="line-height: 20px">a</p>');
     expect(lineOf(paragraphs[0])).toEqual({ line: 300, rule: 'atLeast' });
