@@ -125,6 +125,18 @@ describe('Paragraph spacing backward compatibility', () => {
     expect(spacingOf(parsed.paragraphs[0])).toEqual({ after: '120', lineRule: 'auto' });
   });
 
+  test('a unitless zero margin-bottom on <p> is w:after 0 with browserLayout', async () => {
+    const parsed = await convert('<p style="margin-bottom:0">Text</p>');
+
+    expect(spacingOf(parsed.paragraphs[0]).after).toBe('0');
+  });
+
+  test('a unitless zero margin-bottom on <p> is left alone without browserLayout', async () => {
+    const parsed = await convert('<p style="margin-bottom:0">Text</p>', { browserLayout: false });
+
+    expect(spacingOf(parsed.paragraphs[0]).after).toBeUndefined();
+  });
+
   test('margin shorthand keeps mapping only its bottom value to w:after', async () => {
     const parsed = await convert('<p style="margin: 12pt 0 6pt 0">Text</p>');
 

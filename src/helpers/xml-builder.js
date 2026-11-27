@@ -967,7 +967,7 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
           }
         }
       } else if (vNodeStyleKey === 'margin-bottom') {
-        if (vNode.tagName === 'p') {
+        if (vNode.tagName === 'p' && !browserLayout) {
           modifiedAttributes.afterSpacing = fixupMargin(vNodeStyle['margin-bottom']);
         } else if (browserLayout && paragraphLevelTags.includes(vNode.tagName)) {
           const afterSpacing = fixupParagraphSpacing(vNodeStyleValue);
