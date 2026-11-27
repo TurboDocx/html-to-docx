@@ -146,7 +146,8 @@ function resolveSection(sectionOptions, documentPageSize, documentMargins) {
   // An entry that is not an object is an empty section, so later indices hold.
   const section =
     typeof sectionOptions === 'object' && sectionOptions !== null ? sectionOptions : {};
-  const pageSize = section.pageSize || documentPageSize;
+  // A side the section leaves out is the document's, not a default.
+  const pageSize = { ...documentPageSize, ...section.pageSize };
   const isPortraitOrientation = (section.orientation || defaultOrientation) === defaultOrientation;
   const height = pageSize.height ? pageSize.height : landscapeHeight;
   const width = pageSize.width ? pageSize.width : landscapeWidth;

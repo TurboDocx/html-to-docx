@@ -200,3 +200,31 @@ describe('firstPage without a written section 0 break', () => {
     expect(count({ xml: document, re: /<w:titlePg\/>/g })).toBe(1);
   });
 });
+
+describe('section pageSize and orientation inherit the document', () => {
+  it('takes the missing side of a partial section pageSize from the document', async () => {
+    const { document } = await render({
+      html: sectionHtml,
+      options: {
+        pageSize: { width: 11906, height: 16838 },
+        sections: [{ pageSize: { width: 11906 } }],
+      },
+    });
+    const [first] = sectPrs(document);
+    expect(attr({ xml: first, tag: 'pgSz', name: 'w' })).toBe('11906');
+    expect(attr({ xml: first, tag: 'pgSz', name: 'h' })).toBe('16838');
+  });
+
+  it('inherits the whole page size when the section values are all dropped', async () => {
+    const { document } = await render({
+      html: sectionHtml,
+      options: {
+        pageSize: { width: 11906, height: 16838 },
+        sections: [{ pageSize: { width: 'wide' } }],
+      },
+    });
+    const [first] = sectPrs(document);
+    expect(attr({ xml: first, tag: 'pgSz', name: 'w' })).toBe('11906');
+    expect(attr({ xml: first, tag: 'pgSz', name: 'h' })).toBe('16838');
+  });
+});
