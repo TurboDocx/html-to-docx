@@ -3,14 +3,11 @@
     "src/utils/xml-escape.js": 1,
     "tests/inline-image-caching.test.js": 1
   },
-  "class-methods-use-this": {
-    "src/utils/list.js": 1
-  },
   "complexity": {
     "scripts/diff-docx.js": 1,
     "src/docx-document.js": 1,
     "src/helpers/render-document-file.js": 1,
-    "src/helpers/xml-builder.js": 9,
+    "src/helpers/xml-builder.js": 10,
     "src/utils/svg.js": 1
   },
   "default-param-last": {
@@ -34,7 +31,9 @@
     "scripts/diff-docx.js": 8,
     "scripts/diff-utils.js": 1,
     "src/helpers/xml-builder.js": 6,
-    "tests/rpr-child-order.test.js": 25,
+    "src/html-to-docx.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 1,
+    "tests/rpr-child-order.test.js": 26,
     "tests/table-cell-borders.test.js": 6
   },
   "eslint-js/no-return-await": {
@@ -53,21 +52,52 @@
     "example/nextjs-example/app/DocxGenerator.tsx": 1,
     "example/nextjs-example/app/page.tsx": 1,
     "tests/alignment.test.js": 2,
+    "tests/anchored-shapes.test.js": 3,
+    "tests/checklist.test.js": 2,
+    "tests/first-page.test.js": 1,
+    "tests/font-size-units.test.js": 2,
+    "tests/font-style.test.js": 2,
+    "tests/header-footer-prefixes.test.js": 2,
     "tests/heading-integration.test.js": 3,
     "tests/heading-styles.test.js": 2,
     "tests/helpers/docx-assertions.js": 2,
     "tests/helpers/docx-validator.js": 1,
     "tests/html-parser.test.js": 2,
     "tests/htmlparser2-compatibility.test.js": 1,
+    "tests/image-container-width.test.js": 1,
+    "tests/image-crop-border.test.js": 1,
     "tests/image-processing.test.js": 6,
     "tests/inline-color-override.test.js": 2,
+    "tests/inline-run-formatting.test.js": 2,
+    "tests/libreoffice-render.test.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 1,
+    "tests/line-height-and-weight.test.js": 2,
+    "tests/list-indent-option.test.js": 2,
     "tests/list-multiple-paragraphs.test.js": 2,
+    "tests/list-styles.test.js": 2,
     "tests/nested-tables.test.js": 2,
     "tests/page-break.test.js": 3,
+    "tests/page-fields.test.js": 3,
+    "tests/page-sections.test.js": 1,
+    "tests/paragraph-borders.test.js": 2,
+    "tests/paragraph-mark.test.js": 2,
+    "tests/paragraph-spacing.test.js": 2,
+    "tests/picture-wrap.test.js": 1,
+    "tests/ppr-child-order.test.js": 2,
     "tests/rpr-child-order.test.js": 2,
+    "tests/stock-parity.test.js": 1,
     "tests/strikethrough.test.js": 2,
     "tests/svg-handling.test.js": 4,
+    "tests/tab-characters.test.js": 2,
+    "tests/table-cell-border-width.test.js": 2,
     "tests/table-cell-borders.test.js": 2,
+    "tests/table-cell-headings.test.js": 2,
+    "tests/table-cell-padding.test.js": 3,
+    "tests/table-fixed-layout.test.js": 1,
+    "tests/table-header-rows.test.js": 1,
+    "tests/table-indent.test.js": 3,
+    "tests/table-wrap.test.js": 1,
+    "tests/underline-color.test.js": 2,
     "tests/vdom.test.js": 1,
     "tests/vtree-iteration.test.js": 2,
     "tests/xml-escape.test.js": 1
@@ -147,30 +177,59 @@
   },
   "jest/no-conditional-expect": {
     "tests/alignment.test.js": 3,
+    "tests/anchored-shapes.test.js": 1,
     "tests/html-parser.test.js": 2,
     "tests/table-cell-borders.test.js": 3,
     "tests/vdom.test.js": 2
   },
   "jest/no-conditional-in-test": {
     "tests/alignment.test.js": 3,
+    "tests/anchored-shapes.test.js": 2,
     "tests/heading-styles.test.js": 3,
     "tests/html-parser.test.js": 2,
     "tests/htmlparser2-compatibility.test.js": 1,
     "tests/inline-image-caching.test.js": 3,
+    "tests/libreoffice-render.test.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 4,
     "tests/list-multiple-paragraphs.test.js": 10,
     "tests/nested-tables.test.js": 8,
-    "tests/rpr-child-order.test.js": 19,
+    "tests/page-fields.test.js": 1,
+    "tests/rpr-child-order.test.js": 20,
     "tests/table-cell-borders.test.js": 2,
+    "tests/table-cell-padding.test.js": 1,
+    "tests/table-wrap.test.js": 2,
     "tests/vdom.test.js": 2
+  },
+  "jest/prefer-expect-resolves": {
+    "tests/anchored-shapes.test.js": 1,
+    "tests/first-page.test.js": 5,
+    "tests/page-sections.test.js": 4,
+    "tests/stock-parity.test.js": 2
   },
   "jest/prefer-mock-return-shorthand": {
     "tests/inline-image-caching.test.js": 1
   },
   "jest/prefer-strict-equal": {
+    "tests/anchored-shapes.test.js": 3,
+    "tests/checklist.test.js": 4,
+    "tests/header-footer-prefixes.test.js": 4,
     "tests/html-parser.test.js": 3,
     "tests/htmlparser2-compatibility.test.js": 2,
+    "tests/image-container-width.test.js": 2,
     "tests/image-processing.test.js": 4,
+    "tests/line-height-and-weight.test.js": 5,
+    "tests/list-styles.test.js": 12,
     "tests/nested-tables.test.js": 1,
+    "tests/page-sections.test.js": 1,
+    "tests/paragraph-borders.test.js": 10,
+    "tests/paragraph-spacing.test.js": 9,
+    "tests/ppr-child-order.test.js": 7,
+    "tests/stock-parity.test.js": 2,
+    "tests/tab-characters.test.js": 10,
+    "tests/table-cell-border-width.test.js": 1,
+    "tests/table-cell-padding.test.js": 4,
+    "tests/table-fixed-layout.test.js": 6,
+    "tests/table-indent.test.js": 2,
     "tests/vdom.test.js": 3
   },
   "jest/prefer-to-have-length": {
@@ -182,21 +241,50 @@
     "tests/svg-handling.test.js": 1
   },
   "jsdoc/require-param": {
+    "src/docx-document.js": 4,
     "src/helpers/html-parser.js": 4,
-    "src/helpers/render-document-file.js": 1,
+    "src/helpers/render-document-file.js": 3,
+    "src/helpers/xml-builder.js": 3,
+    "src/html-to-docx.js": 2,
     "src/vdom/index.js": 6,
+    "tests/anchored-shapes.test.js": 2,
+    "tests/first-page.test.js": 1,
+    "tests/header-footer-prefixes.test.js": 2,
+    "tests/helpers/docx-parts.js": 1,
     "tests/helpers/docx-validator.js": 1,
-    "tests/table-cell-borders.test.js": 3
+    "tests/image-container-width.test.js": 2,
+    "tests/libreoffice-render.test.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 1,
+    "tests/page-fields.test.js": 3,
+    "tests/table-cell-borders.test.js": 3,
+    "tests/table-cell-padding.test.js": 2,
+    "tests/table-fixed-layout.test.js": 1,
+    "tests/table-header-rows.test.js": 1,
+    "tests/table-indent.test.js": 3
   },
   "jsdoc/require-returns": {
+    "src/docx-document.js": 4,
     "src/helpers/html-parser.js": 5,
-    "src/helpers/render-document-file.js": 1,
+    "src/helpers/render-document-file.js": 3,
+    "src/helpers/xml-builder.js": 2,
+    "src/html-to-docx.js": 2,
     "src/vdom/index.js": 6,
+    "tests/anchored-shapes.test.js": 2,
+    "tests/first-page.test.js": 1,
+    "tests/header-footer-prefixes.test.js": 2,
     "tests/helpers/docx-validator.js": 1,
-    "tests/table-cell-borders.test.js": 3
+    "tests/image-container-width.test.js": 2,
+    "tests/libreoffice-render.test.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 1,
+    "tests/page-fields.test.js": 3,
+    "tests/table-cell-borders.test.js": 3,
+    "tests/table-cell-padding.test.js": 2,
+    "tests/table-fixed-layout.test.js": 1,
+    "tests/table-header-rows.test.js": 1,
+    "tests/table-indent.test.js": 3
   },
   "logical-assignment-operators": {
-    "src/helpers/xml-builder.js": 6
+    "src/helpers/xml-builder.js": 9
   },
   "max-depth": {
     "scripts/diff-docx.js": 2,
@@ -213,9 +301,9 @@
   "max-params": {
     "index.d.ts": 1,
     "index.js": 1,
-    "src/docx-document.js": 2,
+    "src/docx-document.js": 1,
     "src/helpers/render-document-file.js": 2,
-    "src/helpers/xml-builder.js": 7,
+    "src/helpers/xml-builder.js": 9,
     "src/html-to-docx.js": 1,
     "src/schemas/core.js": 1,
     "src/schemas/document.template.js": 1,
@@ -223,19 +311,23 @@
     "src/utils/image.js": 1,
     "src/utils/svg.js": 1,
     "src/vdom/index.js": 1,
-    "tests/helpers/docx-assertions.js": 1
+    "tests/first-page.test.js": 1,
+    "tests/helpers/docx-assertions.js": 1,
+    "tests/page-sections.test.js": 1,
+    "tests/paragraph-borders.test.js": 1
   },
   "max-statements": {
     "scripts/diff-docx.js": 1,
-    "src/helpers/xml-builder.js": 3
+    "src/helpers/xml-builder.js": 5
   },
   "no-bitwise": {
-    "scripts/postinstall.js": 2
+    "scripts/postinstall.js": 2,
+    "tests/libreoffice-wrap-render.test.js": 11
   },
   "no-cond-assign": {
-    "src/helpers/xml-builder.js": 1,
     "tests/helpers/docx-validator.js": 2,
-    "tests/inline-color-override.test.js": 1
+    "tests/inline-color-override.test.js": 1,
+    "tests/ppr-child-order.test.js": 1
   },
   "no-console": {
     ".github/scripts/update-contributors.js": 9,
@@ -258,7 +350,7 @@
   "no-implicit-coercion": {
     "src/helpers/html-parser.js": 1,
     "src/helpers/render-document-file.js": 1,
-    "src/helpers/xml-builder.js": 2,
+    "src/helpers/xml-builder.js": 1,
     "src/utils/truthy-check.js": 1
   },
   "no-lonely-if": {
@@ -292,6 +384,7 @@
   "no-use-before-define": {
     "example/nextjs-example/app/DocxGenerator.tsx": 1,
     "scripts/diff-docx.js": 1,
+    "src/docx-document.js": 1,
     "src/helpers/xml-builder.js": 3
   },
   "no-useless-concat": {
@@ -307,7 +400,9 @@
     "example/example-alignments.js": 1,
     "example/example-node.js": 1,
     "rollup.config.js": 2,
-    "scripts/postinstall.js": 2
+    "scripts/postinstall.js": 2,
+    "tests/libreoffice-render.test.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 1
   },
   "node/no-sync": {
     ".github/scripts/update-contributors.js": 2,
@@ -329,7 +424,8 @@
   "prefer-object-has-own": {
     "index.js": 2,
     "src/helpers/html-parser.js": 2,
-    "src/helpers/xml-builder.js": 2,
+    "src/helpers/xml-builder.js": 7,
+    "src/utils/list.js": 1,
     "src/vdom/index.js": 3
   },
   "prefer-template": {
@@ -373,6 +469,8 @@
     "example/nextjs-example/app/layout.tsx": 1
   },
   "require-await": {
+    "tests/first-page.test.js": 1,
+    "tests/header-footer-prefixes.test.js": 1,
     "tests/svg-handling.test.js": 1
   },
   "sort-imports": {
@@ -382,15 +480,23 @@
     "src/schemas/styles.js": 1,
     "src/utils/options-utils.js": 1,
     "tests/alignment.test.js": 1,
+    "tests/anchored-shapes.test.js": 1,
+    "tests/checklist.test.js": 1,
+    "tests/header-footer-prefixes.test.js": 1,
     "tests/heading-integration.test.js": 1,
     "tests/helpers/docx-validator.js": 1,
     "tests/image-processing.test.js": 3,
     "tests/inline-image-caching.test.js": 1,
     "tests/list-multiple-paragraphs.test.js": 1,
+    "tests/list-styles.test.js": 1,
     "tests/nested-tables.test.js": 1,
     "tests/page-break.test.js": 2,
+    "tests/page-fields.test.js": 1,
+    "tests/paragraph-borders.test.js": 1,
+    "tests/paragraph-spacing.test.js": 1,
     "tests/strikethrough.test.js": 1,
     "tests/svg-handling.test.js": 2,
+    "tests/tab-characters.test.js": 1,
     "tests/vtree-iteration.test.js": 1
   },
   "typescript/ban-ts-comment": {
@@ -407,6 +513,10 @@
     "example/nextjs-example/app/DocxGenerator.tsx": 1,
     "example/nextjs-example/app/layout.tsx": 1,
     "example/nextjs-example/app/page.tsx": 1
+  },
+  "typescript/no-dynamic-delete": {
+    "src/helpers/render-document-file.js": 1,
+    "src/helpers/xml-builder.js": 1
   },
   "typescript/no-extraneous-class": {
     "src/vdom/index.js": 2
@@ -457,6 +567,7 @@
     "src/utils/image.js": 1
   },
   "unicorn/consistent-function-scoping": {
+    "src/docx-document.js": 2,
     "src/utils/color-conversion.js": 1
   },
   "unicorn/escape-case": {
@@ -466,7 +577,7 @@
   "unicorn/explicit-length-check": {
     "src/docx-document.js": 1,
     "src/helpers/render-document-file.js": 3,
-    "src/helpers/xml-builder.js": 9,
+    "src/helpers/xml-builder.js": 10,
     "src/utils/vnode.js": 1,
     "src/vdom/index.js": 1
   },
@@ -478,20 +589,42 @@
     "example/typescript/typescript-example.ts": 1
   },
   "unicorn/max-nested-calls": {
+    "src/helpers/xml-builder.js": 4,
     "tests/svg-sanitization.test.js": 4
   },
   "unicorn/new-for-builtins": {
-    "src/docx-document.js": 1
+    "src/docx-document.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 3
+  },
+  "unicorn/no-array-callback-reference": {
+    "src/helpers/xml-builder.js": 1,
+    "tests/page-fields.test.js": 1,
+    "tests/page-sections.test.js": 2
+  },
+  "unicorn/no-array-fill-with-reference-type": {
+    "tests/libreoffice-wrap-render.test.js": 1
   },
   "unicorn/no-array-reduce": {
     "scripts/postinstall.js": 1,
     "src/helpers/html-parser.js": 1,
-    "src/helpers/render-document-file.js": 1,
-    "src/helpers/xml-builder.js": 1
+    "src/helpers/render-document-file.js": 1
   },
   "unicorn/no-array-sort": {
-    "src/helpers/xml-builder.js": 1,
-    "src/schemas/styles.js": 1
+    "src/helpers/xml-builder.js": 3,
+    "src/schemas/styles.js": 1,
+    "tests/anchored-shapes.test.js": 2,
+    "tests/paragraph-borders.test.js": 1,
+    "tests/ppr-child-order.test.js": 1
+  },
+  "unicorn/no-await-expression-member": {
+    "tests/image-container-width.test.js": 1,
+    "tests/image-crop-border.test.js": 1,
+    "tests/list-styles.test.js": 1,
+    "tests/picture-wrap.test.js": 1,
+    "tests/stock-parity.test.js": 1,
+    "tests/table-fixed-layout.test.js": 1,
+    "tests/table-header-rows.test.js": 1,
+    "tests/table-wrap.test.js": 1
   },
   "unicorn/no-immediate-mutation": {
     "scripts/diff-docx.js": 1
@@ -506,9 +639,12 @@
     "scripts/diff-docx.js": 1,
     "src/docx-document.js": 7,
     "src/helpers/render-document-file.js": 1,
-    "src/helpers/xml-builder.js": 2,
+    "src/helpers/xml-builder.js": 4,
     "src/schemas/styles.js": 2,
     "src/vdom/index.js": 1
+  },
+  "unicorn/no-new-array": {
+    "src/helpers/xml-builder.js": 1
   },
   "unicorn/no-object-as-default-parameter": {
     "src/helpers/xml-builder.js": 1
@@ -522,7 +658,9 @@
     "tests/list-multiple-paragraphs.test.js": 1
   },
   "unicorn/no-useless-fallback-in-spread": {
-    "src/helpers/render-document-file.js": 6
+    "src/docx-document.js": 2,
+    "src/helpers/render-document-file.js": 6,
+    "src/helpers/xml-builder.js": 2
   },
   "unicorn/no-useless-switch-case": {
     "src/utils/list.js": 1
@@ -533,10 +671,13 @@
   },
   "unicorn/prefer-code-point": {
     "scripts/postinstall.js": 1,
-    "src/utils/image.js": 1
+    "src/utils/image.js": 1,
+    "tests/libreoffice-render.test.js": 2,
+    "tests/libreoffice-wrap-render.test.js": 2
   },
   "unicorn/prefer-dom-node-append": {
-    "example/nextjs-example/app/DocxGenerator.tsx": 1
+    "example/nextjs-example/app/DocxGenerator.tsx": 1,
+    "src/helpers/xml-builder.js": 1
   },
   "unicorn/prefer-dom-node-remove": {
     "example/nextjs-example/app/DocxGenerator.tsx": 1
@@ -548,8 +689,8 @@
     "index.js": 2
   },
   "unicorn/prefer-logical-operator-over-ternary": {
-    "src/docx-document.js": 2,
-    "src/helpers/xml-builder.js": 5,
+    "src/docx-document.js": 4,
+    "src/helpers/xml-builder.js": 2,
     "src/utils/svg.js": 2
   },
   "unicorn/prefer-module": {
@@ -593,7 +734,9 @@
     "scripts/diff-utils.js": 2,
     "scripts/postinstall.js": 2,
     "tests/fixtures/index.js": 2,
-    "tests/htmlparser2-compatibility.test.js": 6
+    "tests/htmlparser2-compatibility.test.js": 6,
+    "tests/libreoffice-render.test.js": 4,
+    "tests/libreoffice-wrap-render.test.js": 5
   },
   "unicorn/prefer-number-coercion": {
     "src/schemas/styles.js": 1,
@@ -615,29 +758,43 @@
   "unicorn/prefer-optional-catch-binding": {
     "index.js": 1,
     "scripts/postinstall.js": 2,
-    "src/utils/image.js": 1
+    "src/utils/image.js": 1,
+    "tests/libreoffice-render.test.js": 1,
+    "tests/libreoffice-wrap-render.test.js": 1
   },
   "unicorn/prefer-regexp-test": {
     "src/utils/image.js": 1
   },
   "unicorn/prefer-set-has": {
     ".github/scripts/update-contributors.js": 1,
-    "src/helpers/render-document-file.js": 1
+    "src/helpers/render-document-file.js": 1,
+    "src/helpers/xml-builder.js": 3
   },
   "unicorn/prefer-single-call": {
-    "scripts/diff-docx.js": 20
+    "scripts/diff-docx.js": 20,
+    "src/helpers/xml-builder.js": 1
   },
   "unicorn/prefer-spread": {
     "src/helpers/render-document-file.js": 3,
-    "src/helpers/xml-builder.js": 3
+    "src/helpers/xml-builder.js": 3,
+    "src/utils/list.js": 1
   },
   "unicorn/prefer-string-replace-all": {
     "rollup.config.js": 1,
     "scripts/diff-utils.js": 2,
+    "src/docx-document.js": 3,
     "src/helpers/xml-builder.js": 1,
     "src/utils/svg.js": 14,
     "src/utils/xml-escape.js": 5,
-    "tests/helpers/docx-validator.js": 5
+    "tests/checklist.test.js": 1,
+    "tests/font-style.test.js": 1,
+    "tests/helpers/docx-validator.js": 5,
+    "tests/inline-run-formatting.test.js": 1,
+    "tests/list-styles.test.js": 3,
+    "tests/page-fields.test.js": 1,
+    "tests/paragraph-borders.test.js": 3,
+    "tests/paragraph-spacing.test.js": 1,
+    "tests/tab-characters.test.js": 1
   },
   "unicorn/prefer-string-slice": {
     "src/helpers/xml-builder.js": 1,
@@ -647,7 +804,7 @@
   "unicorn/prefer-structured-clone": {
     "src/constants.js": 1,
     "src/helpers/render-document-file.js": 1,
-    "src/helpers/xml-builder.js": 7
+    "src/helpers/xml-builder.js": 9
   },
   "unicorn/prefer-ternary": {
     "src/helpers/xml-builder.js": 1,
@@ -660,8 +817,8 @@
   "unicorn/switch-case-braces": {
     "src/docx-document.js": 9,
     "src/helpers/render-document-file.js": 9,
-    "src/helpers/xml-builder.js": 45,
-    "src/utils/list.js": 13,
+    "src/helpers/xml-builder.js": 57,
+    "src/utils/list.js": 11,
     "src/utils/options-utils.js": 3
   },
   "unicorn/text-encoding-identifier-case": {

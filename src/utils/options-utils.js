@@ -8,6 +8,7 @@ import {
   inchToTWIP,
   pointRegex,
   pointToHIP,
+  pointToTWIP,
 } from './unit-conversion';
 
 const fixupFontSize = (fontSize) => {
@@ -54,6 +55,59 @@ const normalizeUnits = (dimensioningObject, defaultDimensionsProperty) => {
   return normalizedUnitResult;
 };
 
+const sectionUnitRegex = /^\s*(\d+(?:\.\d+)?|\.\d+)\s*(px|pt|cm|mm|in)?\s*$/i;
+
+const sectionUnitToTWIP = {
+  px: pixelToTWIP,
+  pt: pointToTWIP,
+  cm: cmToTWIP,
+  mm: (amount) => cmToTWIP(amount / 10),
+  in: inchToTWIP,
+};
+
+/**
+ * One section dimension in twips; a number is already twips.
+ * @param {Object} params - The parameters.
+ * @param {*} params.value - The dimension as given.
+ * @returns {number|null} The twips, or null when the value is not a size.
+ */
+const sectionValueToTWIP = ({ value }) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const matched = typeof value === 'string' ? value.match(sectionUnitRegex) : null;
+  if (!matched) return null;
+  const amount = Number(matched[1]);
+  const unit = (matched[2] || '').toLowerCase();
+  return unit ? sectionUnitToTWIP[unit](amount) : amount;
+};
+
+// Margins that are ST_TwipsMeasure (unsigned) in the schema; top and bottom are signed.
+const unsignedSectionKeys = new Set(['left', 'right', 'header', 'footer', 'gutter']);
+// A page's width and height are ST_TwipsMeasure too, and a page of no size is no page.
+const positiveSectionKeys = new Set(['width', 'height']);
+
+/**
+ * A section's page size or margins in twips. Unlike the document's own, a 0 is
+ * kept, and a value that is not a size is dropped, so the section takes the
+ * document's.
+ * @param {Object} params - The parameters.
+ * @param {Object} params.dimensions - The section's pageSize or margins.
+ * @returns {Object|undefined} The dimensions in twips.
+ */
+const normalizeSectionUnits = ({ dimensions }) => {
+  if (typeof dimensions !== 'object' || dimensions === null) return undefined;
+  const normalized = {};
+  Object.keys(dimensions).forEach((key) => {
+    const twips = sectionValueToTWIP({ value: dimensions[key] });
+    // Those that are unsigned in the schema cannot be negative; top and bottom can.
+    const isInvalid =
+      (twips < 0 && unsignedSectionKeys.has(key)) || (twips <= 0 && positiveSectionKeys.has(key));
+    if (twips !== null && !isInvalid) {
+      normalized[key] = twips;
+    }
+  });
+  return normalized;
+};
+
 /**
  * Creates document options by normalizing the provided options and merging them with default options.
  *
@@ -85,6 +139,20 @@ const createDocumentOptionsAndMergeWithDefaults = (documentOptions) => {
         break;
     }
   });
+
+  // Every section's own page size and margins are given in the same units.
+  if (Array.isArray(documentOptions.sections)) {
+    normalizedDocumentOptions.sections = documentOptions.sections.map((section) => {
+      if (typeof section !== 'object' || section === null) return section;
+      const normalizedSection = { ...section };
+      ['pageSize', 'margins'].forEach((key) => {
+        if (section[key] !== undefined) {
+          normalizedSection[key] = normalizeSectionUnits({ dimensions: section[key] });
+        }
+      });
+      return normalizedSection;
+    });
+  }
 
   // Merge the normalized options with the default options.
   // User-provided options take precedence over default options.
