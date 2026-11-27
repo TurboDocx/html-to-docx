@@ -6,6 +6,9 @@ name: TurboDocx NPM Release - Node.js Package
 on:
   release:
     types: [created]  # Trigger when a new release is published on GitHub
+  # Manual run from main, to publish the version on main when a release-triggered run could not
+  # (for example v1.24.0, whose release run failed before trusted publishing was set up).
+  workflow_dispatch:
 
 jobs:
   # Run all test suites to validate the release before publishing
@@ -27,10 +30,12 @@ jobs:
   # Publish the package to npm registry (only runs if build job passes)
   publish-npm:
     needs: build  # Wait for tests to pass before publishing
-    runs-on: ubuntu-latest
+    # A manual run publishes only from main.
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest  # Trusted publishing needs a GitHub-hosted runner
     permissions:
       contents: read # Needed by actions/checkout
-      id-token: write # Needed to mint the OIDC token npm uses to sign the provenance attestation
+      id-token: write # Trusted publishing: npm exchanges this OIDC token for a short-lived publish credential
     steps:
       - uses: actions/checkout@v5
 
@@ -39,14 +44,18 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org/  # Configure npm registry for publishing
 
+      # Trusted publishing (OIDC) needs npm CLI 11.5.1 or newer. Pinned, and kept on 11.x: npm 12
+      # stops running dependencies' install scripts by default.
+      - run: npm install -g npm@11.21.3
+
       # Install dependencies
       - run: npm ci
 
       # Build the production bundle (bundles modules, minifies code with terser)
       - run: npm run build:prod
 
-      # Publish to npm with public access (scoped packages are private by default)
-      # --provenance attaches a signed SLSA build attestation linking the tarball to this workflow run
-      - run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}  # Use npm token from GitHub secrets
+      # Publish to npm with public access (scoped packages are private by default).
+      # Authenticates through npm trusted publishing (OIDC), configured on npmjs.com for
+      # TurboDocx/html-to-docx and this workflow file; no token. Provenance is attached automatically
+      # for a public repository.
+      - run: npm publish --access public
