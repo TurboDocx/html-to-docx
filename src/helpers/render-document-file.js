@@ -8,7 +8,7 @@ import createHTMLToVDOM from './html-parser';
 import { VNode, isVNode, isVText } from '../vdom/index';
 import * as xmlBuilder from './xml-builder';
 import namespaces from '../namespaces';
-import { defaultDocumentOptions } from '../constants';
+import { defaultDocumentOptions, documentFileName } from '../constants';
 import { buildImage } from '../utils/image';
 import { vNodeHasChildren } from '../utils/vnode';
 import { buildSVGElement } from '../utils/svg';
@@ -621,9 +621,11 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
 
     // One of the document's sections (options.sections): its content laid out
     // in its own text box, then the break that sets its pages up.
+    // Only the body has sections: in a header or footer part the div is a plain div.
     const sectionIndex = divAttributes['data-docx-section'];
+    const renderingBody = docxDocumentInstance.relationshipFilename === documentFileName;
     const section =
-      sectionIndex !== undefined && Array.isArray(docxDocumentInstance.sections)
+      renderingBody && sectionIndex !== undefined && Array.isArray(docxDocumentInstance.sections)
         ? docxDocumentInstance.sections[Number(sectionIndex)]
         : undefined;
     if (section) {

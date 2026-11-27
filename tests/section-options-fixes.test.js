@@ -371,3 +371,24 @@ describe('section pageSize that is not positive', () => {
     expect(attr({ xml: first, tag: 'pgSz', name: 'h' })).toBe('16838');
   });
 });
+
+// Only the body has sections. A data-docx-section div in a header or footer used to write the
+// body's section-break placeholders into that part, which nothing replaces there.
+describe('a section marker outside the body', () => {
+  it('is a plain div in the header and footer', async () => {
+    const { read } = await render({
+      html: '<p>body</p>',
+      header: '<div data-docx-section="0"><p>H</p></div>',
+      footer: '<div data-docx-section="0"><p>F</p></div>',
+      options: { header: true, footer: true, sections: [{ orientation: 'landscape' }] },
+    });
+    const [header, footer] = await Promise.all([
+      read('word/header1.xml'),
+      read('word/footer1.xml'),
+    ]);
+
+    expect(header).toContain('>H<');
+    expect(footer).toContain('>F<');
+    expect(`${header}${footer}`).not.toMatch(/tdxSection|<w:sectPr/);
+  });
+});
