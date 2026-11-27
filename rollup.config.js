@@ -52,7 +52,7 @@ const libraryConfig = {
     resolve(),
     json(),
     commonjs(),
-    nodePolyfills(),
+    nodePolyfills({ exclude: ['**/node_modules/debug/**'] }),
     terser({
       mangle: false,
     }),
