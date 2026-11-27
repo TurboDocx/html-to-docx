@@ -179,7 +179,7 @@ function resolveSection({
  * or else the document's. Written into each break once every part exists —
  * the body is converted before the headers are.
  */
-function sectionReferencesXML(section, document, index) {
+function sectionReferencesXML({ section, document, isFirstSection }) {
   const reference = ({ type, ownId, objects, isEnabled, firstPageId }) => {
     // The first-page band, when firstPage supplies one, is only ever named by
     // the first section's break, so no break takes it as the document's own.
@@ -207,17 +207,17 @@ function sectionReferencesXML(section, document, index) {
       isEnabled: document.footer,
       firstPageId: document.firstPageFooterRelationshipId,
     }) +
-    (index === 0 ? firstPageReferencesXML(document) : '')
+    (isFirstSection ? firstPageReferencesXML(document) : '')
   );
 }
 
 /** Page 1's own header and footer, as the first section names them. */
 function firstPageReferencesXML(document) {
-  const reference = (type, id) =>
+  const reference = ({ type, id }) =>
     id ? `<w:${type}Reference r:id="rId${id}" w:type="first"/>` : '';
   return (
-    reference('header', document.firstPageHeaderRelationshipId) +
-    reference('footer', document.firstPageFooterRelationshipId)
+    reference({ type: 'header', id: document.firstPageHeaderRelationshipId }) +
+    reference({ type: 'footer', id: document.firstPageFooterRelationshipId })
   );
 }
 
@@ -479,9 +479,9 @@ class DocxDocument {
       .replace(/<w:tdxSectionReferences w:val="(\d+)"\/>/g, (_match, index) => {
         const section = this.sections[Number(index)];
         if (!section) return '';
-        const isFirst = !referencesSeen;
+        const isFirstSection = !referencesSeen;
         referencesSeen = true;
-        return sectionReferencesXML(section, this, isFirst ? 0 : -1);
+        return sectionReferencesXML({ section, document: this, isFirstSection });
       })
       .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, () => {
         if (titleSeen) return '';
@@ -653,7 +653,7 @@ class DocxDocument {
           // honours its start value, deeper levels restart at 1 under their parent.
           levelStart = level === baseLevel ? startValue : '1';
           numberFormat = 'decimal';
-          levelText = this.ListStyleBuilder.getOutlineListLevelText(level, baseLevel);
+          levelText = this.ListStyleBuilder.getOutlineListLevelText({ level, baseLevel });
           // "1.1.1." is wider than "1.": give each deeper level 180 more twips.
           hangingIndent = baseHanging + 180 * Math.max(0, level - baseLevel);
         }
@@ -688,10 +688,10 @@ class DocxDocument {
           .up();
 
         if (type === 'ul') {
-          const bulletFont = this.ListStyleBuilder.getUnorderedListFont(
-            properties.style,
-            properties.attributes
-          );
+          const bulletFont = this.ListStyleBuilder.getUnorderedListFont({
+            style: properties.style,
+            attributes: properties.attributes,
+          });
           const bulletRunPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } });
           const bulletFontsElement = bulletRunPropertiesFragment
             .ele('@w', 'rPr')
@@ -764,10 +764,10 @@ class DocxDocument {
     // written before the numbering is (see generateFontTableXML).
     if (
       type === 'ul' &&
-      this.ListStyleBuilder.getUnorderedListFont(
-        properties && properties.style,
-        properties && properties.attributes
-      ) === this.symbolFont.glyph
+      this.ListStyleBuilder.getUnorderedListFont({
+        style: properties && properties.style,
+        attributes: properties && properties.attributes,
+      }) === this.symbolFont.glyph
     ) {
       this.registerSymbolFont({ kind: 'glyph' });
     }

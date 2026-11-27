@@ -323,7 +323,7 @@ const buildTextElement = (text, { browserLayout = false } = {}) => {
 
 // An underline, named a colour only when the CSS names one: unnamed, Word
 // draws the line in the text's colour, as CSS does (currentColor).
-const appendUnderline = (parent, value) => {
+const appendUnderline = ({ parent, value }) => {
   const underline = parent.ele('@w', 'u').att('@w', 'val', value.style ? value.style : 'single');
   if (value.color) {
     underline.att('@w', 'color', value.color);
@@ -333,7 +333,7 @@ const appendUnderline = (parent, value) => {
 
 const buildTextDecoration = (value) => {
   if (value.line === 'underline') {
-    return appendUnderline(fragment({ namespaceAlias: { w: namespaces.w } }), value);
+    return appendUnderline({ parent: fragment({ namespaceAlias: { w: namespaces.w } }), value });
   } else if (value.line === 'line-through') {
     return fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'strike')
@@ -345,13 +345,13 @@ const buildTextDecoration = (value) => {
   // (spec slot 9) then <w:u> (slot 27) so the resulting <w:rPr> child
   // sequence stays valid per ECMA-376 EG_RPrBase. Word silently drops
   // out-of-order children.
-  return appendUnderline(
-    fragment({ namespaceAlias: { w: namespaces.w } })
+  return appendUnderline({
+    parent: fragment({ namespaceAlias: { w: namespaces.w } })
       .ele('@w', 'strike')
       .att('@w', 'val', true)
       .up(),
-    value
-  );
+    value,
+  });
 };
 
 // maps html text-decoration-style attribute values to ooxml values
@@ -432,7 +432,7 @@ const resolveEmLineHeight = ({ lineHeight, documentFontSize }) => {
 
 // 1.23.3's line height, kept for callers without browserLayout: a unitless value is
 // multiplied by the element's font size, a percentage likewise.
-const fixupLineHeightFor1233 = (lineHeight, fontSize) => {
+const fixupLineHeightFor1233 = ({ lineHeight, fontSize }) => {
   if (!Number.isNaN(Number(lineHeight))) {
     if (fontSize) {
       const actualLineHeight = Number(lineHeight) * fontSize;
@@ -507,7 +507,7 @@ const relativeFontSizeScale = { smaller: 1 / 1.2, larger: 1.2 };
  * default size. Returns undefined when the value cannot be resolved, so the
  * caller keeps the inherited size instead of falling back to 5pt.
  */
-const resolveFontSize = (fontSizeString, docxDocumentInstance, inheritedFontSize) => {
+const resolveFontSize = ({ fontSizeString, docxDocumentInstance, inheritedFontSize }) => {
   const fixedFontSize = fixupFontSize(fontSizeString, docxDocumentInstance);
   if (typeof fixedFontSize === 'number' && Number.isFinite(fixedFontSize)) {
     return Number.isInteger(fixedFontSize) ? fixedFontSize : Math.round(fixedFontSize);
@@ -662,7 +662,7 @@ const tableCellPaddingProperties = [
 // Expands one padding declaration into the sides it sets, in TWIPs. Returns
 // undefined when any part of it is a length Word cannot store, so a broken
 // declaration is dropped whole rather than applied by halves.
-const parseCellPadding = (propertyName, value) => {
+const parseCellPadding = ({ propertyName, value }) => {
   if (propertyName !== 'padding') {
     const sideMargin = absoluteLengthToTWIP(value);
     return sideMargin === undefined
@@ -896,21 +896,21 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
       } else if (vNodeStyleKey === 'font-size' && !browserLayout) {
         modifiedAttributes.fontSize = fixupFontSize(vNodeStyleValue, docxDocumentInstance);
       } else if (vNodeStyleKey === 'font-size') {
-        const fontSize = resolveFontSize(
-          vNodeStyleValue,
+        const fontSize = resolveFontSize({
+          fontSizeString: vNodeStyleValue,
           docxDocumentInstance,
-          modifiedAttributes.fontSize
-        );
+          inheritedFontSize: modifiedAttributes.fontSize,
+        });
         if (fontSize !== undefined) {
           modifiedAttributes.fontSize = fontSize;
         }
       } else if (vNodeStyleKey === 'line-height' && !browserLayout) {
-        modifiedAttributes.lineHeight = fixupLineHeightFor1233(
-          vNodeStyleValue,
-          vNodeStyle['font-size']
+        modifiedAttributes.lineHeight = fixupLineHeightFor1233({
+          lineHeight: vNodeStyleValue,
+          fontSize: vNodeStyle['font-size']
             ? fixupFontSize(vNodeStyle['font-size'], docxDocumentInstance)
-            : null
-        );
+            : null,
+        });
       } else if (vNodeStyleKey === 'line-height') {
         const emLineHeight = resolveEmLineHeight({
           lineHeight: vNodeStyleValue,
@@ -1021,7 +1021,10 @@ const modifiedStyleAttributesBuilder = (docxDocumentInstance, vNode, attributes,
         // and a side nobody mentioned is left out of <w:tcMar> entirely so it
         // keeps inheriting the table default.
         if (vNode.tagName === 'td' || vNode.tagName === 'th') {
-          const paddingSides = parseCellPadding(vNodeStyleKey, vNodeStyleValue);
+          const paddingSides = parseCellPadding({
+            propertyName: vNodeStyleKey,
+            value: vNodeStyleValue,
+          });
           if (paddingSides) {
             modifiedAttributes.cellMargin = {
               ...(modifiedAttributes.cellMargin || {}),
@@ -1308,7 +1311,7 @@ const sortRprChildren = (rprFragment) => {
 // happened to be set. Word reads <w:tcPr>/<w:tblPr> children as an ordered
 // sequence and drops whatever is out of place, and a child cannot simply be
 // spliced into a list that is itself unordered.
-const buildOrderedProperties = (propertiesFragment, childFragments, elementOrder, sorted) => {
+const buildOrderedProperties = ({ propertiesFragment, childFragments, elementOrder, sorted }) => {
   // An element the order table does not name sorts to the end rather than to
   // the front, so adding a builder without updating the table cannot push a
   // known child out of its slot.
@@ -1397,7 +1400,7 @@ const fieldInstructions = {
   numpages: ' NUMPAGES ',
 };
 
-const buildFieldRun = (runPropertiesAttributes, buildContent) => {
+const buildFieldRun = ({ runPropertiesAttributes, buildContent }) => {
   const runFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'r');
   runFragment.import(sortRprChildren(buildRunProperties(cloneDeep(runPropertiesAttributes))));
   buildContent(runFragment);
@@ -1405,7 +1408,7 @@ const buildFieldRun = (runPropertiesAttributes, buildContent) => {
   return runFragment.up();
 };
 
-const buildPageFieldRuns = (vNode, attributes, docxDocumentInstance) => {
+const buildPageFieldRuns = ({ vNode, attributes, docxDocumentInstance }) => {
   const fieldName = String(vNode.properties.attributes['data-field']).trim().toLowerCase();
   const instruction = fieldInstructions[fieldName];
   if (!instruction) return null;
@@ -1417,21 +1420,31 @@ const buildPageFieldRuns = (vNode, attributes, docxDocumentInstance) => {
   const cachedResult = collectVNodeText(vNode).trim() || '1';
 
   return [
-    buildFieldRun(fieldAttributes, (runFragment) =>
-      runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'begin').up()
-    ),
-    buildFieldRun(fieldAttributes, (runFragment) =>
-      runFragment.ele('@w', 'instrText').att('@xml', 'space', 'preserve').txt(instruction).up()
-    ),
-    buildFieldRun(fieldAttributes, (runFragment) =>
-      runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'separate').up()
-    ),
-    buildFieldRun(fieldAttributes, (runFragment) =>
-      runFragment.import(buildTextElement(cachedResult, layoutOf(docxDocumentInstance)))
-    ),
-    buildFieldRun(fieldAttributes, (runFragment) =>
-      runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'end').up()
-    ),
+    buildFieldRun({
+      runPropertiesAttributes: fieldAttributes,
+      buildContent: (runFragment) =>
+        runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'begin').up(),
+    }),
+    buildFieldRun({
+      runPropertiesAttributes: fieldAttributes,
+      buildContent: (runFragment) =>
+        runFragment.ele('@w', 'instrText').att('@xml', 'space', 'preserve').txt(instruction).up(),
+    }),
+    buildFieldRun({
+      runPropertiesAttributes: fieldAttributes,
+      buildContent: (runFragment) =>
+        runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'separate').up(),
+    }),
+    buildFieldRun({
+      runPropertiesAttributes: fieldAttributes,
+      buildContent: (runFragment) =>
+        runFragment.import(buildTextElement(cachedResult, layoutOf(docxDocumentInstance))),
+    }),
+    buildFieldRun({
+      runPropertiesAttributes: fieldAttributes,
+      buildContent: (runFragment) =>
+        runFragment.ele('@w', 'fldChar').att('@w', 'fldCharType', 'end').up(),
+    }),
   ];
 };
 
@@ -1564,7 +1577,7 @@ const buildShapeGraphic = (marker) => {
 // measured from the page corner, takes no space in the line (wrapNone), and
 // sits behind the text. relativeHeight rises with the drawing id, so a marker
 // written later in the HTML paints over one written earlier.
-const buildShapeAnchor = (marker, drawingId) => {
+const buildShapeAnchor = ({ marker, drawingId }) => {
   const anchorFragment = fragment({ namespaceAlias: { wp: namespaces.wp } })
     .ele('@wp', 'anchor')
     .att('distT', '0')
@@ -1618,7 +1631,7 @@ const buildShapeAnchor = (marker, drawingId) => {
   return anchorFragment.up();
 };
 
-const buildShapeMarkerRun = (vNode, docxDocumentInstance) => {
+const buildShapeMarkerRun = ({ vNode, docxDocumentInstance }) => {
   if (!docxDocumentInstance) return null;
   const marker = parseShapeMarker(vNode);
   if (!marker) return null;
@@ -1626,7 +1639,7 @@ const buildShapeMarkerRun = (vNode, docxDocumentInstance) => {
   const drawingId = docxDocumentInstance.createDrawingId();
   const runFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'r');
   const drawingFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'drawing');
-  drawingFragment.import(buildShapeAnchor(marker, drawingId));
+  drawingFragment.import(buildShapeAnchor({ marker, drawingId }));
   runFragment.import(drawingFragment.up());
 
   return runFragment.up();
@@ -1634,20 +1647,20 @@ const buildShapeMarkerRun = (vNode, docxDocumentInstance) => {
 
 // Intercepts the marker elements before they are treated as text. Returns the
 // runs they stand for, or null when the element is ordinary markup.
-const buildMarkerRuns = (vNode, attributes, docxDocumentInstance) => {
+const buildMarkerRuns = ({ vNode, attributes, docxDocumentInstance }) => {
   // Markers are a browserLayout feature: without it a data-shape or data-field element is
   // ordinary markup and keeps its text, as in 1.23.3.
   if (!layoutOf(docxDocumentInstance).browserLayout) return null;
   if (!isVNode(vNode) || !vNode.properties || !vNode.properties.attributes) return null;
   const markerAttributes = vNode.properties.attributes;
   if (markerAttributes['data-shape'] !== undefined) {
-    const shapeRun = buildShapeMarkerRun(vNode, docxDocumentInstance);
+    const shapeRun = buildShapeMarkerRun({ vNode, docxDocumentInstance });
     // An unreadable marker still swallows its element: it was never text, and
     // rendering the leftovers would put stray characters on the page.
     return shapeRun ? [shapeRun] : [];
   }
   if (markerAttributes['data-field'] !== undefined) {
-    return buildPageFieldRuns(vNode, attributes, docxDocumentInstance);
+    return buildPageFieldRuns({ vNode, attributes, docxDocumentInstance });
   }
 
   return null;
@@ -1990,7 +2003,7 @@ const buildRunOrRuns = async (vNode, attributes, docxDocumentInstance) => {
   // this is the one place the marker elements have to be caught. Catching them
   // here is also what keeps an empty marker alive: the span loop below walks
   // children, and a marker has none.
-  const markerRuns = buildMarkerRuns(vNode, attributes, docxDocumentInstance);
+  const markerRuns = buildMarkerRuns({ vNode, attributes, docxDocumentInstance });
   if (markerRuns) return markerRuns;
 
   if ((isVNode(vNode) || vNode?.isCoveringNode) && vNode.tagName === 'span' && vNode.children) {
@@ -2107,7 +2120,7 @@ const buildListContinuationIndent = ({ level, docxDocumentInstance }) => {
 // Hanging indent of a checklist item at `level`, matching list numbering
 // (numbering.xml uses left=(level+1)*levelIndent, hanging=hangingIndent —
 // Word's 720 and 360 unless the document names its own).
-const checklistIndentLeft = (level, docxDocumentInstance) =>
+const checklistIndentLeft = ({ level, docxDocumentInstance }) =>
   ((level || 0) + 1) * ((docxDocumentInstance && docxDocumentInstance.listLevelIndent) ?? 720);
 const checklistHanging = (docxDocumentInstance) =>
   (docxDocumentInstance && docxDocumentInstance.listHangingIndent) ?? 360;
@@ -2284,25 +2297,25 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
   // Children are collected first and imported in spec order at the end, so
   // the output order does not depend on the order CSS properties were declared.
   const children = [];
-  const addChild = (name, childFragment) => {
+  const addChild = ({ name, childFragment }) => {
     children.push({ name, childFragment, originalIndex: children.length });
   };
 
   // Add RTL support when direction is rtl
   if (docxDocumentInstance && docxDocumentInstance.direction === 'rtl') {
-    addChild(
-      'bidi',
-      fragment({ namespaceAlias: { w: namespaces.w } })
+    addChild({
+      name: 'bidi',
+      childFragment: fragment({ namespaceAlias: { w: namespaces.w } })
         .ele('@w', 'bidi')
-        .up()
-    );
-    addChild(
-      'rtl',
-      fragment({ namespaceAlias: { w: namespaces.w } })
+        .up(),
+    });
+    addChild({
+      name: 'rtl',
+      childFragment: fragment({ namespaceAlias: { w: namespaces.w } })
         .ele('@w', 'rtl')
         .att('@w', 'val', '1')
-        .up()
-    );
+        .up(),
+    });
   }
 
   if (attributes && attributes.constructor === Object) {
@@ -2313,38 +2326,38 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
         case 'checklist':
           // Checklist items are indented like list items, with the checkbox
           // glyph in the hanging indent; later blocks align with the text.
-          const checklistLeft = checklistIndentLeft(
-            attributes.checklist.level,
-            docxDocumentInstance
-          );
+          const checklistLeft = checklistIndentLeft({
+            level: attributes.checklist.level,
+            docxDocumentInstance,
+          });
           if (attributes.isContinuation) {
-            addChild(
-              'ind',
-              fragment({ namespaceAlias: { w: namespaces.w } })
+            addChild({
+              name: 'ind',
+              childFragment: fragment({ namespaceAlias: { w: namespaces.w } })
                 .ele('@w', 'ind')
                 .att('@w', 'left', String(checklistLeft))
                 .att('@w', 'hanging', '0')
-                .up()
-            );
+                .up(),
+            });
           } else {
-            addChild(
-              'tabs',
-              fragment({ namespaceAlias: { w: namespaces.w } })
+            addChild({
+              name: 'tabs',
+              childFragment: fragment({ namespaceAlias: { w: namespaces.w } })
                 .ele('@w', 'tabs')
                 .ele('@w', 'tab')
                 .att('@w', 'val', 'left')
                 .att('@w', 'pos', String(checklistLeft))
                 .up()
-                .up()
-            );
-            addChild(
-              'ind',
-              fragment({ namespaceAlias: { w: namespaces.w } })
+                .up(),
+            });
+            addChild({
+              name: 'ind',
+              childFragment: fragment({ namespaceAlias: { w: namespaces.w } })
                 .ele('@w', 'ind')
                 .att('@w', 'left', String(checklistLeft))
                 .att('@w', 'hanging', String(checklistHanging(docxDocumentInstance)))
-                .up()
-            );
+                .up(),
+            });
           }
           // eslint-disable-next-line no-param-reassign
           delete attributes.checklist;
@@ -2357,18 +2370,18 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
               level: attributes.indentLevel || 0,
               docxDocumentInstance,
             });
-            addChild('ind', indentationFragment);
+            addChild({ name: 'ind', childFragment: indentationFragment });
           } else {
             const { levelId, numberingId } = attributes[key];
             const numberingPropertiesFragment = buildNumberingProperties(levelId, numberingId);
-            addChild('numPr', numberingPropertiesFragment);
+            addChild({ name: 'numPr', childFragment: numberingPropertiesFragment });
           }
           // eslint-disable-next-line no-param-reassign
           delete attributes.numbering;
           break;
         case 'textAlign':
           const horizontalAlignmentFragment = buildHorizontalAlignment(attributes[key]);
-          addChild('jc', horizontalAlignmentFragment);
+          addChild({ name: 'jc', childFragment: horizontalAlignmentFragment });
           // eslint-disable-next-line no-param-reassign
           delete attributes.textAlign;
           break;
@@ -2377,7 +2390,7 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           // Essentially if background color needs to be across the row
           if (attributes.display === 'block') {
             const shadingFragment = buildShading(attributes[key]);
-            addChild('shd', shadingFragment);
+            addChild({ name: 'shd', childFragment: shadingFragment });
             // FIXME: Inner padding in case of shaded paragraphs.
             // CSS borders (below) replace these padding borders side by side.
             paragraphBorders = { ...cloneDeep(paragraphBordersObject), ...paragraphBorders };
@@ -2394,26 +2407,29 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           // The paragraph's own type, on its mark: Word lays the last line off
           // the mark too, and an empty paragraph off nothing else (buildParagraph).
           // In schema order, as a run's are (sortRprChildren): Word drops an out-of-place child.
-          addChild('rPr', sortRprChildren(buildRunProperties(attributes.paragraphMark)));
+          addChild({
+            name: 'rPr',
+            childFragment: sortRprChildren(buildRunProperties(attributes.paragraphMark)),
+          });
           delete attributes.paragraphMark;
           break;
         case 'paragraphStyle':
           const pStyleFragment = buildPStyle(attributes.paragraphStyle);
-          addChild('pStyle', pStyleFragment);
+          addChild({ name: 'pStyle', childFragment: pStyleFragment });
           delete attributes.paragraphStyle;
           break;
         case 'indentation':
           // A checklist item's indent comes from its level (see 'checklist').
           if (!isChecklistParagraph) {
             const indentationFragment = buildIndentation(attributes[key]);
-            addChild('ind', indentationFragment);
+            addChild({ name: 'ind', childFragment: indentationFragment });
           }
           // eslint-disable-next-line no-param-reassign
           delete attributes.indentation;
           break;
         case 'textDecoration':
           const textDecorationFragment = buildTextDecoration(attributes[key]);
-          addChild('textDecoration', textDecorationFragment);
+          addChild({ name: 'textDecoration', childFragment: textDecorationFragment });
           // we don't delete attributes.textDecoration so that it could be inherited by children nodes.
           break;
         // Note: pageBreakAfter is not handled here — OOXML has no paragraph property for it.
@@ -2423,7 +2439,7 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
           const pageBreakBeforeFragment = fragment({ namespaceAlias: { w: namespaces.w } })
             .ele('@w', 'pageBreakBefore')
             .up();
-          addChild('pageBreakBefore', pageBreakBeforeFragment);
+          addChild({ name: 'pageBreakBefore', childFragment: pageBreakBeforeFragment });
           // eslint-disable-next-line no-param-reassign
           delete attributes.pageBreakBefore;
           break;
@@ -2431,7 +2447,7 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
     });
 
     if (paragraphBorders && paragraphBorderSides.some((side) => paragraphBorders[side])) {
-      addChild('pBdr', buildParagraphBorder(paragraphBorders));
+      addChild({ name: 'pBdr', childFragment: buildParagraphBorder(paragraphBorders) });
     }
 
     const spacingFragment = buildSpacing(
@@ -2449,7 +2465,7 @@ const buildParagraphProperties = (attributes, docxDocumentInstance) => {
     // eslint-disable-next-line no-param-reassign
     delete attributes.afterSpacing;
 
-    addChild('spacing', spacingFragment);
+    addChild({ name: 'spacing', childFragment: spacingFragment });
   }
 
   children
@@ -2567,16 +2583,16 @@ const imagePlacementOf = (vNode) => {
   if (!PLACED_WRAPS.includes(wrap)) {
     return null;
   }
-  const px = (name, fallback) => {
+  const px = ({ name, fallback }) => {
     const value = Number(htmlAttributes[name]);
     return Number.isFinite(value) ? value : fallback;
   };
   return {
     wrap,
-    gap: Math.max(0, Math.min(48, px('data-wrap-gap', 12))),
+    gap: Math.max(0, Math.min(48, px({ name: 'data-wrap-gap', fallback: 12 }))),
     position: htmlAttributes['data-position'] === 'page' ? 'page' : 'text',
-    x: px('data-x', 0),
-    y: px('data-y', 0),
+    x: px({ name: 'data-x', fallback: 0 }),
+    y: px({ name: 'data-y', fallback: 0 }),
   };
 };
 
@@ -3219,12 +3235,12 @@ const buildTableCellProperties = (attributes, parentWidth) => {
 
   // Word reads <w:tcPr> as an ordered sequence (<w:tcW> before <w:gridSpan>,
   // <w:tcMar> between <w:shd> and <w:vAlign>), so it is always put in spec order.
-  return buildOrderedProperties(
-    tableCellPropertiesFragment,
+  return buildOrderedProperties({
+    propertiesFragment: tableCellPropertiesFragment,
     childFragments,
-    TCPR_ELEMENT_ORDER,
-    true
-  );
+    elementOrder: TCPR_ELEMENT_ORDER,
+    sorted: true,
+  });
 };
 
 /**
@@ -3973,7 +3989,7 @@ const columnSpanOf = (cellVNode) => {
 };
 
 // How wide a cell is: the grid columns it covers, from `start`.
-const gridSpanWidth = (attributes, start, span) => {
+const gridSpanWidth = ({ attributes, start, span }) => {
   const widths = attributes.tableGridColumnWidths;
   if (!Array.isArray(widths) || widths.length === 0 || start + span > widths.length) {
     return undefined;
@@ -4521,7 +4537,11 @@ const buildRowSpanCell = (
     }
 
     if (exactPixelBorders && attributes.tableLayout === 'fixed') {
-      const coveredWidth = gridSpanWidth(attributes, columnIndex.index, spanObject.colSpan || 1);
+      const coveredWidth = gridSpanWidth({
+        attributes,
+        start: columnIndex.index,
+        span: spanObject.colSpan || 1,
+      });
       if (coveredWidth) {
         cellProperties.width = coveredWidth;
       }
@@ -4684,11 +4704,11 @@ const buildTableRow = async (
           // 1.23.3's conversion: em, rem and keywords stay unresolved.
           modifiedAttributes.fontSize = fixupFontSize(tableRowStyleValue, docxDocumentInstance);
         } else if (tableRowStlyeKey === 'font-size') {
-          const fontSize = resolveFontSize(
-            tableRowStyleValue,
+          const fontSize = resolveFontSize({
+            fontSizeString: tableRowStyleValue,
             docxDocumentInstance,
-            modifiedAttributes.fontSize
-          );
+            inheritedFontSize: modifiedAttributes.fontSize,
+          });
           if (fontSize !== undefined) {
             modifiedAttributes.fontSize = fontSize;
           }
@@ -4745,7 +4765,11 @@ const buildTableRow = async (
           // even split is only the fallback for a table whose grid is unknown.
           maximumWidth:
             (docxDocumentInstance.browserLayout &&
-              gridSpanWidth(modifiedAttributes, columnIndex.index, columnSpanOf(column))) ||
+              gridSpanWidth({
+                attributes: modifiedAttributes,
+                start: columnIndex.index,
+                span: columnSpanOf(column),
+              })) ||
             maximumColumnWidth,
         },
         rowSpanMap,
@@ -5006,12 +5030,12 @@ const buildTableProperties = (attributes) => {
   // the order the attributes were set in cannot promise, so an indented table
   // has its whole <w:tblPr> put in spec order. Tables that declared no indent
   // are emitted in the order they always were.
-  return buildOrderedProperties(
-    tablePropertiesFragment,
+  return buildOrderedProperties({
+    propertiesFragment: tablePropertiesFragment,
     childFragments,
-    TBLPR_ELEMENT_ORDER,
-    hasTableIndent || hasTableLayout
-  );
+    elementOrder: TBLPR_ELEMENT_ORDER,
+    sorted: hasTableIndent || hasTableLayout,
+  });
 };
 
 // The grid a table is laid over: its <col>s, or else its first row's cells and
@@ -5034,7 +5058,7 @@ const tableGridColumnCountOf = (tableVNode) => {
 };
 
 // A <col>'s own width in TWIPs, or undefined when it sets none.
-const colWidthOf = (colVNode, tableWidth) => {
+const colWidthOf = ({ colVNode, tableWidth }) => {
   const declared =
     (colVNode.properties.style && colVNode.properties.style.width) ||
     (colVNode.properties.attributes && colVNode.properties.attributes.width) ||
@@ -5049,7 +5073,7 @@ const colWidthOf = (colVNode, tableWidth) => {
 
 // Whole TWIPs that add up to exactly `total`: the last column takes the
 // rounding, so the grid is as wide as the table.
-const wholeWidths = (widths, total) => {
+const wholeWidths = ({ widths, total }) => {
   const rounded = widths.map((width) => Math.max(0, Math.round(width)));
   const drift = Math.round(total) - rounded.reduce((sum, width) => sum + width, 0);
   if (rounded.length > 0 && Math.abs(drift) <= rounded.length) {
@@ -5061,7 +5085,7 @@ const wholeWidths = (widths, total) => {
 // Every grid column's width, in TWIPs. A fixed-layout table takes its <col>s'
 // widths, sharing what they leave among the columns that set none; any other
 // table is split evenly, as it always was.
-const tableGridColumnWidthsOf = (tableVNode, tableWidth, isFixedLayout) => {
+const tableGridColumnWidthsOf = ({ tableVNode, tableWidth, isFixedLayout }) => {
   const count = tableGridColumnCountOf(tableVNode);
   if (!count || !(tableWidth > 0)) {
     return [];
@@ -5075,16 +5099,16 @@ const tableGridColumnWidthsOf = (tableVNode, tableWidth, isFixedLayout) => {
       ? colgroup.children.filter((childVNode) => childVNode.tagName === 'col')
       : [];
   if (cols.length !== count) {
-    return wholeWidths(new Array(count).fill(tableWidth / count), tableWidth);
+    return wholeWidths({ widths: new Array(count).fill(tableWidth / count), total: tableWidth });
   }
-  const declared = cols.map((col) => colWidthOf(col, tableWidth));
+  const declared = cols.map((col) => colWidthOf({ colVNode: col, tableWidth }));
   const set = declared.reduce((sum, width) => sum + (width || 0), 0);
   const unset = declared.filter((width) => width === undefined).length;
   const share = unset ? Math.max(0, tableWidth - set) / unset : 0;
-  return wholeWidths(
-    declared.map((width) => (width === undefined ? share : width)),
-    unset ? Math.max(tableWidth, set) : set
-  );
+  return wholeWidths({
+    widths: declared.map((width) => (width === undefined ? share : width)),
+    total: unset ? Math.max(tableWidth, set) : set,
+  });
 };
 
 const buildTable = async (vNode, attributes, docxDocumentInstance) => {
@@ -5397,13 +5421,14 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   }
   // Each grid column's width, so every cell knows how wide it is — never a
   // containing table's. Read before <w:tblPr> is built, which drops the width.
-  modifiedAttributes.tableGridColumnWidths = tableGridColumnWidthsOf(
-    vNode,
-    modifiedAttributes.tableLayout === 'fixed'
-      ? modifiedAttributes.width || attributes.maximumWidth
-      : attributes.maximumWidth,
-    modifiedAttributes.tableLayout === 'fixed'
-  );
+  modifiedAttributes.tableGridColumnWidths = tableGridColumnWidthsOf({
+    tableVNode: vNode,
+    tableWidth:
+      modifiedAttributes.tableLayout === 'fixed'
+        ? modifiedAttributes.width || attributes.maximumWidth
+        : attributes.maximumWidth,
+    isFixedLayout: modifiedAttributes.tableLayout === 'fixed',
+  });
   const tablePropertiesFragment = buildTableProperties(modifiedAttributes);
   tableFragment.import(tablePropertiesFragment);
 

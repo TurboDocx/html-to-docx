@@ -27,7 +27,7 @@ const arialBulletGlyphs = new Set([
 ]);
 
 // <ul data-bullet="❖">: the list's own glyph, when it is exactly one character.
-const getDataBullet = (attributes, symbolBulletFont) => {
+const getDataBullet = ({ attributes, symbolBulletFont }) => {
   const value = attributes && attributes['data-bullet'];
   if (typeof value !== 'string' || Array.from(value).length !== 1) {
     return null;
@@ -38,8 +38,8 @@ const getDataBullet = (attributes, symbolBulletFont) => {
   };
 };
 
-const getUnorderedListBullet = (style, attributes, symbolBulletFont) => {
-  const dataBullet = getDataBullet(attributes, symbolBulletFont);
+const getUnorderedListBullet = ({ style, attributes, symbolBulletFont }) => {
+  const dataBullet = getDataBullet({ attributes, symbolBulletFont });
   if (dataBullet) {
     return dataBullet;
   }
@@ -120,7 +120,7 @@ class ListStyleBuilder {
   // Multilevel outline text for `level` of a list whose first level is
   // `baseLevel`: "%1." then "%1.%2." then "%1.%2.%3." ...
   // eslint-disable-next-line class-methods-use-this
-  getOutlineListLevelText(level, baseLevel = 0) {
+  getOutlineListLevelText({ level, baseLevel = 0 }) {
     const firstLevel = level < baseLevel ? level : baseLevel;
     let levelText = '';
     for (let outlineLevel = firstLevel; outlineLevel <= level; outlineLevel += 1) {
@@ -140,14 +140,22 @@ class ListStyleBuilder {
       if (listType === 'circle') return 'o';
       return '\uF0B7';
     }
-    const bullet = getUnorderedListBullet(style, attributes, this.symbolBulletFont);
+    const bullet = getUnorderedListBullet({
+      style,
+      attributes,
+      symbolBulletFont: this.symbolBulletFont,
+    });
     return bullet ? bullet.glyph : '\uF0B7';
   }
 
   // Font for the bullet glyph returned by getUnorderedListPrefixSuffix.
-  getUnorderedListFont(style, attributes) {
+  getUnorderedListFont({ style, attributes }) {
     if (!this.browserLayout) return 'Symbol';
-    const bullet = getUnorderedListBullet(style, attributes, this.symbolBulletFont);
+    const bullet = getUnorderedListBullet({
+      style,
+      attributes,
+      symbolBulletFont: this.symbolBulletFont,
+    });
     return bullet ? bullet.font : 'Symbol';
   }
 }

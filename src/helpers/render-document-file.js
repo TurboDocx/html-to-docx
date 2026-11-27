@@ -120,7 +120,7 @@ const withoutListContainerStyles = (style) => {
   return itemStyle;
 };
 
-const listAttribute = (listNode, name) =>
+const listAttribute = ({ listNode, name }) =>
   listNode && listNode.properties && listNode.properties.attributes
     ? listNode.properties.attributes[name]
     : undefined;
@@ -132,20 +132,23 @@ const isTrueAttribute = (value) =>
 const isChecklist = (listNode) =>
   isVNode(listNode) &&
   listNode.tagName === 'ul' &&
-  isTrueAttribute(listAttribute(listNode, 'data-checklist'));
+  isTrueAttribute(listAttribute({ listNode, name: 'data-checklist' }));
 
 // <li data-checked data-strike> state of a checklist item. Text is struck
 // only when the item is both checked and marked data-strike="true".
 const getChecklistItemState = (liNode) => {
-  const checked = isTrueAttribute(listAttribute(liNode, 'data-checked'));
-  return { checked, strike: checked && isTrueAttribute(listAttribute(liNode, 'data-strike')) };
+  const checked = isTrueAttribute(listAttribute({ listNode: liNode, name: 'data-checked' }));
+  return {
+    checked,
+    strike: checked && isTrueAttribute(listAttribute({ listNode: liNode, name: 'data-strike' })),
+  };
 };
 
 // <ol data-numbering="outline">: multilevel legal-style numbering (1., 1.1., 1.1.1.).
 const isOutlineList = (listNode) =>
   isVNode(listNode) &&
   listNode.tagName === 'ol' &&
-  listAttribute(listNode, 'data-numbering') === 'outline';
+  listAttribute({ listNode, name: 'data-numbering' }) === 'outline';
 
 // A nested <ol> inside an outline list continues that outline when it asks for
 // outline numbering, or when it declares no numbering of its own (no
@@ -154,7 +157,7 @@ const joinsOutlineList = (listNode) => {
   if (!isVNode(listNode) || listNode.tagName !== 'ol') {
     return false;
   }
-  const dataNumbering = listAttribute(listNode, 'data-numbering');
+  const dataNumbering = listAttribute({ listNode, name: 'data-numbering' });
   if (dataNumbering !== undefined) {
     return dataNumbering === 'outline';
   }
@@ -178,7 +181,7 @@ const joinsOutlineList = (listNode) => {
  * Returns the queue fields for the list: numberingId, `outline` (the outline
  * the list's items belong to, or null) and `checklist`.
  */
-const allocateListNumbering = (docxDocumentInstance, listNode, level, parentOutline) => {
+const allocateListNumbering = ({ docxDocumentInstance, listNode, level, parentOutline }) => {
   // Checklists and outline numbering are browserLayout features: without it every list gets
   // its own definition, as in 1.23.3.
   if (!docxDocumentInstance.browserLayout) {
@@ -269,7 +272,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       node: vNode,
       level: 0,
       type: vNode.tagName,
-      ...allocateListNumbering(docxDocumentInstance, vNode, 0, null),
+      ...allocateListNumbering({
+        docxDocumentInstance,
+        listNode: vNode,
+        level: 0,
+        parentOutline: null,
+      }),
     },
   ];
   while (vNodeObjects.length) {
@@ -287,12 +295,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
     ) {
       Object.assign(
         tempVNodeObject,
-        allocateListNumbering(
+        allocateListNumbering({
           docxDocumentInstance,
-          tempVNodeObject.node,
-          tempVNodeObject.level,
-          tempVNodeObject.parentOutline
-        )
+          listNode: tempVNodeObject.node,
+          level: tempVNodeObject.level,
+          parentOutline: tempVNodeObject.parentOutline,
+        })
       );
     }
 
@@ -379,12 +387,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
             node: childVNode,
             level: tempVNodeObject.level + 1,
             type: childVNode.tagName,
-            ...allocateListNumbering(
+            ...allocateListNumbering({
               docxDocumentInstance,
-              childVNode,
-              tempVNodeObject.level + 1,
-              tempVNodeObject.outline
-            ),
+              listNode: childVNode,
+              level: tempVNodeObject.level + 1,
+              parentOutline: tempVNodeObject.outline,
+            }),
           });
         } else {
           // eslint-disable-next-line no-lonely-if
@@ -552,7 +560,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
 // signature block — wants to sit flush against what follows, so it can turn
 // that paragraph off for itself without the caller having to switch it off for
 // every table in the document.
-const tableSuppressesSpacingAfter = (vNode, docxDocumentInstance) => {
+const tableSuppressesSpacingAfter = ({ vNode, docxDocumentInstance }) => {
   // A browserLayout feature: 1.23.3 put the paragraph after every table.
   if (!(docxDocumentInstance && docxDocumentInstance.browserLayout)) return false;
   const tableAttributes = (vNode && vNode.properties && vNode.properties.attributes) || {};
@@ -767,7 +775,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
             // Adding empty paragraph for space after table only if the option is enabled
             if (
               docxDocumentInstance.addSpacingAfterTable &&
-              !tableSuppressesSpacingAfter(childVNode, docxDocumentInstance)
+              !tableSuppressesSpacingAfter({ vNode: childVNode, docxDocumentInstance })
             ) {
               const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
               xmlFragment.import(emptyParagraphFragment);
@@ -808,7 +816,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
       // Adding empty paragraph for space after table only if the option is enabled
       if (
         docxDocumentInstance.addSpacingAfterTable &&
-        !tableSuppressesSpacingAfter(vNode, docxDocumentInstance)
+        !tableSuppressesSpacingAfter({ vNode, docxDocumentInstance })
       ) {
         const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
         xmlFragment.import(emptyParagraphFragment);

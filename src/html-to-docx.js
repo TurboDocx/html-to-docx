@@ -27,7 +27,7 @@ const convertHTML = createHTMLToVDOM();
  * image there, where Word and LibreOffice look for it. (They all went into
  * `header1` before, so only the first part's pictures were drawn.)
  */
-function nextPartName(docxDocument, type) {
+function nextPartName({ docxDocument, type }) {
   return type === 'header'
     ? `${headerType}${docxDocument.lastHeaderId + 1}`
     : `${footerType}${docxDocument.lastFooterId + 1}`;
@@ -40,7 +40,7 @@ function nextPartName(docxDocument, type) {
  * a portrait section's header is as wide as the portrait page, not the
  * document's last one.
  */
-async function addSectionPart(docxDocument, zip, type, htmlString, section) {
+async function addSectionPart({ docxDocument, zip, type, htmlString, section }) {
   const vTree = convertHTML(htmlString);
   const isHeader = type === 'header';
 
@@ -48,7 +48,7 @@ async function addSectionPart(docxDocument, zip, type, htmlString, section) {
   // Its own relationships — its pictures' — go with its own part, which is
   // named once it is written: the next header or footer number.
   // eslint-disable-next-line no-param-reassign
-  docxDocument.relationshipFilename = nextPartName(docxDocument, type);
+  docxDocument.relationshipFilename = nextPartName({ docxDocument, type });
   // eslint-disable-next-line no-param-reassign
   docxDocument.availableDocumentSpace = section.availableDocumentSpace;
   // eslint-disable-next-line no-param-reassign
@@ -135,7 +135,7 @@ async function addFilesToContainer(
   if (docxDocument.header && headerHTMLString) {
     const vTree = convertHTML(headerHTMLString);
 
-    docxDocument.relationshipFilename = nextPartName(docxDocument, 'header');
+    docxDocument.relationshipFilename = nextPartName({ docxDocument, type: 'header' });
     const { headerId, headerXML } = await docxDocument.generateHeaderXML(vTree);
     docxDocument.relationshipFilename = documentFileName;
     const fileNameWithExt = `${headerType}${headerId}.xml`;
@@ -156,7 +156,7 @@ async function addFilesToContainer(
   if (docxDocument.footer && footerHTMLString) {
     const vTree = convertHTML(footerHTMLString);
 
-    docxDocument.relationshipFilename = nextPartName(docxDocument, 'footer');
+    docxDocument.relationshipFilename = nextPartName({ docxDocument, type: 'footer' });
     const { footerId, footerXML } = await docxDocument.generateFooterXML(vTree);
     docxDocument.relationshipFilename = documentFileName;
     const fileNameWithExt = `${footerType}${footerId}.xml`;
@@ -190,22 +190,22 @@ async function addFilesToContainer(
       return documentOptions.decodeUnicode ? decode(html) : html;
     };
     if (docxDocument.header) {
-      docxDocument.firstPageHeaderRelationshipId = await addSectionPart(
+      docxDocument.firstPageHeaderRelationshipId = await addSectionPart({
         docxDocument,
         zip,
-        'header',
-        firstPart(firstPage.headerHTML),
-        firstSection
-      );
+        type: 'header',
+        htmlString: firstPart(firstPage.headerHTML),
+        section: firstSection,
+      });
     }
     if (docxDocument.footer) {
-      docxDocument.firstPageFooterRelationshipId = await addSectionPart(
+      docxDocument.firstPageFooterRelationshipId = await addSectionPart({
         docxDocument,
         zip,
-        'footer',
-        firstPart(firstPage.footerHTML),
-        firstSection
-      );
+        type: 'footer',
+        htmlString: firstPart(firstPage.footerHTML),
+        section: firstSection,
+      });
     }
   }
   // A section that brought its own header or footer gets parts of its own,
@@ -214,23 +214,23 @@ async function addFilesToContainer(
   for (const section of docxDocument.sections) {
     if (docxDocument.header && section.headerHTML) {
       // eslint-disable-next-line no-await-in-loop
-      section.headerRelationshipId = await addSectionPart(
+      section.headerRelationshipId = await addSectionPart({
         docxDocument,
         zip,
-        'header',
-        documentOptions.decodeUnicode ? decode(section.headerHTML) : section.headerHTML,
-        section
-      );
+        type: 'header',
+        htmlString: documentOptions.decodeUnicode ? decode(section.headerHTML) : section.headerHTML,
+        section,
+      });
     }
     if (docxDocument.footer && section.footerHTML) {
       // eslint-disable-next-line no-await-in-loop
-      section.footerRelationshipId = await addSectionPart(
+      section.footerRelationshipId = await addSectionPart({
         docxDocument,
         zip,
-        'footer',
-        documentOptions.decodeUnicode ? decode(section.footerHTML) : section.footerHTML,
-        section
-      );
+        type: 'footer',
+        htmlString: documentOptions.decodeUnicode ? decode(section.footerHTML) : section.footerHTML,
+        section,
+      });
     }
   }
   const themeFileNameWithExt = `${themeFileName}.xml`;
