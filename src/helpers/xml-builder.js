@@ -2519,7 +2519,23 @@ const imageCropOf = (vNode) => {
     const value = Number(htmlAttributes[`data-crop-${name}`]);
     return Number.isFinite(value) && value >= 0 && value < 1 ? value : 0;
   };
-  return { top: side('top'), right: side('right'), bottom: side('bottom'), left: side('left') };
+  const crop = {
+    top: side('top'),
+    right: side('right'),
+    bottom: side('bottom'),
+    left: side('left'),
+  };
+  // Two sides that together take the whole picture (or more) leave nothing to
+  // show, so that axis is not cropped.
+  if (crop.left + crop.right >= 1) {
+    crop.left = 0;
+    crop.right = 0;
+  }
+  if (crop.top + crop.bottom >= 1) {
+    crop.top = 0;
+    crop.bottom = 0;
+  }
+  return crop;
 };
 
 // The line around a picture (`data-border-width` in px, `data-border-color`),

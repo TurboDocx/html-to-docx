@@ -44,6 +44,22 @@ describe("a picture's crop and border", () => {
     expect(xml).toMatch(/<a:srcRect b="0" l="0" r="0" t="0"\/>/);
   });
 
+  it('drops the crop of an axis whose two sides leave no picture', async () => {
+    const xml = await documentXml(
+      `<p><img src="${PIXEL}" width="100" height="50" data-crop-left="0.6" data-crop-right="0.6" data-crop-top="0.5" data-crop-bottom="0.5"></p>`
+    );
+
+    expect(xml).toMatch(/<a:srcRect b="0" l="0" r="0" t="0"\/>/);
+  });
+
+  it('still crops an axis whose two sides leave a picture', async () => {
+    const xml = await documentXml(
+      `<p><img src="${PIXEL}" width="100" height="50" data-crop-left="0.1" data-crop-right="0.2"></p>`
+    );
+
+    expect(xml).toMatch(/<a:srcRect b="0" l="10000" r="20000" t="0"\/>/);
+  });
+
   it('draws a border around the picture', async () => {
     const xml = await documentXml(
       `<p><img src="${PIXEL}" width="100" height="50" data-border-width="2" data-border-color="#1F4E79"></p>`
