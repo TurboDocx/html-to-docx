@@ -10,8 +10,8 @@ import { create } from 'xmlbuilder2';
  *   - the body's `w:sectPr` last (the schema's place for it);
  *   - the children of `w:rPr`, `w:pPr` and `w:tcPr` sorted (the schema fixes their order, and
  *     the converter now writes it);
- *   - each `w:tblGrid` as its column count and total width (see serializeGrid), and a second
- *     grid after a table's first row dropped (see withoutLateGrids);
+ *   - each `w:tblGrid` as its column count and total width (see serializeGrid), and on
+ *     1.23.3's side only, a table's grids after its first dropped (see withoutLateGrids);
  *   - a `w:lineRule` anywhere but `w:spacing` dropped (see isStrayLineRule);
  *   - indentation-only text dropped, but text inside `w:t`, `w:instrText` and `w:delText` kept
  *     exactly, since a lost space there is a real change.
@@ -80,27 +80,28 @@ const serializeGrid = (node, indent) => {
   return `${indent}<w:tblGrid columns="${widths.length}" total="${total}">\n`;
 };
 
-// CT_Tbl is tblPr, one tblGrid, then rows. 1.23.3 built a second grid between the rows of a table
-// with a <thead> and a <tbody>, which is invalid; the converter now writes one. A grid after the
-// first row is dropped (tests/table-header-rows.test.js requires the converter to write one).
+// CT_Tbl is tblPr, one tblGrid, then rows. 1.23.3 built a second grid between the rows of some
+// tables, which is invalid; the converter now writes one. On 1.23.3's side only (dropLateGrids),
+// every grid after a table's first grid is dropped. This branch's side keeps all of them, so a
+// duplicate it writes still fails the suite, and a table's only grid is never dropped.
 const withoutLateGrids = (children) => {
-  const firstRow = children.findIndex((child) => child.localName === 'tr');
-  return firstRow === -1
+  const firstGrid = children.findIndex((child) => child.localName === 'tblGrid');
+  return firstGrid === -1
     ? children
-    : children.filter((child, index) => index < firstRow || child.localName !== 'tblGrid');
+    : children.filter((child, index) => index <= firstGrid || child.localName !== 'tblGrid');
 };
 
-const orderedChildren = (node, children) => {
+const orderedChildren = ({ node, children, dropLateGrids }) => {
   if (node.localName === 'body') {
     return [
       ...children.filter((child) => child.localName !== 'sectPr'),
       ...children.filter((child) => child.localName === 'sectPr'),
     ];
   }
-  return node.localName === 'tbl' ? withoutLateGrids(children) : children;
+  return dropLateGrids && node.localName === 'tbl' ? withoutLateGrids(children) : children;
 };
 
-const serialize = (node, indent) => {
+const serializeElement = ({ node, indent, dropLateGrids, serialize }) => {
   if (node.nodeType === 3 || node.nodeType === 4) return serializeText(node, indent);
   if (node.nodeType !== 1) return '';
   if (node.localName === 'tblGrid' && node.namespaceURI === W) return serializeGrid(node, indent);
@@ -112,7 +113,7 @@ const serialize = (node, indent) => {
     .toSorted();
 
   const children = [...node.childNodes];
-  const ordered = orderedChildren(node, children);
+  const ordered = orderedChildren({ node, children, dropLateGrids });
   const inner = ordered.map((child) => serialize(child, `${indent}  `));
   const body = SORTED_CHILDREN.has(node.localName) ? inner.toSorted() : inner;
 
@@ -122,31 +123,46 @@ const serialize = (node, indent) => {
   )}`;
 };
 
+const serializeNode = ({ node, indent, dropLateGrids }) => {
+  const serialize = (child, childIndent) =>
+    serializeNode({ node: child, indent: childIndent, dropLateGrids });
+  return serializeElement({ node, indent, dropLateGrids, serialize });
+};
+
 /**
  * One XML part in canonical form.
  *
- * @param {string} xml The part's XML.
+ * @param {object} params The part and how to read it.
+ * @param {string} params.xml The part's XML.
+ * @param {boolean} [params.dropLateGrids] Forgive 1.23.3's second table grid (1.23.3's side only).
  * @returns {string} One node per line, in canonical order.
  */
-export const canonicalXml = (xml) => serialize(create(xml).root().node, '');
+export const canonicalXml = ({ xml, dropLateGrids = false }) =>
+  serializeNode({ node: create(xml).root().node, indent: '', dropLateGrids });
 
-const canonicalPart = async (name, file) => {
-  if (/\.(xml|rels)$/.test(name)) return canonicalXml(await file.async('string'));
+const canonicalPart = async ({ name, file, dropLateGrids }) => {
+  if (/\.(xml|rels)$/.test(name)) {
+    return canonicalXml({ xml: await file.async('string'), dropLateGrids });
+  }
   return `base64:${await file.async('base64')}`;
 };
 
 /**
  * Every part of a DOCX package: XML parts in canonical form, other parts as base64.
  *
- * @param {Buffer|Blob} buffer The DOCX package.
+ * @param {object} params The package and how to read it.
+ * @param {Buffer|Blob} params.buffer The DOCX package.
+ * @param {boolean} [params.dropLateGrids] Forgive 1.23.3's second table grid (1.23.3's side only).
  * @returns {Promise<Record<string, string>>} Part name to canonical content.
  */
-export const canonicalDocx = async (buffer) => {
+export const canonicalDocx = async ({ buffer, dropLateGrids = false }) => {
   const zip = await JSZip.loadAsync(buffer);
   const names = Object.keys(zip.files)
     .filter((name) => !zip.files[name].dir && !SKIPPED_PARTS.has(name))
     .toSorted();
-  const contents = await Promise.all(names.map((name) => canonicalPart(name, zip.files[name])));
+  const contents = await Promise.all(
+    names.map((name) => canonicalPart({ name, file: zip.files[name], dropLateGrids }))
+  );
   return Object.fromEntries(names.map((name, index) => [name, contents[index]]));
 };
 

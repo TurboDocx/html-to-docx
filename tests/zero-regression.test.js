@@ -57,7 +57,8 @@ const optionsFor = (options = {}) => ({
   deterministicIds: true,
 });
 
-const render = async (convert, entry) => {
+// 1.23.3's render forgives its known invalid second table grid; this branch's render does not.
+const render = async ({ convert, entry, dropLateGrids = false }) => {
   try {
     const buffer = await convert(
       entry.html,
@@ -65,7 +66,7 @@ const render = async (convert, entry) => {
       optionsFor(entry.options),
       entry.footerHTML ?? null
     );
-    return { error: null, parts: await canonicalDocx(buffer) };
+    return { error: null, parts: await canonicalDocx({ buffer, dropLateGrids }) };
   } catch (error) {
     return { error: String(error?.message ?? error), parts: {} };
   }
@@ -91,8 +92,8 @@ const withValidityFixes = (expected, actual) => {
 
 // Both renders as one comparable value: whether they threw alike, and the parts that differ.
 const compare = async (entry) => {
-  const expected = await render(baseline, entry);
-  const actual = await render(HTMLtoDOCX, entry);
+  const expected = await render({ convert: baseline, entry, dropLateGrids: true });
+  const actual = await render({ convert: HTMLtoDOCX, entry });
   return {
     error:
       actual.error === expected.error ? 'same' : { expected: expected.error, actual: actual.error },
