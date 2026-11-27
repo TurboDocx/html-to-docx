@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## Unreleased (1.24.0)
+## [1.24.0](https://github.com/TurboDocx/html-to-docx/compare/v1.23.3...v1.24.0) (2026-11-27)
 
 ### Features
 
