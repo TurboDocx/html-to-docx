@@ -141,4 +141,38 @@ describe('a different first page', () => {
     const [body] = sectPrs(rendered.document);
     expect(body.match(/<w:titlePg\/>/g)).toHaveLength(1);
   });
+
+  describe('band HTML minification', () => {
+    const PRETTY = '<div>\n  <p>X</p>\n  <p>Y</p>\n</div>';
+    const paragraphsOf = async ({ rendered, kind, type }) => {
+      const [sectPr] = sectPrs(rendered.document);
+      const part = await partOf(rendered, referenceOf(sectPr, kind, type));
+      return [...part.matchAll(/<w:p[ >]/g)].length;
+    };
+
+    it('minifies firstPage.headerHTML like headerHTML', async () => {
+      const running = await render('<p>B</p>', { header: true }, PRETTY);
+      const first = await render('<p>B</p>', { header: true, firstPage: { headerHTML: PRETTY } });
+      const runningCount = await paragraphsOf({
+        rendered: running,
+        kind: 'header',
+        type: 'default',
+      });
+      const firstCount = await paragraphsOf({ rendered: first, kind: 'header', type: 'first' });
+      expect(firstCount).toBe(runningCount);
+    });
+
+    it('minifies firstPage.footerHTML unless skipHTMLMinify is set', async () => {
+      const options = { footer: true, firstPage: { footerHTML: PRETTY } };
+      const minified = await render('<p>B</p>', options);
+      const raw = await render('<p>B</p>', { ...options, preprocessing: { skipHTMLMinify: true } });
+      const minifiedCount = await paragraphsOf({
+        rendered: minified,
+        kind: 'footer',
+        type: 'first',
+      });
+      const rawCount = await paragraphsOf({ rendered: raw, kind: 'footer', type: 'first' });
+      expect(minifiedCount).toBeLessThan(rawCount);
+    });
+  });
 });

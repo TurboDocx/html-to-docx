@@ -44,6 +44,31 @@ async function generateContainer(
     footerHTML = await minifyHTMLString(footerHTML);
   }
 
+  // The bands that are not the document's own (page 1's, a section's) are HTML
+  // too, so whitespace between their tags is minified away the same way.
+  if (!normalizedDocumentOptions.preprocessing.skipHTMLMinify) {
+    const minifyBands = async (bands) => {
+      if (!bands || typeof bands !== 'object') return bands;
+      const minified = { ...bands };
+      await Promise.all(
+        ['headerHTML', 'footerHTML']
+          .filter((key) => bands[key])
+          .map(async (key) => {
+            minified[key] = await minifyHTMLString(bands[key]);
+          })
+      );
+      return minified;
+    };
+    if (normalizedDocumentOptions.firstPage) {
+      normalizedDocumentOptions.firstPage = await minifyBands(normalizedDocumentOptions.firstPage);
+    }
+    if (Array.isArray(normalizedDocumentOptions.sections)) {
+      normalizedDocumentOptions.sections = await Promise.all(
+        normalizedDocumentOptions.sections.map(minifyBands)
+      );
+    }
+  }
+
   await addFilesToContainer(zip, contentHTML, normalizedDocumentOptions, headerHTML, footerHTML);
 
   const buffer = await zip.generateAsync({ type: 'arraybuffer' });

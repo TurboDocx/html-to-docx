@@ -175,4 +175,22 @@ describe('a document of several sections', () => {
     expect(sectPrs(document)).toHaveLength(1);
     expect(document).not.toContain('nextPage');
   });
+
+  it("minifies a section's own header and footer HTML like the document's", async () => {
+    const pretty = '<div>\n  <p>X</p>\n  <p>Y</p>\n</div>';
+    const { document, rels, read } = await render(
+      '<div data-docx-section="0"><p>a</p></div><p>b</p>',
+      { header: true, footer: true, sections: [{ headerHTML: pretty, footerHTML: pretty }] }
+    );
+    const [first] = sectPrs(document);
+    const counts = await Promise.all(
+      ['header', 'footer'].map(async (kind) => {
+        const id = first.match(new RegExp(`<w:${kind}Reference r:id="(rId\\d+)"`))[1];
+        const target = rels.match(new RegExp(`Id="${id}"[^>]*Target="([^"]+)"`))[1];
+        const part = await read(`word/${target}`);
+        return [...part.matchAll(/<w:p[ >]/g)].length;
+      })
+    );
+    expect(counts).toStrictEqual([2, 2]);
+  });
 });
