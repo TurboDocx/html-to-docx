@@ -61,12 +61,18 @@ function generateContentTypesFragments(contentTypesXML, type, objects) {
   }
 }
 
-function generateSectionReferenceXML(documentXML, documentSectionType, objects, isEnabled) {
+function generateSectionReferenceXML({
+  documentXML,
+  documentSectionType,
+  objects,
+  isEnabled,
+  omitType,
+}) {
   if (isEnabled && objects && Array.isArray(objects) && objects.length) {
     const xmlFragment = fragment();
     // A section's own part is named by that section's break, not here.
     objects
-      .filter(({ type }) => type !== 'sectionOnly')
+      .filter(({ type }) => type !== 'sectionOnly' && type !== omitType)
       .forEach(({ relationshipId, type }) => {
         const objectFragment = fragment({ namespaceAlias: { w: namespaces.w, r: namespaces.r } })
           .ele('@w', `${documentSectionType}Reference`)
@@ -165,8 +171,13 @@ function resolveSection(section, documentPageSize, documentMargins) {
  * the body is converted before the headers are.
  */
 function sectionReferencesXML(section, document, index) {
-  const reference = (type, ownId, objects, isEnabled) => {
-    const documentOwn = objects.find((object) => object.type !== 'sectionOnly');
+  const reference = ({ type, ownId, objects, isEnabled, firstPageId }) => {
+    // The first section's first-page band, when firstPage supplies one, is its
+    // only 'first' reference, so the document's own of that type is passed over.
+    const documentOwn = objects.find(
+      (object) =>
+        object.type !== 'sectionOnly' && !(index === 0 && firstPageId && object.type === 'first')
+    );
     const id = ownId || (isEnabled && documentOwn ? documentOwn.relationshipId : null);
     // The document's own part keeps the type the document gave it (headerType /
     // footerType); a section's own part is its default.
@@ -174,8 +185,20 @@ function sectionReferencesXML(section, document, index) {
     return id ? `<w:${type}Reference r:id="rId${id}" w:type="${partType}"/>` : '';
   };
   return (
-    reference('header', section.headerRelationshipId, document.headerObjects, document.header) +
-    reference('footer', section.footerRelationshipId, document.footerObjects, document.footer) +
+    reference({
+      type: 'header',
+      ownId: section.headerRelationshipId,
+      objects: document.headerObjects,
+      isEnabled: document.header,
+      firstPageId: document.firstPageHeaderRelationshipId,
+    }) +
+    reference({
+      type: 'footer',
+      ownId: section.footerRelationshipId,
+      objects: document.footerObjects,
+      isEnabled: document.footer,
+      firstPageId: document.firstPageFooterRelationshipId,
+    }) +
     (index === 0 ? firstPageReferencesXML(document) : '')
   );
 }
@@ -352,8 +375,22 @@ class DocxDocument {
     );
     documentXML.root().first().import(this.documentXML);
 
-    generateSectionReferenceXML(documentXML, 'header', this.headerObjects, this.header);
-    generateSectionReferenceXML(documentXML, 'footer', this.footerObjects, this.footer);
+    // A band that firstPage supplies for page 1 is that side's only 'first'
+    // reference (at most one per type), so the document's own is left out.
+    generateSectionReferenceXML({
+      documentXML,
+      documentSectionType: 'header',
+      objects: this.headerObjects,
+      isEnabled: this.header,
+      omitType: this.firstPageHeaderRelationshipId ? 'first' : undefined,
+    });
+    generateSectionReferenceXML({
+      documentXML,
+      documentSectionType: 'footer',
+      objects: this.footerObjects,
+      isEnabled: this.footer,
+      omitType: this.firstPageFooterRelationshipId ? 'first' : undefined,
+    });
 
     // Page 1's own bands, in a document of one section: its first page is the
     // document's. With several, the first section's break names them instead.

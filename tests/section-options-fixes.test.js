@@ -74,3 +74,55 @@ describe('section page setup units', () => {
     expect(document).not.toContain('NaN');
   });
 });
+
+describe('a first-type header together with firstPage', () => {
+  const firstRefs = ({ sectPr, kind }) =>
+    [...sectPr.matchAll(new RegExp(`<w:${kind}Reference [^>]*w:type="first"/>`, 'g'))].map(
+      (m) => m[0]
+    );
+  const options = {
+    header: true,
+    footer: true,
+    headerType: 'first',
+    footerType: 'first',
+    firstPage: { headerHTML: '<p>FP</p>', footerHTML: '<p>FPF</p>' },
+  };
+
+  it('writes one first header reference in the body sectPr, to the firstPage part', async () => {
+    const rendered = await render({
+      html: '<p>x</p>',
+      options,
+      header: '<p>H</p>',
+      footer: '<p>F</p>',
+    });
+    const body = sectPrs(rendered.document).pop();
+    const headers = firstRefs({ sectPr: body, kind: 'header' });
+    expect(headers).toHaveLength(1);
+    expect(firstRefs({ sectPr: body, kind: 'footer' })).toHaveLength(1);
+    const id = headers[0].match(/r:id="(rId\d+)"/)[1];
+    const target = rendered.rels.match(new RegExp(`Id="${id}"[^>]*Target="([^"]+)"`))[1];
+    await expect(rendered.read(`word/${target}`)).resolves.toContain('FP');
+  });
+
+  it("writes one first header reference in section 0's break", async () => {
+    const rendered = await render({
+      html: sectionHtml,
+      options: { ...options, sections: [{}] },
+      header: '<p>H</p>',
+      footer: '<p>F</p>',
+    });
+    const [first] = sectPrs(rendered.document);
+    expect(firstRefs({ sectPr: first, kind: 'header' })).toHaveLength(1);
+    expect(firstRefs({ sectPr: first, kind: 'footer' })).toHaveLength(1);
+  });
+
+  it('without firstPage a first-type header is still written', async () => {
+    const { document } = await render({
+      html: '<p>x</p>',
+      options: { header: true, headerType: 'first' },
+      header: '<p>H</p>',
+    });
+    const body = sectPrs(document).pop();
+    expect(firstRefs({ sectPr: body, kind: 'header' })).toHaveLength(1);
+  });
+});
