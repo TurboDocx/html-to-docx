@@ -271,3 +271,30 @@ describe('section margins that cannot be negative', () => {
     expect(attr({ xml: first, tag: 'pgMar', name: 'gutter' })).not.toMatch(/^-/);
   });
 });
+
+describe('section pageSize that is not positive', () => {
+  it('drops a negative width so the document width applies', async () => {
+    const { document } = await render({
+      html: sectionHtml,
+      options: {
+        pageSize: { width: 11906, height: 16838 },
+        sections: [{ pageSize: { width: -5000 } }],
+      },
+    });
+    const [first] = sectPrs(document);
+    expect(attr({ xml: first, tag: 'pgSz', name: 'w' })).toBe('11906');
+  });
+
+  it('drops a zero width so the document width, not Letter, applies', async () => {
+    const { document } = await render({
+      html: sectionHtml,
+      options: {
+        pageSize: { width: 11906, height: 16838 },
+        sections: [{ pageSize: { width: 0, height: '-1in' } }],
+      },
+    });
+    const [first] = sectPrs(document);
+    expect(attr({ xml: first, tag: 'pgSz', name: 'w' })).toBe('11906');
+    expect(attr({ xml: first, tag: 'pgSz', name: 'h' })).toBe('16838');
+  });
+});
