@@ -388,11 +388,12 @@ class DocxDocument {
     );
     documentXML.root().first().import(this.documentXML);
 
-    // Whether section 0's break was actually written (a section div that is
-    // missing, or dropped inside a cell or list item, writes none): when it was
-    // not, the body's properties carry the first page, as without sections.
-    const hasSectionBreakZero = /<w:tdxSectionTitlePage w:val="0"\/>/.test(documentXML.toString());
-    const bodyCarriesFirstPage = this.sections.length === 0 || !hasSectionBreakZero;
+    // Page 1 belongs to the first section break written, whatever its index (a
+    // section div that is missing, or dropped inside a cell or list item,
+    // writes none): when no break was written, the body's properties carry the
+    // first page, as without sections.
+    const bodyCarriesFirstPage =
+      this.sections.length === 0 || this.firstSectionBreakIndex() === null;
 
     // A band that firstPage supplies for page 1 is that side's only 'first'
     // reference (at most one per type), so the document's own is left out.
@@ -421,7 +422,7 @@ class DocxDocument {
         .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPage'));
     }
 
-    // With sections, the first section's break carries it (tdxSectionTitlePage):
+    // With sections, the first break carries it (tdxSectionTitlePage):
     // the body's properties are the last section's.
     if (
       bodyCarriesFirstPage &&
@@ -468,27 +469,39 @@ class DocxDocument {
     bodySectionProperties.remove();
 
     // Each section break names its header and footer, which exist by now;
-    // the first section — or the only one — whether its first page differs.
-    // Only the first break for index 0 carries them, so a repeated index never
-    // writes the first-page references or titlePg twice.
-    let referencesZeroSeen = false;
-    let titleZeroSeen = false;
+    // the first break in the document — page 1's section, or the only one —
+    // whether its first page differs. Only that one carries them, so they are
+    // never written twice.
+    let referencesSeen = false;
+    let titleSeen = false;
     return documentXML
       .toString({ prettyPrint: true })
       .replace(/<w:tdxSectionReferences w:val="(\d+)"\/>/g, (_match, index) => {
         const section = this.sections[Number(index)];
         if (!section) return '';
-        const isFirstZero = Number(index) === 0 && !referencesZeroSeen;
-        if (Number(index) === 0) referencesZeroSeen = true;
-        return sectionReferencesXML(section, this, isFirstZero ? 0 : -1);
+        const isFirst = !referencesSeen;
+        referencesSeen = true;
+        return sectionReferencesXML(section, this, isFirst ? 0 : -1);
       })
-      .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, (_match, index) => {
-        if (Number(index) !== 0 || titleZeroSeen) return '';
-        titleZeroSeen = true;
+      .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, () => {
+        if (titleSeen) return '';
+        titleSeen = true;
         return hasFirstPage(this) || this.skipsFirstHeaderFooter() ? '<w:titlePg/>' : '';
       })
       .replace(/<w:tdxFirstPage\/>/g, () => firstPageReferencesXML(this))
       .replaceAll('<w:tdxFirstPageTitle/>', '<w:titlePg/>');
+  }
+
+  /**
+   * The index of the first section break in the body, in document order: the
+   * section that holds page 1. Null when no break was written.
+   * @returns {number|null} The section index.
+   */
+  firstSectionBreakIndex() {
+    const matched = /<(?:\w+:)?tdxSectionTitlePage\b[^>]*?\bval="(\d+)"/.exec(
+      this.documentXML.toString()
+    );
+    return matched ? Number(matched[1]) : null;
   }
 
   // Whether the first page shows no running header or footer (skipFirstHeaderFooter).

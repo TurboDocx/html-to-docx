@@ -175,12 +175,16 @@ async function addFilesToContainer(
     docxDocument.footerObjects.push({ footerId, relationshipId, type: docxDocument.footerType });
   }
   // Page 1's own header and footer (Word's "Different first page"): parts of
-  // their own, laid out on the first section's page, which that section names
+  // their own, laid out on page 1's section, which names them
   // as its first page's (DocxDocument.generateDocumentXML). An empty one is
   // still a part, so page 1 shows nothing rather than the running band.
   const { firstPage } = documentOptions;
   if (firstPage) {
-    const firstSection = docxDocument.sections[0] || docxDocument;
+    // Laid out on the page of the section that holds page 1: the first break
+    // in the body, known now that the body is converted (its index may not be
+    // 0), or the document's own page when there is none.
+    const firstSection =
+      docxDocument.sections[docxDocument.firstSectionBreakIndex()] || docxDocument;
     const firstPart = (partHTML) => {
       const html = partHTML || defaultHTMLString;
       return documentOptions.decodeUnicode ? decode(html) : html;

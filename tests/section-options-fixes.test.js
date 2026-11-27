@@ -272,6 +272,79 @@ describe('section margins that cannot be negative', () => {
   });
 });
 
+describe('first page goes to the section that holds page 1', () => {
+  const count = ({ xml, re }) => (xml.match(re) || []).length;
+  const firstRefs = /<w:headerReference [^>]*w:type="first"/g;
+  const base = {
+    header: true,
+    firstPage: { headerHTML: '<p>COVER</p>' },
+    sections: [{}, { orientation: 'landscape' }],
+  };
+
+  it('gives the first-page header and titlePg to section 1 when only its div exists', async () => {
+    const { document, rels, read } = await render({
+      html: '<p>page1</p><div data-docx-section="1"><p>s1</p></div><p>last</p>',
+      options: base,
+      header: '<p>H</p>',
+    });
+    const [first, body] = sectPrs(document);
+    expect(count({ xml: first, re: firstRefs })).toBe(1);
+    expect(first).toMatch(/<w:titlePg\/>/);
+    expect(count({ xml: body, re: firstRefs })).toBe(0);
+    expect(body).not.toMatch(/<w:titlePg\/>/);
+    const rid = first.match(/<w:headerReference r:id="(rId\d+)" w:type="first"/)[1];
+    const target = rels.match(new RegExp(`Id="${rid}"[^>]*Target="([^"]+)"`))[1];
+    const part = await read(`word/${target}`);
+    expect(part).toContain('COVER');
+  });
+
+  it('gives them to the first break in document order when divs come 1 then 0', async () => {
+    const { document } = await render({
+      html: '<div data-docx-section="1"><p>s1</p></div><div data-docx-section="0"><p>s0</p></div><p>last</p>',
+      options: base,
+      header: '<p>H</p>',
+    });
+    const [first, second, body] = sectPrs(document);
+    expect(count({ xml: first, re: firstRefs })).toBe(1);
+    expect(first).toMatch(/<w:titlePg\/>/);
+    expect(count({ xml: second, re: firstRefs })).toBe(0);
+    expect(second).not.toMatch(/<w:titlePg\/>/);
+    expect(count({ xml: body, re: firstRefs })).toBe(0);
+    expect(count({ xml: document, re: /<w:titlePg\/>/g })).toBe(1);
+  });
+
+  it('puts skipFirstHeaderFooter titlePg on section 1 when only its div exists', async () => {
+    const { document } = await render({
+      html: '<p>page1</p><div data-docx-section="1"><p>s1</p></div><p>last</p>',
+      options: { header: true, skipFirstHeaderFooter: true, sections: [{}, {}] },
+      header: '<p>H</p>',
+    });
+    const [first, body] = sectPrs(document);
+    expect(first).toMatch(/<w:titlePg\/>/);
+    expect(body).not.toMatch(/<w:titlePg\/>/);
+  });
+
+  it('lays the first-page part out on the page size of the section holding page 1', async () => {
+    const { document, rels, read } = await render({
+      html: '<div data-docx-section="1"><p>s1</p></div><p>last</p>',
+      options: {
+        header: true,
+        firstPage: { headerHTML: '<table><tr><td>wide</td></tr></table>' },
+        sections: [{}, { pageSize: { width: 20000, height: 12000 } }],
+      },
+      header: '<p>H</p>',
+    });
+    const [first] = sectPrs(document);
+    const rid = first.match(/<w:headerReference r:id="(rId\d+)" w:type="first"/)[1];
+    const target = rels.match(new RegExp(`Id="${rid}"[^>]*Target="([^"]+)"`))[1];
+    const part = await read(`word/${target}`);
+    const widths = [...part.matchAll(/<w:gridCol w:w="(\d+)"/g)].map((m) => Number(m[1]));
+    expect(widths.length).toBeGreaterThan(0);
+    // Wider than a Letter page's 8640 text width, so it was laid out on section 1.
+    expect(Math.max(...widths)).toBeGreaterThan(8640);
+  });
+});
+
 describe('section pageSize that is not positive', () => {
   it('drops a negative width so the document width applies', async () => {
     const { document } = await render({
