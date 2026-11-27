@@ -15,6 +15,7 @@ const namespaces = {
   w10: 'urn:schemas-microsoft-com:office:word',
   wp: 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',
   wne: 'http://schemas.microsoft.com/office/word/2006/wordml',
+  wps: 'http://schemas.microsoft.com/office/word/2010/wordprocessingShape',
   xsd: 'http://www.w3.org/2001/XMLSchema',
   xsi: 'http://www.w3.org/2001/XMLSchema-instance',
   numbering: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering',

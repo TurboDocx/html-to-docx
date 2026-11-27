@@ -17,6 +17,7 @@ import {
   fontTableXML as fontTableXMLString,
   genericRelsXML as genericRelsXMLString,
   generateDocumentTemplate,
+  generateSectionTemplate,
 } from './schemas';
 import { convertVTreeToXML } from './helpers';
 import namespaces from './namespaces';
@@ -37,6 +38,8 @@ import {
   documentFileName,
   imageType,
   defaultDocumentOptions,
+  defaultSymbolFont,
+  symbolFontAlternative,
 } from './constants';
 import ListStyleBuilder from './utils/list';
 import { fontFamilyToTableObject } from './utils/font-family-conversion';
@@ -58,17 +61,26 @@ function generateContentTypesFragments(contentTypesXML, type, objects) {
   }
 }
 
-function generateSectionReferenceXML(documentXML, documentSectionType, objects, isEnabled) {
+function generateSectionReferenceXML({
+  documentXML,
+  documentSectionType,
+  objects,
+  isEnabled,
+  omitType,
+}) {
   if (isEnabled && objects && Array.isArray(objects) && objects.length) {
     const xmlFragment = fragment();
-    objects.forEach(({ relationshipId, type }) => {
-      const objectFragment = fragment({ namespaceAlias: { w: namespaces.w, r: namespaces.r } })
-        .ele('@w', `${documentSectionType}Reference`)
-        .att('@r', 'id', `rId${relationshipId}`)
-        .att('@w', 'type', type)
-        .up();
-      xmlFragment.import(objectFragment);
-    });
+    // A section's own part is named by that section's break, not here.
+    objects
+      .filter(({ type }) => type !== 'sectionOnly' && type !== omitType)
+      .forEach(({ relationshipId, type }) => {
+        const objectFragment = fragment({ namespaceAlias: { w: namespaces.w, r: namespaces.r } })
+          .ele('@w', `${documentSectionType}Reference`)
+          .att('@r', 'id', `rId${relationshipId}`)
+          .att('@w', 'type', type)
+          .up();
+        xmlFragment.import(objectFragment);
+      });
 
     documentXML.root().first().first().import(xmlFragment);
   }
@@ -102,19 +114,9 @@ function generateXMLString(xmlString, direction) {
 }
 
 async function generateSectionXML(vTree, type = 'header') {
-  const sectionXML = create({
-    encoding: 'UTF-8',
-    standalone: true,
-    namespaceAlias: {
-      w: namespaces.w,
-      ve: namespaces.ve,
-      o: namespaces.o,
-      r: namespaces.r,
-      v: namespaces.v,
-      wp: namespaces.wp,
-      w10: namespaces.w10,
-    },
-  }).ele('@w', type === 'header' ? 'hdr' : 'ftr');
+  // From a template that declares the prefixes, as document.xml is: see
+  // section.template.js for what an undeclared root did to the band's markup.
+  const sectionXML = create({ encoding: 'UTF-8', standalone: true }, generateSectionTemplate(type));
 
   const XMLFragment = fragment();
   await convertVTreeToXML(this, vTree, XMLFragment);
@@ -135,6 +137,100 @@ async function generateSectionXML(vTree, type = 'header') {
 
   return { [`${type}Id`]: this[`last${referenceName}Id`], [`${type}XML`]: sectionXML };
 }
+
+/**
+ * One section's page, resolved the way the document's own is: the sheet turned
+ * for landscape, and whatever margin it does not set taken from the document.
+ */
+function resolveSection({
+  sectionOptions,
+  documentPageSize,
+  documentMargins,
+  documentOrientation,
+}) {
+  // An entry that is not an object is an empty section, so later indices hold.
+  const section =
+    typeof sectionOptions === 'object' && sectionOptions !== null ? sectionOptions : {};
+  // A side the section leaves out is the document's, not a default.
+  const pageSize = { ...documentPageSize, ...section.pageSize };
+  const isPortraitOrientation = (section.orientation || documentOrientation) === defaultOrientation;
+  const height = pageSize.height ? pageSize.height : landscapeHeight;
+  const width = pageSize.width ? pageSize.width : landscapeWidth;
+  const sectionWidth = isPortraitOrientation ? width : height;
+  const sectionHeight = isPortraitOrientation ? height : width;
+  const margins = { ...documentMargins, ...(section.margins || {}) };
+
+  return {
+    orientation: isPortraitOrientation ? 'portrait' : 'landscape',
+    width: sectionWidth,
+    height: sectionHeight,
+    margins,
+    availableDocumentSpace: sectionWidth - margins.left - margins.right,
+    availableDocumentHeight: sectionHeight - margins.top - margins.bottom,
+    headerHTML: section.headerHTML || null,
+    footerHTML: section.footerHTML || null,
+    headerRelationshipId: null,
+    footerRelationshipId: null,
+  };
+}
+
+/**
+ * The header and footer a section's break names: its own, when it brought one,
+ * or else the document's. Written into each break once every part exists —
+ * the body is converted before the headers are.
+ */
+function sectionReferencesXML({ section, document, isFirstSection }) {
+  const reference = ({ type, ownId, objects, isEnabled, firstPageId }) => {
+    // The first-page band, when firstPage supplies one, is only ever named by
+    // the first section's break, so no break takes it as the document's own.
+    const documentOwn = objects.find(
+      (object) => object.type !== 'sectionOnly' && !(firstPageId && object.type === 'first')
+    );
+    const id = ownId || (isEnabled && documentOwn ? documentOwn.relationshipId : null);
+    // The document's own part keeps the type the document gave it (headerType /
+    // footerType); a section's own part is its default.
+    const partType = !ownId && documentOwn && documentOwn.type ? documentOwn.type : 'default';
+    return id ? `<w:${type}Reference r:id="rId${id}" w:type="${partType}"/>` : '';
+  };
+  return (
+    reference({
+      type: 'header',
+      ownId: section.headerRelationshipId,
+      objects: document.headerObjects,
+      isEnabled: document.header,
+      firstPageId: document.firstPageHeaderRelationshipId,
+    }) +
+    reference({
+      type: 'footer',
+      ownId: section.footerRelationshipId,
+      objects: document.footerObjects,
+      isEnabled: document.footer,
+      firstPageId: document.firstPageFooterRelationshipId,
+    }) +
+    (isFirstSection ? firstPageReferencesXML(document) : '')
+  );
+}
+
+/** Page 1's own header and footer, as the first section names them. */
+function firstPageReferencesXML(document) {
+  const reference = ({ type, id }) =>
+    id ? `<w:${type}Reference r:id="rId${id}" w:type="first"/>` : '';
+  return (
+    reference({ type: 'header', id: document.firstPageHeaderRelationshipId }) +
+    reference({ type: 'footer', id: document.firstPageFooterRelationshipId })
+  );
+}
+
+/** Whether the document's first page has bands of its own. */
+const hasFirstPage = (document) =>
+  Boolean(document.firstPageHeaderRelationshipId || document.firstPageFooterRelationshipId);
+
+// A list indent in twips: the value given, zero included, when it is a number of 0 or more.
+const indentOrDefault = ({ value, fallback }) => {
+  const indent = value === null || value === undefined || value === '' ? Number.NaN : Number(value);
+  // Whole twips: ST_TwipsMeasure takes no fractions.
+  return Number.isFinite(indent) && indent >= 0 ? Math.round(indent) : fallback;
+};
 
 class DocxDocument {
   constructor(properties) {
@@ -165,6 +261,19 @@ class DocxDocument {
     };
 
     this.availableDocumentSpace = this.width - this.margins.left - this.margins.right;
+    // The text area's height, the tallest an image is drawn (computeImageDimensions).
+    this.availableDocumentHeight = this.height - this.margins.top - this.margins.bottom;
+    // Every section but the last, set up as its own options say; the last is
+    // the document's own (page sections — a landscape page in a portrait
+    // document, a page with its own margins or colour).
+    this.sections = (properties.sections || []).map((section) =>
+      resolveSection({
+        sectionOptions: section,
+        documentPageSize: this.pageSize,
+        documentMargins: this.margins,
+        documentOrientation: this.orientation,
+      })
+    );
     this.title = properties.title || '';
     this.subject = properties.subject || '';
     this.creator = properties.creator || applicationName;
@@ -185,6 +294,35 @@ class DocxDocument {
     this.direction = properties.direction || 'ltr';
     this.tableRowCantSplit =
       (properties.table && properties.table.row && properties.table.row.cantSplit) || false;
+    // A heading in a table cell built as a Word heading — its HeadingN style —
+    // rather than a plain paragraph; off unless asked for (table.cellHeadings).
+    this.tableCellHeadings = Boolean(properties.table && properties.table.cellHeadings);
+    // The document editor's layout rules (image caps, exact px borders, cell boxes); stock output when off.
+    this.browserLayout = Boolean(properties.browserLayout);
+    // The fonts of the checklist checkboxes and of the symbol bullets (browserLayout only).
+    this.symbolFont = {
+      checkbox:
+        (properties.symbolFont && properties.symbolFont.checkbox) || defaultSymbolFont.checkbox,
+      glyph: (properties.symbolFont && properties.symbolFont.glyph) || defaultSymbolFont.glyph,
+    };
+    // A list level's indent and its marker's hanging, in twips: Word's 720 and
+    // 360 unless the document names its own (the document editor's 45px level
+    // and 25px marker column).
+    this.listLevelIndent = indentOrDefault({
+      value: properties.numbering && properties.numbering.levelIndent,
+      fallback: 720,
+    });
+    // Whether the document named a level indent at all: a list item's
+    // continuation paragraph then lines up with the item's text.
+    this.listLevelIndentIsSet =
+      indentOrDefault({
+        value: properties.numbering && properties.numbering.levelIndent,
+        fallback: null,
+      }) !== null;
+    this.listHangingIndent = indentOrDefault({
+      value: properties.numbering && properties.numbering.hangingIndent,
+      fallback: 360,
+    });
     this.tableBorders =
       (properties.table && properties.table.borderOptions) ||
       defaultDocumentOptions.table.borderOptions;
@@ -227,7 +365,12 @@ class DocxDocument {
     this.generateFooterXML = this.generateFooterXML.bind(this);
     this.generateSectionXML = generateSectionXML.bind(this);
 
-    this.ListStyleBuilder = new ListStyleBuilder(properties.numbering);
+    // The list options merge over the defaults: a document that names only
+    // its indents keeps the default ordered-list style.
+    this.ListStyleBuilder = new ListStyleBuilder(
+      { ...defaultDocumentOptions.numbering, ...(properties.numbering || {}) },
+      { browserLayout: this.browserLayout, symbolBulletFont: this.symbolFont.glyph }
+    );
   }
 
   generateContentTypesXML() {
@@ -246,10 +389,48 @@ class DocxDocument {
     );
     documentXML.root().first().import(this.documentXML);
 
-    generateSectionReferenceXML(documentXML, 'header', this.headerObjects, this.header);
-    generateSectionReferenceXML(documentXML, 'footer', this.footerObjects, this.footer);
+    // Page 1 belongs to the first section break written, whatever its index (a
+    // section div that is missing, or dropped inside a cell or list item,
+    // writes none): when no break was written, the body's properties carry the
+    // first page, as without sections.
+    const bodyCarriesFirstPage =
+      this.sections.length === 0 || this.firstSectionBreakIndex() === null;
 
-    if ((this.header || this.footer) && this.skipFirstHeaderFooter) {
+    // A band that firstPage supplies for page 1 is that side's only 'first'
+    // reference (at most one per type), so the document's own is left out.
+    generateSectionReferenceXML({
+      documentXML,
+      documentSectionType: 'header',
+      objects: this.headerObjects,
+      isEnabled: this.header,
+      omitType: this.firstPageHeaderRelationshipId ? 'first' : undefined,
+    });
+    generateSectionReferenceXML({
+      documentXML,
+      documentSectionType: 'footer',
+      objects: this.footerObjects,
+      isEnabled: this.footer,
+      omitType: this.firstPageFooterRelationshipId ? 'first' : undefined,
+    });
+
+    // Page 1's own bands, in a document of one section: its first page is the
+    // document's. With several, the first section's break names them instead.
+    if (bodyCarriesFirstPage && hasFirstPage(this)) {
+      documentXML
+        .root()
+        .first()
+        .first()
+        .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPage'));
+    }
+
+    // With sections, the first break carries it (tdxSectionTitlePage):
+    // the body's properties are the last section's.
+    if (
+      bodyCarriesFirstPage &&
+      (this.header || this.footer) &&
+      this.skipFirstHeaderFooter &&
+      !hasFirstPage(this)
+    ) {
       documentXML
         .root()
         .first()
@@ -270,8 +451,63 @@ class DocxDocument {
             .att('@w', 'restart', restart)
         );
     }
+    // After lnNumType, as CT_SectPr has it.
+    if (bodyCarriesFirstPage && hasFirstPage(this)) {
+      documentXML
+        .root()
+        .first()
+        .first()
+        .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPageTitle'));
+    }
 
-    return documentXML.toString({ prettyPrint: true });
+    // The body's own section properties go last, as the schema has them
+    // (CT_Body): the template opens the body with them, and with one section
+    // that never mattered — with several, the last section is the one after
+    // every break.
+    const body = documentXML.root().first();
+    const bodySectionProperties = body.first();
+    body.import(bodySectionProperties);
+    bodySectionProperties.remove();
+
+    // Each section break names its header and footer, which exist by now;
+    // the first break in the document — page 1's section, or the only one —
+    // whether its first page differs. Only that one carries them, so they are
+    // never written twice.
+    let referencesSeen = false;
+    let titleSeen = false;
+    return documentXML
+      .toString({ prettyPrint: true })
+      .replace(/<w:tdxSectionReferences w:val="(\d+)"\/>/g, (_match, index) => {
+        const section = this.sections[Number(index)];
+        if (!section) return '';
+        const isFirstSection = !referencesSeen;
+        referencesSeen = true;
+        return sectionReferencesXML({ section, document: this, isFirstSection });
+      })
+      .replace(/<w:tdxSectionTitlePage w:val="(\d+)"\/>/g, () => {
+        if (titleSeen) return '';
+        titleSeen = true;
+        return hasFirstPage(this) || this.skipsFirstHeaderFooter() ? '<w:titlePg/>' : '';
+      })
+      .replace(/<w:tdxFirstPage\/>/g, () => firstPageReferencesXML(this))
+      .replaceAll('<w:tdxFirstPageTitle/>', '<w:titlePg/>');
+  }
+
+  /**
+   * The index of the first section break in the body, in document order: the
+   * section that holds page 1. Null when no break was written.
+   * @returns {number|null} The section index.
+   */
+  firstSectionBreakIndex() {
+    const matched = /<(?:\w+:)?tdxSectionTitlePage\b[^>]*?\bval="(\d+)"/.exec(
+      this.documentXML.toString()
+    );
+    return matched ? Number(matched[1]) : null;
+  }
+
+  // Whether the first page shows no running header or footer (skipFirstHeaderFooter).
+  skipsFirstHeaderFooter() {
+    return Boolean((this.header || this.footer) && this.skipFirstHeaderFooter);
   }
 
   generateCoreXML() {
@@ -323,7 +559,7 @@ class DocxDocument {
       'Symbol',
       'Times New Roman',
     ];
-    this.fontTableObjects.forEach(({ fontName, genericFontName }) => {
+    this.fontTableObjects.forEach(({ fontName, genericFontName, altName }) => {
       if (!fontNames.includes(fontName)) {
         fontNames.push(fontName);
         const fontFragment = fragment({
@@ -339,7 +575,7 @@ class DocxDocument {
             fontFragment.ele('@w', 'pitch').att('@w', 'val', 'variable');
             break;
           case 'sans-serif':
-            fontFragment.ele('@w', 'altName').att('@w', 'val', 'Arial');
+            fontFragment.ele('@w', 'altName').att('@w', 'val', altName || 'Arial');
             fontFragment.ele('@w', 'family').att('@w', 'val', 'swiss');
             fontFragment.ele('@w', 'pitch').att('@w', 'val', 'variable');
             break;
@@ -379,7 +615,7 @@ class DocxDocument {
     // The current implementation is a quick fix to handle nested lists
     // For every ul or ol encountered, all levels have the same startValue
     // This helps in handling the indentation for that particular level in the transformation
-    this.numberingObjects.forEach(({ numberingId, type, properties }) => {
+    this.numberingObjects.forEach(({ numberingId, type, properties, outline, baseLevel }) => {
       const abstractNumberingFragment = fragment({ namespaceAlias: { w: namespaces.w } })
         .ele('@w', 'abstractNum')
         .att('@w', 'abstractNumId', String(numberingId));
@@ -391,31 +627,49 @@ class DocxDocument {
         startValue = properties.start;
       }
       [...Array(9).keys()].forEach((level) => {
+        let levelStart = type === 'ol' ? startValue : '1';
+        let numberFormat =
+          type === 'ol'
+            ? this.ListStyleBuilder.getListStyleType(
+                properties.style && properties.style['list-style-type']
+              )
+            : 'bullet';
+        let levelText =
+          type === 'ol'
+            ? this.ListStyleBuilder.getListPrefixSuffix(
+                properties.style,
+                level,
+                properties.attributes
+              )
+            : this.ListStyleBuilder.getUnorderedListPrefixSuffix(
+                properties.style,
+                properties.attributes
+              );
+        // "01." is as wide as an outline "1.1.": hang it as far so it clears its text.
+        const baseHanging = this.listHangingIndent;
+        let hangingIndent =
+          this.browserLayout && numberFormat === 'decimalZero' ? baseHanging + 180 : baseHanging;
+        if (type === 'ol' && outline) {
+          // Outline levels are all decimal; only the list's own first level
+          // honours its start value, deeper levels restart at 1 under their parent.
+          levelStart = level === baseLevel ? startValue : '1';
+          numberFormat = 'decimal';
+          levelText = this.ListStyleBuilder.getOutlineListLevelText({ level, baseLevel });
+          // "1.1.1." is wider than "1.": give each deeper level 180 more twips.
+          hangingIndent = baseHanging + 180 * Math.max(0, level - baseLevel);
+        }
+
         const levelFragment = fragment({ namespaceAlias: { w: namespaces.w } })
           .ele('@w', 'lvl')
           .att('@w', 'ilvl', level)
           .ele('@w', 'start')
-          .att('@w', 'val', type === 'ol' ? startValue : '1')
+          .att('@w', 'val', levelStart)
           .up()
           .ele('@w', 'numFmt')
-          .att(
-            '@w',
-            'val',
-            type === 'ol'
-              ? this.ListStyleBuilder.getListStyleType(
-                  properties.style && properties.style['list-style-type']
-                )
-              : 'bullet'
-          )
+          .att('@w', 'val', numberFormat)
           .up()
           .ele('@w', 'lvlText')
-          .att(
-            '@w',
-            'val',
-            type === 'ol'
-              ? this.ListStyleBuilder.getListPrefixSuffix(properties.style, level)
-              : this.ListStyleBuilder.getUnorderedListPrefixSuffix(properties.style)
-          )
+          .att('@w', 'val', levelText)
           .up()
           .ele('@w', 'lvlJc')
           .att('@w', 'val', 'left')
@@ -424,27 +678,34 @@ class DocxDocument {
           .ele('@w', 'tabs')
           .ele('@w', 'tab')
           .att('@w', 'val', 'num')
-          .att('@w', 'pos', (level + 1) * 720)
+          .att('@w', 'pos', (level + 1) * this.listLevelIndent)
           .up()
           .up()
           .ele('@w', 'ind')
-          .att('@w', 'left', (level + 1) * 720)
-          .att('@w', 'hanging', 360)
+          .att('@w', 'left', (level + 1) * this.listLevelIndent)
+          .att('@w', 'hanging', hangingIndent)
           .up()
           .up()
           .up();
 
         if (type === 'ul') {
-          levelFragment.last().import(
-            fragment({ namespaceAlias: { w: namespaces.w } })
-              .ele('@w', 'rPr')
-              .ele('@w', 'rFonts')
-              .att('@w', 'ascii', 'Symbol')
-              .att('@w', 'hAnsi', 'Symbol')
-              .att('@w', 'hint', 'default')
-              .up()
-              .up()
-          );
+          const bulletFont = this.ListStyleBuilder.getUnorderedListFont({
+            style: properties.style,
+            attributes: properties.attributes,
+          });
+          const bulletRunPropertiesFragment = fragment({ namespaceAlias: { w: namespaces.w } });
+          const bulletFontsElement = bulletRunPropertiesFragment
+            .ele('@w', 'rPr')
+            .ele('@w', 'rFonts')
+            .att('@w', 'ascii', bulletFont)
+            .att('@w', 'hAnsi', bulletFont);
+          if (bulletFont !== 'Symbol') {
+            // Pin every script slot so Word never picks another font for the glyph.
+            bulletFontsElement.att('@w', 'eastAsia', bulletFont).att('@w', 'cs', bulletFont);
+          }
+
+          bulletFontsElement.att('@w', 'hint', 'default');
+          levelFragment.last().import(bulletRunPropertiesFragment);
         }
         abstractNumberingFragment.import(levelFragment);
       });
@@ -497,17 +758,68 @@ class DocxDocument {
     return relationshipXMLStrings;
   }
 
-  createNumbering(type, properties) {
+  // options.outline: multilevel "1. / 1.1. / 1.1.1." numbering whose first
+  // rendered level is options.baseLevel (the list's nesting depth).
+  createNumbering(type, properties, options = {}) {
+    // A list drawn in the symbol font lists it in the font table, which is
+    // written before the numbering is (see generateFontTableXML).
+    if (
+      type === 'ul' &&
+      this.ListStyleBuilder.getUnorderedListFont({
+        style: properties && properties.style,
+        attributes: properties && properties.attributes,
+      }) === this.symbolFont.glyph
+    ) {
+      this.registerSymbolFont({ kind: 'glyph' });
+    }
     this.lastNumberingId += 1;
-    this.numberingObjects.push({ numberingId: this.lastNumberingId, type, properties });
+    this.numberingObjects.push({
+      numberingId: this.lastNumberingId,
+      type,
+      properties,
+      outline: Boolean(options.outline),
+      baseLevel: options.baseLevel || 0,
+    });
 
     return this.lastNumberingId;
+  }
+
+  // Every <wp:docPr> in a part needs an id no other drawing uses, or Word
+  // reports the ids as duplicated and renumbers them on save. Pictures take
+  // theirs from the media counter, so shapes draw from the same counter rather
+  // than starting a second sequence that would collide with it. The number
+  // also rises with source order, which is what the shape anchors use as their
+  // z-order so a later shape paints over an earlier one.
+  createDrawingId() {
+    this.lastMediaId += 1;
+    return this.lastMediaId;
   }
 
   createFont(fontFamily) {
     const fontTableObject = fontFamilyToTableObject(fontFamily, this.font);
     this.fontTableObjects.push(fontTableObject);
     return fontTableObject.fontName;
+  }
+
+  // Adds a font table entry for a font the converter itself uses (rather than
+  // one parsed from a CSS font-family list), with an optional alternative name.
+  // Lists a symbol font (kind: 'checkbox' | 'glyph') with the other kind's default as its
+  // alternative, or the first default when they would be the same font.
+  registerSymbolFont({ kind }) {
+    const fontName = this.symbolFont[kind];
+    const alternative = symbolFontAlternative[kind];
+    return this.registerFont({
+      fontName,
+      genericFontName: 'sans-serif',
+      altName: alternative === fontName ? symbolFontAlternative.glyph : alternative,
+    });
+  }
+
+  registerFont({ fontName, genericFontName, altName }) {
+    if (!this.fontTableObjects.some((fontTableObject) => fontTableObject.fontName === fontName)) {
+      this.fontTableObjects.push({ fontName, genericFontName, altName });
+    }
+    return fontName;
   }
 
   async createMediaFile(base64String) {
@@ -526,8 +838,7 @@ class DocxDocument {
 
     // Handle SVG images based on svgHandling option
     const svgHandling =
-      this.imageProcessing?.svgHandling ||
-      defaultDocumentOptions.imageProcessing.svgHandling;
+      this.imageProcessing?.svgHandling || defaultDocumentOptions.imageProcessing.svgHandling;
 
     if (isSVG(mimeType) && svgHandling === 'convert') {
       try {

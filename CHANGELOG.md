@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Unreleased (1.24.0)
+
+### Features
+
+* **browserLayout:** new document option that lays the document out the way a browser renders the HTML. Off by default. It turns on:
+  * CSS `line-height`, `em` / `rem` font sizes, paragraph `margin-top` / `margin-bottom`, paragraph borders, `font-weight` below 600 as not bold, `font-style: italic`, tab characters as `<w:tab/>`, and each paragraph mark's own run properties
+  * table cell `padding` (`w:tcMar`), table `margin-left` indent, `table-layout: fixed`, `<thead>` as repeating header rows, floating tables (`data-wrap`), and `data-no-spacing-after`
+  * floating pictures (`data-wrap`), picture crop, border and transparency (`data-crop-*`, `data-border-*`, `data-transparency`), and alt text on the drawing
+  * `decimal-leading-zero`, `data-suffix`, outline numbering (`data-numbering="outline"`), `data-bullet` glyphs, Arial bullets for `disc` / `circle` / `square`, and checklists (`<ul data-checklist="true">`)
+  * `data-shape` and `data-field` markers
+* **symbolFont:** new option `{ checkbox?, glyph? }` naming the fonts of checklist boxes (default `Segoe UI Symbol`) and of symbol bullets (default `DejaVu Sans`), each listed in the font table with the other as its alternative. Used with `browserLayout`.
+* **firstPage:** Word's "Different first page" header and footer, as `firstPage: { headerHTML, footerHTML }`.
+* **sections:** page sections with their own orientation, size, margins, header and footer (`sections` + `<div data-docx-section>`).
+* **table.cellHeadings:** headings inside table cells written as Word headings.
+* **numbering:** `numbering.levelIndent` and `numbering.hangingIndent` set the list level indent and marker hanging, in twips.
+
+### Bug Fixes
+
+* the body's `w:sectPr` is written last, as the schema requires
+* table grid column widths are written as whole twips
+* a table with a `<thead>` and a `<tbody>` writes one `<w:tblGrid>`, not a second one between its rows (Word on the web could refuse to edit such a document)
+* `<li><p>..</p>tail</li>` no longer writes `w:numId w:val="null"`
+* `w:lineRule` is written only on `w:spacing`
+* header and footer parts are written with `w:` prefixes, so template engines such as docxtemplater find their text
+* the children of `w:tcPr`, `w:pPr` and `w:rPr` are written in schema order
+* the `numbering` option no longer crashes when it omits `defaultOrderedListStyleType`
+
+No change to output for callers who pass none of the new options (checked against 1.23.3 by the zero-regression suite), apart from the bug fixes above.
+
 ### [1.23.3](https://github.com/TurboDocx/html-to-docx/compare/v1.23.2...v1.23.3) (2026-10-30)
 
 

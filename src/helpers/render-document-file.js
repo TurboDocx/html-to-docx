@@ -8,7 +8,7 @@ import createHTMLToVDOM from './html-parser';
 import { VNode, isVNode, isVText } from '../vdom/index';
 import * as xmlBuilder from './xml-builder';
 import namespaces from '../namespaces';
-import { defaultDocumentOptions } from '../constants';
+import { defaultDocumentOptions, documentFileName } from '../constants';
 import { buildImage } from '../utils/image';
 import { vNodeHasChildren } from '../utils/vnode';
 import { buildSVGElement } from '../utils/svg';
@@ -97,6 +97,118 @@ const LIST_ITEM_BLOCK_TAGS = [
   'dl',
 ];
 
+// Style properties of a <ul>/<ol> that describe the list box as a whole. They
+// are not copied onto each item when the list's style is merged into its
+// items (items only honour them when declared on the <li> itself).
+const LIST_CONTAINER_STYLE_KEYS = [
+  'margin-top',
+  'border',
+  'border-top',
+  'border-right',
+  'border-bottom',
+  'border-left',
+];
+
+const withoutListContainerStyles = (style) => {
+  if (!style) {
+    return style;
+  }
+  const itemStyle = { ...style };
+  LIST_CONTAINER_STYLE_KEYS.forEach((key) => {
+    delete itemStyle[key];
+  });
+  return itemStyle;
+};
+
+const listAttribute = ({ listNode, name }) =>
+  listNode && listNode.properties && listNode.properties.attributes
+    ? listNode.properties.attributes[name]
+    : undefined;
+
+const isTrueAttribute = (value) =>
+  typeof value === 'string' && value.trim().toLowerCase() === 'true';
+
+// <ul data-checklist="true">: items get a checkbox glyph instead of numbering.
+const isChecklist = (listNode) =>
+  isVNode(listNode) &&
+  listNode.tagName === 'ul' &&
+  isTrueAttribute(listAttribute({ listNode, name: 'data-checklist' }));
+
+// <li data-checked data-strike> state of a checklist item. Text is struck
+// only when the item is both checked and marked data-strike="true".
+const getChecklistItemState = (liNode) => {
+  const checked = isTrueAttribute(listAttribute({ listNode: liNode, name: 'data-checked' }));
+  return {
+    checked,
+    strike: checked && isTrueAttribute(listAttribute({ listNode: liNode, name: 'data-strike' })),
+  };
+};
+
+// <ol data-numbering="outline">: multilevel legal-style numbering (1., 1.1., 1.1.1.).
+const isOutlineList = (listNode) =>
+  isVNode(listNode) &&
+  listNode.tagName === 'ol' &&
+  listAttribute({ listNode, name: 'data-numbering' }) === 'outline';
+
+// A nested <ol> inside an outline list continues that outline when it asks for
+// outline numbering, or when it declares no numbering of its own (no
+// data-numbering and no list-style-type other than decimal).
+const joinsOutlineList = (listNode) => {
+  if (!isVNode(listNode) || listNode.tagName !== 'ol') {
+    return false;
+  }
+  const dataNumbering = listAttribute({ listNode, name: 'data-numbering' });
+  if (dataNumbering !== undefined) {
+    return dataNumbering === 'outline';
+  }
+  const listStyleType =
+    listNode.properties && listNode.properties.style
+      ? listNode.properties.style['list-style-type']
+      : undefined;
+  return !listStyleType || listStyleType.trim().toLowerCase() === 'decimal';
+};
+
+/**
+ * Picks the numbering definition for a <ul>/<ol> rendered at `level`.
+ *
+ * Every list normally gets its own definition. Outline lists are the
+ * exception: nested outline lists reuse the definition of the outline they
+ * belong to, because "%1.%2." only reads the parent counter when both levels
+ * share one numbering instance.
+ *
+ * Checklists use no numbering definition at all.
+ *
+ * Returns the queue fields for the list: numberingId, `outline` (the outline
+ * the list's items belong to, or null) and `checklist`.
+ */
+const allocateListNumbering = ({ docxDocumentInstance, listNode, level, parentOutline }) => {
+  // Checklists and outline numbering are browserLayout features: without it every list gets
+  // its own definition, as in 1.23.3.
+  if (!docxDocumentInstance.browserLayout) {
+    return {
+      numberingId: docxDocumentInstance.createNumbering(listNode.tagName, listNode.properties),
+      outline: null,
+    };
+  }
+  if (isChecklist(listNode)) {
+    return { numberingId: null, outline: null, checklist: true };
+  }
+  if (parentOutline && joinsOutlineList(listNode)) {
+    return { numberingId: parentOutline.numberingId, outline: parentOutline };
+  }
+  if (isOutlineList(listNode)) {
+    const numberingId = docxDocumentInstance.createNumbering('ol', listNode.properties, {
+      outline: true,
+      baseLevel: level,
+    });
+    return { numberingId, outline: { numberingId } };
+  }
+  return {
+    numberingId: docxDocumentInstance.createNumbering(listNode.tagName, listNode.properties),
+    outline: null,
+  };
+};
+
 /**
  * Walk an <li>'s children in document order and tag each one with the role
  * it should play in the rendered DOCX. Returns an ordered list, not buckets —
@@ -160,7 +272,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       node: vNode,
       level: 0,
       type: vNode.tagName,
-      numberingId: docxDocumentInstance.createNumbering(vNode.tagName, vNode.properties),
+      ...allocateListNumbering({
+        docxDocumentInstance,
+        listNode: vNode,
+        level: 0,
+        parentOutline: null,
+      }),
     },
   ];
   while (vNodeObjects.length) {
@@ -176,13 +293,23 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       isVNode(tempVNodeObject.node) &&
       ['ul', 'ol'].includes(tempVNodeObject.node.tagName)
     ) {
-      tempVNodeObject.numberingId = docxDocumentInstance.createNumbering(
-        tempVNodeObject.node.tagName,
-        tempVNodeObject.node.properties
+      Object.assign(
+        tempVNodeObject,
+        allocateListNumbering({
+          docxDocumentInstance,
+          listNode: tempVNodeObject.node,
+          level: tempVNodeObject.level,
+          parentOutline: tempVNodeObject.parentOutline,
+        })
       );
     }
 
     const parentVNodeProperties = tempVNodeObject.node.properties;
+    const parentIsList =
+      isVNode(tempVNodeObject.node) && ['ul', 'ol'].includes(tempVNodeObject.node.tagName);
+    const inheritedStyle = parentIsList
+      ? withoutListContainerStyles(parentVNodeProperties?.style)
+      : parentVNodeProperties?.style;
 
     // Issue #198 — a <table> inside an <li> has to be routed through
     // buildTable. classifyListItemChildren() buckets it as a block, which sent
@@ -223,10 +350,23 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
       // continuation paragraphs — same indentation, no marker. `indentLevel`
       // carries the nesting depth so the continuation lines up under the bullet
       // rather than sliding back to the margin.
+      const itemMarkerAttributes = tempVNodeObject.checklist
+        ? {
+            checklist: {
+              level: tempVNodeObject.level,
+              ...(tempVNodeObject.checklistItem || { checked: false, strike: false }),
+            },
+          }
+        : {
+            numbering: {
+              levelId: tempVNodeObject.level,
+              numberingId: tempVNodeObject.numberingId,
+            },
+          };
       const paragraphFragment = await xmlBuilder.buildParagraph(
         tempVNodeObject.node,
         {
-          numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
+          ...itemMarkerAttributes,
           isContinuation: tempVNodeObject.isContinuation || false,
           indentLevel: tempVNodeObject.indentLevel,
         },
@@ -247,10 +387,12 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
             node: childVNode,
             level: tempVNodeObject.level + 1,
             type: childVNode.tagName,
-            numberingId: docxDocumentInstance.createNumbering(
-              childVNode.tagName,
-              childVNode.properties
-            ),
+            ...allocateListNumbering({
+              docxDocumentInstance,
+              listNode: childVNode,
+              level: tempVNodeObject.level + 1,
+              parentOutline: tempVNodeObject.outline,
+            }),
           });
         } else {
           // eslint-disable-next-line no-lonely-if
@@ -269,7 +411,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                 ...(childVNode?.properties?.attributes || {}),
               },
               style: {
-                ...(parentVNodeProperties?.style || {}),
+                ...(inheritedStyle || {}),
                 ...(childVNode?.properties?.style || {}),
               },
             };
@@ -293,6 +435,9 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
             //     can drop styling on the surrounding list.
             if (isVNode(childVNode) && childVNode.tagName.toLowerCase() === 'li') {
               const items = classifyListItemChildren(childVNode);
+              const checklistFields = tempVNodeObject.checklist
+                ? { checklist: true, checklistItem: getChecklistItemState(childVNode) }
+                : {};
 
               let firstContentEmitted = false;
               let inlineShell = null;
@@ -305,6 +450,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                     numberingId: firstContentEmitted ? null : tempVNodeObject.numberingId,
                     isContinuation: firstContentEmitted,
                     indentLevel: tempVNodeObject.level,
+                    ...checklistFields,
                   });
                   firstContentEmitted = true;
                   inlineShell = null;
@@ -333,6 +479,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                     numberingId: firstContentEmitted ? null : tempVNodeObject.numberingId,
                     isContinuation: firstContentEmitted,
                     indentLevel: tempVNodeObject.level,
+                    ...checklistFields,
                   });
                   firstContentEmitted = true;
                 } else if (item.kind === 'sublist') {
@@ -347,6 +494,7 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                     level: tempVNodeObject.level + 1,
                     type: item.node.tagName,
                     numberingId: null,
+                    parentOutline: tempVNodeObject.outline,
                   });
                 } else {
                   // inline / text — accumulate into a shared wrapper paragraph.
@@ -382,11 +530,17 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
                   : childVNode
                 : paragraphVNode;
 
+              // Carry the list-item context of the wrapper (e.g. an inline run
+              // that follows a block inside the same <li> is a continuation).
               accumulator.push({
                 node: generatedNode,
                 level: tempVNodeObject.level,
                 type: tempVNodeObject.type,
                 numberingId: tempVNodeObject.numberingId,
+                isContinuation: tempVNodeObject.isContinuation || false,
+                indentLevel: tempVNodeObject.indentLevel,
+                checklist: tempVNodeObject.checklist,
+                checklistItem: tempVNodeObject.checklistItem,
               });
             }
           }
@@ -401,6 +555,62 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
   return listElements;
 };
 
+// A table normally gets a blank paragraph after it, because two tables in a
+// row otherwise merge into one in Word. A layout table — a header band, a
+// signature block — wants to sit flush against what follows, so it can turn
+// that paragraph off for itself without the caller having to switch it off for
+// every table in the document.
+const tableSuppressesSpacingAfter = ({ vNode, docxDocumentInstance }) => {
+  // A browserLayout feature: 1.23.3 put the paragraph after every table.
+  if (!(docxDocumentInstance && docxDocumentInstance.browserLayout)) return false;
+  const tableAttributes = (vNode && vNode.properties && vNode.properties.attributes) || {};
+  const suppress = tableAttributes['data-no-spacing-after'];
+
+  return suppress !== undefined && String(suppress).trim().toLowerCase() !== 'false';
+};
+
+/**
+ * The paragraph that ends a section: a 1pt mark carrying the section's page —
+ * its size, orientation and margins — starting the next section on a new
+ * page. Its header and footer are written in once they exist
+ * (DocxDocument.generateDocumentXML).
+ */
+const buildSectionBreak = ({ section, index, lineNumber }) => {
+  const { width, height, orientation, margins } = section;
+  const paragraph = fragment({ namespaceAlias: { w: namespaces.w } });
+  const paragraphProperties = paragraph.ele('@w', 'p').ele('@w', 'pPr');
+  paragraphProperties
+    .ele('@w', 'spacing')
+    .att('@w', 'before', '0')
+    .att('@w', 'after', '0')
+    .att('@w', 'line', '20')
+    .att('@w', 'lineRule', 'exact');
+  paragraphProperties.ele('@w', 'rPr').ele('@w', 'sz').att('@w', 'val', '2');
+  const sectionProperties = paragraphProperties.ele('@w', 'sectPr');
+  sectionProperties.ele('@w', 'tdxSectionReferences').att('@w', 'val', String(index));
+  sectionProperties.ele('@w', 'type').att('@w', 'val', 'nextPage');
+  sectionProperties
+    .ele('@w', 'pgSz')
+    .att('@w', 'w', String(Math.round(width)))
+    .att('@w', 'h', String(Math.round(height)))
+    .att('@w', 'orient', orientation);
+  const pageMargins = sectionProperties.ele('@w', 'pgMar');
+  ['top', 'right', 'bottom', 'left', 'header', 'footer', 'gutter'].forEach((side) => {
+    pageMargins.att('@w', side, String(Math.round(margins[side] || 0)));
+  });
+  // Line numbering runs through the document, so each break carries it as the body does.
+  if (lineNumber) {
+    sectionProperties
+      .ele('@w', 'lnNumType')
+      .att('@w', 'countBy', lineNumber.countBy)
+      .att('@w', 'start', lineNumber.start)
+      .att('@w', 'restart', lineNumber.restart);
+  }
+  // Whether its first page differs (titlePg), which follows the page's setup.
+  sectionProperties.ele('@w', 'tdxSectionTitlePage').att('@w', 'val', String(index));
+  return paragraph;
+};
+
 async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, imageOptions = null) {
   // Use default options if not provided
   if (!imageOptions) {
@@ -408,6 +618,50 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
   }
   if (vNode.tagName === 'div') {
     const divAttributes = vNode.properties.attributes || {};
+
+    // One of the document's sections (options.sections): its content laid out
+    // in its own text box, then the break that sets its pages up.
+    // Only the body has sections: in a header or footer part the div is a plain div.
+    const sectionIndex = divAttributes['data-docx-section'];
+    const renderingBody = docxDocumentInstance.relationshipFilename === documentFileName;
+    const section =
+      renderingBody && sectionIndex !== undefined && Array.isArray(docxDocumentInstance.sections)
+        ? docxDocumentInstance.sections[Number(sectionIndex)]
+        : undefined;
+    if (section) {
+      const { availableDocumentSpace, availableDocumentHeight } = docxDocumentInstance;
+      // eslint-disable-next-line no-param-reassign
+      docxDocumentInstance.availableDocumentSpace = section.availableDocumentSpace;
+      // eslint-disable-next-line no-param-reassign
+      docxDocumentInstance.availableDocumentHeight = section.availableDocumentHeight;
+      try {
+        if (vNodeHasChildren(vNode)) {
+          // eslint-disable-next-line no-plusplus
+          for (let index = 0; index < vNode.children.length; index++) {
+            // eslint-disable-next-line no-use-before-define
+            await convertVTreeToXML(
+              docxDocumentInstance,
+              vNode.children[index],
+              xmlFragment,
+              imageOptions
+            );
+          }
+        }
+      } finally {
+        // eslint-disable-next-line no-param-reassign
+        docxDocumentInstance.availableDocumentSpace = availableDocumentSpace;
+        // eslint-disable-next-line no-param-reassign
+        docxDocumentInstance.availableDocumentHeight = availableDocumentHeight;
+      }
+      xmlFragment.import(
+        buildSectionBreak({
+          section,
+          index: Number(sectionIndex),
+          lineNumber: docxDocumentInstance.lineNumber,
+        })
+      );
+      return;
+    }
 
     // Legacy backward compat: <div class="page-break"> — keep existing behavior exactly
     if (divAttributes.class === 'page-break') {
@@ -521,7 +775,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
             );
             xmlFragment.import(tableFragment);
             // Adding empty paragraph for space after table only if the option is enabled
-            if (docxDocumentInstance.addSpacingAfterTable) {
+            if (
+              docxDocumentInstance.addSpacingAfterTable &&
+              !tableSuppressesSpacingAfter({ vNode: childVNode, docxDocumentInstance })
+            ) {
               const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
               xmlFragment.import(emptyParagraphFragment);
             }
@@ -559,7 +816,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
       );
       xmlFragment.import(tableFragment);
       // Adding empty paragraph for space after table only if the option is enabled
-      if (docxDocumentInstance.addSpacingAfterTable) {
+      if (
+        docxDocumentInstance.addSpacingAfterTable &&
+        !tableSuppressesSpacingAfter({ vNode, docxDocumentInstance })
+      ) {
         const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
         xmlFragment.import(emptyParagraphFragment);
       }
@@ -609,7 +869,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
   }
 }
 
-// eslint-disable-next-line consistent-return
+// eslint-disable-next-line eslint-js/consistent-return
 export async function convertVTreeToXML(
   docxDocumentInstance,
   vTree,

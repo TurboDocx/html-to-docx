@@ -207,6 +207,27 @@ const paragraphBordersObject = {
     color: 'FFFFFF',
   },
 };
+// The fonts that draw the glyphs no common text font has: the checkboxes of a
+// checklist (U+2610, U+2611) and the dingbats of a data-bullet list (❖ ➢ ➔ ❏
+// ◆ ★). Both are fonts readers already have (the symbolFont option names others).
+// Each is listed in the font table as a sans font with the other as its
+// alternative, so a reader without the first substitutes a text font that has
+// the glyphs, not a colour emoji font (LibreOffice did, for ☑).
+const defaultSymbolFont = {
+  checkbox: 'Segoe UI Symbol',
+  glyph: 'DejaVu Sans',
+};
+const symbolFontAlternative = {
+  checkbox: 'DejaVu Sans',
+  glyph: 'Segoe UI Symbol',
+};
+// Checklist items (<ul data-checklist="true">) start with one of these glyphs
+// instead of a list marker. U+2610/U+2611 (Miscellaneous Symbols) are not in
+// common text fonts, so the run names the symbol font.
+const checklistSymbols = {
+  checked: '\u2611', // ☑
+  unchecked: '\u2610', // ☐
+};
 const colorlessColors = ['transparent', 'auto'];
 const verticalAlignValues = ['top', 'middle', 'bottom'];
 const defaultPercentageMarginValue = 0;
@@ -238,6 +259,9 @@ export {
   hyperlinkType,
   imageType,
   paragraphBordersObject,
+  checklistSymbols,
+  defaultSymbolFont,
+  symbolFontAlternative,
   colorlessColors,
   verticalAlignValues,
   defaultLang,

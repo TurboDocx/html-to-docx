@@ -305,3 +305,25 @@ describe('Table cell border fixup (PR #186)', () => {
     expect(assertNoSwappedSlots(xml)).toBeGreaterThan(0);
   });
 });
+
+describe('single-side table borders with browserLayout', () => {
+  const tblBorders = async (style) => {
+    const { xml } = await parseDOCX(
+      await HTMLtoDOCX(`<table style="${style}"><tr><td>A</td></tr></table>`, undefined, {
+        browserLayout: true,
+      })
+    );
+    return xml.match(/<w:tblBorders>[\s\S]*?<\/w:tblBorders>/)[0];
+  };
+
+  test.each(['left', 'right', 'top', 'bottom'])(
+    'border-%s is drawn as exact pixels, like the shorthand',
+    async (side) => {
+      const shorthand = await tblBorders('border: 3px solid #000');
+      const single = await tblBorders(`border-${side}: 3px solid #000`);
+      const expected = shorthand.match(new RegExp(`<w:${side}\\b[^>]*w:sz="(\\d+)"`))[1];
+      expect(expected).toBe('18');
+      expect(single.match(new RegExp(`<w:${side}\\b[^>]*w:sz="(\\d+)"`))[1]).toBe(expected);
+    }
+  );
+});
