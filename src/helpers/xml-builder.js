@@ -5133,6 +5133,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         } else if (tableStyle === 'border-left') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
             tableStyles['border-left'],
+            undefined,
             exactPixelBorders
           );
           tableBorders.left = borderThickness;
@@ -5141,6 +5142,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         } else if (tableStyle === 'border-right') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
             tableStyles['border-right'],
+            undefined,
             exactPixelBorders
           );
           tableBorders.right = borderThickness;
@@ -5149,6 +5151,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         } else if (tableStyle === 'border-top') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
             tableStyles['border-top'],
+            undefined,
             exactPixelBorders
           );
           tableBorders.top = borderThickness;
@@ -5157,6 +5160,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
         } else if (tableStyle === 'border-bottom') {
           const [borderThickness, borderStroke, borderStrokeColor] = cssBorderParser(
             tableStyles['border-bottom'],
+            undefined,
             exactPixelBorders
           );
           tableBorders.bottom = borderThickness;
