@@ -102,11 +102,11 @@ declare namespace HTMLtoDOCX {
         /** Every page section but the last, which is the document's own. */
         sections?: SectionOptions[];
         /**
-         * The document editor's layout rules: pictures held inside their box,
-         * borders at their exact pixel weight, a cell's content box. Off by default,
-         * which keeps the stock output.
+         * Lay the document out the way a browser renders the HTML: CSS line height,
+         * em/rem sizes, margins, padding, borders, table header rows and the data-*
+         * features. Off by default, which keeps 1.23.3's output.
          */
-        editorLayout?: boolean;
+        browserLayout?: boolean;
         lineNumber?: boolean;
         lineNumberOptions?: LineNumberOptions;
         numbering?: {

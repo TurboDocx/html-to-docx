@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import HTMLtoDOCX from '../index.js';
 
 /**
- * Without `editorLayout`, the converter lays things out as stock html-to-docx
+ * Without `browserLayout`, the converter lays things out as stock html-to-docx
  * does: callers that never heard of the document editor keep the output they
  * had. The tcPr/nested-table validity fixes apply to everyone.
  */
@@ -17,7 +17,7 @@ const documentXml = async (html, options) => {
   return (await JSZip.loadAsync(docx)).file('word/document.xml').async('string');
 };
 
-describe('stock output when editorLayout is not set', () => {
+describe('stock output when browserLayout is not set', () => {
   it('keeps a 450x225 picture in a table cell at 450x225', async () => {
     const xml = await documentXml(
       `<table><tr><td><img src="${PIXEL}" width="450" height="225"></td><td>B</td></tr></table>`
@@ -39,10 +39,10 @@ describe('stock output when editorLayout is not set', () => {
     expect(new Set(sizes)).toEqual(new Set([8]));
   });
 
-  it('draws a 1px border at its exact 6 eighths with editorLayout', async () => {
+  it('draws a 1px border at its exact 6 eighths with browserLayout', async () => {
     const xml = await documentXml(
       '<table><tr><td style="border: 1px solid #000000">A</td></tr></table>',
-      { editorLayout: true }
+      { browserLayout: true }
     );
 
     expect(xml).toContain('w:sz="6"');
@@ -58,12 +58,12 @@ describe('a fixed table cell width', () => {
     expect(await documentXml(fixedTable)).not.toContain('<w:tcW');
   });
 
-  it('is declared with editorLayout', async () => {
-    expect(await documentXml(fixedTable, { editorLayout: true })).toContain('<w:tcW');
+  it('is declared with browserLayout', async () => {
+    expect(await documentXml(fixedTable, { browserLayout: true })).toContain('<w:tcW');
   });
 });
 
-describe.each([[undefined], [{ editorLayout: true }]])('validity fixes, options %j', (options) => {
+describe.each([[undefined], [{ browserLayout: true }]])('validity fixes, options %j', (options) => {
   it('puts a cell width before its grid span in a fixed table', async () => {
     const xml = await documentXml(
       '<table style="width: 100%; table-layout: fixed"><tr><td colspan="2" style="width: 200px">A</td></tr><tr><td>B</td><td>C</td></tr></table>',

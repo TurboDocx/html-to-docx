@@ -17,7 +17,7 @@ const PIXEL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
 
 const documentXml = async (html) =>
-  (await JSZip.loadAsync(await HTMLtoDOCX(html, undefined, { editorLayout: true })))
+  (await JSZip.loadAsync(await HTMLtoDOCX(html, undefined, { browserLayout: true })))
     .file('word/document.xml')
     .async('string');
 

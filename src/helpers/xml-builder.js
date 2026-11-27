@@ -1835,7 +1835,7 @@ const buildRun = async (vNode, attributes, docxDocumentInstance) => {
         attributes.originalWidth = imageProperties.width;
         attributes.originalHeight = imageProperties.height;
 
-        computeImageDimensions(vNode, attributes, docxDocumentInstance.editorLayout);
+        computeImageDimensions(vNode, attributes, docxDocumentInstance.browserLayout);
         // Placed against its text: an anchored picture, each its own place in
         // the stack, a later one over an earlier one.
         if (attributes.placement) {
@@ -2435,7 +2435,7 @@ const imageTransparencyOf = (vNode) => {
   return Number.isFinite(value) && value > 0 ? Math.min(100, value) : 0;
 };
 
-const computeImageDimensions = (vNode, attributes, editorLayout = false) => {
+const computeImageDimensions = (vNode, attributes, browserLayout = false) => {
   // Its crop and border ride along to the picture's markup (buildPicture).
   // eslint-disable-next-line no-param-reassign
   attributes.crop = imageCropOf(vNode);
@@ -2451,7 +2451,7 @@ const computeImageDimensions = (vNode, attributes, editorLayout = false) => {
   // Word lays a picture's line out OUTSIDE the picture (buildEffectExtentFragment),
   // so the picture and its line both sides are what has to fit.
   const borderReachInEMU =
-    editorLayout && attributes.border ? 2 * pixelToEMU(attributes.border.width) : 0;
+    browserLayout && attributes.border ? 2 * pixelToEMU(attributes.border.width) : 0;
   const maximumWidthInEMU = Math.max(0, TWIPToEMU(maximumWidth) - borderReachInEMU);
   let originalWidthInEMU = pixelToEMU(originalWidth);
   let originalHeightInEMU = pixelToEMU(originalHeight);
@@ -2586,14 +2586,14 @@ const computeImageDimensions = (vNode, attributes, editorLayout = false) => {
   // in — keeping its proportions; one that fits keeps the size it was given. The cap on the natural size above is
   // replaced by any width the <img> names, so an image an editor sized went
   // past its cell and off the page; the box is held here, last.
-  if (editorLayout && maximumWidthInEMU > 0 && modifiedWidth > maximumWidthInEMU) {
+  if (browserLayout && maximumWidthInEMU > 0 && modifiedWidth > maximumWidthInEMU) {
     modifiedHeight = Math.round((modifiedHeight * maximumWidthInEMU) / modifiedWidth);
     modifiedWidth = maximumWidthInEMU;
   }
   // Nor taller than the page's text area: an image taller than a page runs
   // off it, in the line it sits in.
   const maximumHeightInEMU = Math.max(0, TWIPToEMU(maximumHeight) - borderReachInEMU);
-  if (editorLayout && maximumHeightInEMU > 0 && modifiedHeight > maximumHeightInEMU) {
+  if (browserLayout && maximumHeightInEMU > 0 && modifiedHeight > maximumHeightInEMU) {
     modifiedWidth = Math.round((modifiedWidth * maximumHeightInEMU) / modifiedHeight);
     modifiedHeight = maximumHeightInEMU;
   }
@@ -2821,7 +2821,11 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
           modifiedAttributes.originalWidth = imageProperties.width;
           modifiedAttributes.originalHeight = imageProperties.height;
 
-          computeImageDimensions(childVNode, modifiedAttributes, docxDocumentInstance.editorLayout);
+          computeImageDimensions(
+            childVNode,
+            modifiedAttributes,
+            docxDocumentInstance.browserLayout
+          );
         }
         const runOrHyperlinkFragments = await buildRunOrHyperLink(
           childVNode,
@@ -2870,7 +2874,7 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
       modifiedAttributes.originalWidth = imageProperties.width;
       modifiedAttributes.originalHeight = imageProperties.height;
 
-      computeImageDimensions(vNode, modifiedAttributes, docxDocumentInstance.editorLayout);
+      computeImageDimensions(vNode, modifiedAttributes, docxDocumentInstance.browserLayout);
     }
     const runFragments = await buildRunOrRuns(vNode, modifiedAttributes, docxDocumentInstance);
     if (Array.isArray(runFragments)) {
@@ -3992,7 +3996,7 @@ const buildTableCell = async (
         docxDocumentInstance.tableBorders,
         rowIndexEquivalent,
         columnIndexEquivalent,
-        docxDocumentInstance.editorLayout
+        docxDocumentInstance.browserLayout
       );
     } else {
       // no style attribute was given to the table cell
@@ -4066,7 +4070,7 @@ const buildTableCell = async (
   // A fixed-layout table's cell declares the width of its columns, which is
   // what Word lays it out at; one that sets its own keeps that.
   if (
-    docxDocumentInstance.editorLayout &&
+    docxDocumentInstance.browserLayout &&
     modifiedAttributes.tableLayout === 'fixed' &&
     !modifiedAttributes.width
   ) {
@@ -4078,7 +4082,7 @@ const buildTableCell = async (
   const contentWidth = cellContentWidth(modifiedAttributes);
   const tableCellPropertiesFragment = buildTableCellProperties(modifiedAttributes, parentWidth);
   tableCellFragment.import(tableCellPropertiesFragment);
-  if (docxDocumentInstance.editorLayout && contentWidth) {
+  if (docxDocumentInstance.browserLayout && contentWidth) {
     modifiedAttributes.maximumWidth = contentWidth;
   }
   // Track whether the next nested <w:tbl> needs a leading sentinel (without
@@ -4490,7 +4494,7 @@ const buildTableRow = async (
         docxDocumentInstance.tableBorders,
         rowIndexEquivalent,
         'na',
-        docxDocumentInstance.editorLayout
+        docxDocumentInstance.browserLayout
       );
 
       // if there are some styles provided to table row
@@ -4552,7 +4556,7 @@ const buildTableRow = async (
         modifiedAttributes,
         docxDocumentInstance.tableBorders,
         tableWidth,
-        docxDocumentInstance.editorLayout
+        docxDocumentInstance.browserLayout
       );
       if (Array.isArray(rowSpanCellFragments)) {
         for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
@@ -4572,7 +4576,7 @@ const buildTableRow = async (
           // As wide as the grid columns it spans, from where it stands — the
           // even split is only the fallback for a table whose grid is unknown.
           maximumWidth:
-            (docxDocumentInstance.editorLayout &&
+            (docxDocumentInstance.browserLayout &&
               gridSpanWidth(modifiedAttributes, columnIndex.index, columnSpanOf(column))) ||
             maximumColumnWidth,
         },
@@ -4596,7 +4600,7 @@ const buildTableRow = async (
       modifiedAttributes,
       docxDocumentInstance.tableBorders,
       tableWidth,
-      docxDocumentInstance.editorLayout
+      docxDocumentInstance.browserLayout
     );
     if (Array.isArray(rowSpanCellFragments)) {
       for (let iteratorIndex = 0; iteratorIndex < rowSpanCellFragments.length; iteratorIndex++) {
@@ -4918,7 +4922,7 @@ const tableGridColumnWidthsOf = (tableVNode, tableWidth, isFixedLayout) => {
 const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   const tableFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tbl');
   const modifiedAttributes = { ...attributes };
-  const exactPixelBorders = docxDocumentInstance.editorLayout;
+  const exactPixelBorders = docxDocumentInstance.browserLayout;
   // A nested table lays out on its own; it does not inherit its parent's fixed layout or grid.
   delete modifiedAttributes.tableLayout;
   delete modifiedAttributes.tableGridColumnWidths;

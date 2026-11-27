@@ -50,7 +50,7 @@ export const pointToEIP = (PointValue) => Math.round(PointValue * 8);
 
 export const pixelToEIP = (pixelValue) => pointToEIP(pixelToPoint(pixelValue));
 
-// A CSS pixel is 3/4 of a point: 6 eighths, exactly (the editor layout's borders).
+// A CSS pixel is 3/4 of a point: 6 eighths, exactly (the browser layout's borders).
 export const pixelToEIPExact = (pixelValue) => Math.round(Number(pixelValue) * 6);
 
 export const EIPToPixel = (EIPValue) => pointToPixel(EIPToPoint(EIPValue));

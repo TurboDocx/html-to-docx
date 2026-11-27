@@ -16,7 +16,7 @@ import HTMLtoDOCX from '../index.js';
 const EMU_PER_PX = 9525;
 
 const documentXml = async (html) => {
-  const docx = await HTMLtoDOCX(html, undefined, { editorLayout: true });
+  const docx = await HTMLtoDOCX(html, undefined, { browserLayout: true });
   return (await JSZip.loadAsync(docx)).file('word/document.xml').async('string');
 };
 

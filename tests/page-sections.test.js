@@ -48,7 +48,7 @@ describe('a document of several sections', () => {
         pageSize: LETTER,
         margins: MARGINS,
         sections: [landscapeSection],
-        editorLayout: true,
+        browserLayout: true,
       }
     );
 
@@ -118,7 +118,7 @@ describe('a document of several sections', () => {
         pageSize: LETTER,
         margins: MARGINS,
         sections: [landscapeSection],
-        editorLayout: true,
+        browserLayout: true,
       }
     );
 
