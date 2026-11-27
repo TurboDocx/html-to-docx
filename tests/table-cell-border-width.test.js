@@ -37,3 +37,17 @@ describe('table cell border widths', () => {
     expect(new Set(sizes)).toEqual(new Set([eighths]));
   });
 });
+
+describe('border-width on a cell', () => {
+  test('sizes the borders the cell already has, and keeps all four', async () => {
+    // The middle cell: edge cells leave their outer sides to the table.
+    const row = (cell) => `<tr><td>a</td>${cell}<td>c</td></tr>`;
+    const html = `<table>${row('<td>b</td>')}${row(
+      '<td style="border: 1px solid #000000; border-width: 2px">B</td>'
+    )}${row('<td>d</td>')}</table>`;
+    const { xml } = await parseDOCX(await HTMLtoDOCX(html, undefined, { browserLayout: true }));
+    const cell = xml.slice(xml.lastIndexOf('<w:tc>', xml.indexOf('>B<')), xml.indexOf('>B<'));
+
+    expect(cellBorderSizes(cell)).toStrictEqual([12, 12, 12, 12]);
+  });
+});

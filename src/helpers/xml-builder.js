@@ -3810,7 +3810,12 @@ const fixupTableCellBorder = (
         bottom: borderStyleParser(tableCellStyles[tableCellStyle]),
       };
     } else if (tableCellStyle === 'border-width') {
-      const width = borderSizeParser(tableCellStyle[tableCellStyle], exactPixelBorders);
+      // 1.23.3 indexed the key with itself (always undefined) and so removed the borders; only
+      // browserLayout reads the cell's own width.
+      const width = borderSizeParser(
+        exactPixelBorders ? tableCellStyles[tableCellStyle] : tableCellStyle[tableCellStyle],
+        exactPixelBorders
+      );
       if (rowIndexEquivalentFirst === -1) {
         attributes.tableCellBorder.top = width;
       }
