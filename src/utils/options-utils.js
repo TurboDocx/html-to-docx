@@ -8,6 +8,7 @@ import {
   inchToTWIP,
   pointRegex,
   pointToHIP,
+  pointToTWIP,
 } from './unit-conversion';
 
 const fixupFontSize = (fontSize) => {
@@ -54,6 +55,49 @@ const normalizeUnits = (dimensioningObject, defaultDimensionsProperty) => {
   return normalizedUnitResult;
 };
 
+const sectionUnitRegex = /^\s*(\d+(?:\.\d+)?|\.\d+)\s*(px|pt|cm|mm|in)?\s*$/i;
+
+const sectionUnitToTWIP = {
+  px: pixelToTWIP,
+  pt: pointToTWIP,
+  cm: cmToTWIP,
+  mm: (amount) => cmToTWIP(amount / 10),
+  in: inchToTWIP,
+};
+
+/**
+ * One section dimension in twips; a number is already twips.
+ * @param {Object} params - The parameters.
+ * @param {*} params.value - The dimension as given.
+ * @returns {number|null} The twips, or null when the value is not a size.
+ */
+const sectionValueToTWIP = ({ value }) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const matched = typeof value === 'string' ? value.match(sectionUnitRegex) : null;
+  if (!matched) return null;
+  const amount = Number(matched[1]);
+  const unit = (matched[2] || '').toLowerCase();
+  return unit ? sectionUnitToTWIP[unit](amount) : amount;
+};
+
+/**
+ * A section's page size or margins in twips. Unlike the document's own, a 0 is
+ * kept, and a value that is not a size is dropped, so the section takes the
+ * document's.
+ * @param {Object} params - The parameters.
+ * @param {Object} params.dimensions - The section's pageSize or margins.
+ * @returns {Object|undefined} The dimensions in twips.
+ */
+const normalizeSectionUnits = ({ dimensions }) => {
+  if (typeof dimensions !== 'object' || dimensions === null) return undefined;
+  const normalized = {};
+  Object.keys(dimensions).forEach((key) => {
+    const twips = sectionValueToTWIP({ value: dimensions[key] });
+    if (twips !== null) normalized[key] = twips;
+  });
+  return normalized;
+};
+
 /**
  * Creates document options by normalizing the provided options and merging them with default options.
  *
@@ -93,7 +137,7 @@ const createDocumentOptionsAndMergeWithDefaults = (documentOptions) => {
       const normalizedSection = { ...section };
       ['pageSize', 'margins'].forEach((key) => {
         if (section[key] !== undefined) {
-          normalizedSection[key] = normalizeUnits(section[key], defaultDocumentOptions[key]);
+          normalizedSection[key] = normalizeSectionUnits({ dimensions: section[key] });
         }
       });
       return normalizedSection;
