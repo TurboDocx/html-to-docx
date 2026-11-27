@@ -339,7 +339,7 @@ class DocxDocument {
         .import(fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tdxFirstPage'));
     }
 
-    if ((this.header || this.footer) && this.skipFirstHeaderFooter) {
+    if ((this.header || this.footer) && this.skipFirstHeaderFooter && !hasFirstPage(this)) {
       documentXML
         .root()
         .first()

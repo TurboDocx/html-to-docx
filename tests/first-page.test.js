@@ -126,4 +126,19 @@ describe('a different first page', () => {
     const partRels = await rendered.read(`word/_rels/${target}.rels`);
     expect(partRels).toMatch(new RegExp(`Id="${embed}"[^>]*Target="media/`));
   });
+
+  it('writes <w:titlePg/> once when skipFirstHeaderFooter and firstPage are both set', async () => {
+    const rendered = await render(
+      '<p>Body</p>',
+      {
+        header: true,
+        skipFirstHeaderFooter: true,
+        firstPage: { headerHTML: '<p>Cover</p>' },
+      },
+      '<p>Running</p>'
+    );
+
+    const [body] = sectPrs(rendered.document);
+    expect(body.match(/<w:titlePg\/>/g)).toHaveLength(1);
+  });
 });
