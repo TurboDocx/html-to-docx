@@ -5007,6 +5007,8 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
   const tableFragment = fragment({ namespaceAlias: { w: namespaces.w } }).ele('@w', 'tbl');
   const modifiedAttributes = { ...attributes };
   const exactPixelBorders = docxDocumentInstance.browserLayout;
+  // Indent, wrap, fixed layout and repeating header rows are browserLayout features.
+  const { browserLayout } = layoutOf(docxDocumentInstance);
   // A nested table lays out on its own; it does not inherit its parent's fixed layout or grid.
   delete modifiedAttributes.tableLayout;
   delete modifiedAttributes.tableGridColumnWidths;
@@ -5201,7 +5203,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             ...tableBorders.strokes,
             bottom: borderStyleParser(tableStyles[tableStyle]),
           };
-        } else if (tableStyle === 'margin-left') {
+        } else if (tableStyle === 'margin-left' && browserLayout) {
           // <w:tblInd> is the distance from the text margin to the table's
           // leading edge, so it only takes a non-negative absolute length — a
           // table cannot hang into the page margin this way.
@@ -5222,7 +5224,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
     // The document editor's wrap (canvas task 4.8): a table the text runs
     // beside, at the margin's left or right edge (`data-wrap`), `data-wrap-gap`
     // px from it — Word's Text wrapping: Around.
-    if (['left', 'right'].includes(tableAttributes['data-wrap'])) {
+    if (browserLayout && ['left', 'right'].includes(tableAttributes['data-wrap'])) {
       const gap = Number(tableAttributes['data-wrap-gap']);
       modifiedAttributes.tableFloat = {
         side: tableAttributes['data-wrap'],
@@ -5301,7 +5303,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
 
     // `table-layout: fixed` keeps the columns as given. Word otherwise re-fits
     // them to their content, whatever the grid says.
-    if (tableStyles['table-layout'] === 'fixed') {
+    if (browserLayout && tableStyles['table-layout'] === 'fixed') {
       modifiedAttributes.tableLayout = 'fixed';
     }
   }
@@ -5344,7 +5346,7 @@ const buildTable = async (vNode, attributes, docxDocumentInstance) => {
             }
             const tableRowFragment = await buildTableRow(
               grandChildVNode,
-              { ...modifiedAttributes, tableHeaderRow: true },
+              { ...modifiedAttributes, tableHeaderRow: browserLayout },
               rowSpanMap,
               docxDocumentInstance,
               setBorderIndexEquivalent(iteratorIndex, childVNode.children.length)

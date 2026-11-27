@@ -544,7 +544,9 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
 // signature block — wants to sit flush against what follows, so it can turn
 // that paragraph off for itself without the caller having to switch it off for
 // every table in the document.
-const tableSuppressesSpacingAfter = (vNode) => {
+const tableSuppressesSpacingAfter = (vNode, docxDocumentInstance) => {
+  // A browserLayout feature: 1.23.3 put the paragraph after every table.
+  if (!(docxDocumentInstance && docxDocumentInstance.browserLayout)) return false;
   const tableAttributes = (vNode && vNode.properties && vNode.properties.attributes) || {};
   const suppress = tableAttributes['data-no-spacing-after'];
 
@@ -743,7 +745,7 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
             // Adding empty paragraph for space after table only if the option is enabled
             if (
               docxDocumentInstance.addSpacingAfterTable &&
-              !tableSuppressesSpacingAfter(childVNode)
+              !tableSuppressesSpacingAfter(childVNode, docxDocumentInstance)
             ) {
               const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
               xmlFragment.import(emptyParagraphFragment);
@@ -782,7 +784,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment, image
       );
       xmlFragment.import(tableFragment);
       // Adding empty paragraph for space after table only if the option is enabled
-      if (docxDocumentInstance.addSpacingAfterTable && !tableSuppressesSpacingAfter(vNode)) {
+      if (
+        docxDocumentInstance.addSpacingAfterTable &&
+        !tableSuppressesSpacingAfter(vNode, docxDocumentInstance)
+      ) {
         const emptyParagraphFragment = await xmlBuilder.buildParagraph(null, {});
         xmlFragment.import(emptyParagraphFragment);
       }

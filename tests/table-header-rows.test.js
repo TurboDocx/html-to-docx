@@ -11,7 +11,7 @@ import HTMLtoDOCX from '../index.js';
  */
 
 const documentXml = async (html) => {
-  const docx = await HTMLtoDOCX(html);
+  const docx = await HTMLtoDOCX(html, null, { browserLayout: true });
   return (await JSZip.loadAsync(docx)).file('word/document.xml').async('string');
 };
 

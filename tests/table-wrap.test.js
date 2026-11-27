@@ -13,7 +13,9 @@ import HTMLtoDOCX from '../index.js';
 const TWIPS_PER_PX = 15;
 
 const documentXml = async (html) =>
-  (await JSZip.loadAsync(await HTMLtoDOCX(html))).file('word/document.xml').async('string');
+  (await JSZip.loadAsync(await HTMLtoDOCX(html, null, { browserLayout: true })))
+    .file('word/document.xml')
+    .async('string');
 
 const tableProperties = (xml) => (xml.match(/<w:tblPr>[\s\S]*?<\/w:tblPr>/) || [''])[0];
 

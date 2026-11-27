@@ -76,11 +76,14 @@ describe.each([[undefined], [{ browserLayout: true }]])('validity fixes, options
     expect(spanningCell.indexOf('<w:tcW')).toBeGreaterThan(-1);
     expect(spanningCell.indexOf('<w:tcW')).toBeLessThan(spanningCell.indexOf('<w:gridSpan'));
   });
+});
 
+// A fixed layout is a browserLayout feature, so only there can a parent's leak into a child.
+describe('a fixed table with browserLayout', () => {
   it('does not make a nested table fixed because its parent is', async () => {
     const xml = await documentXml(
       '<table style="width: 100%; table-layout: fixed"><tr><td><table><tr><td>in</td></tr></table></td></tr></table>',
-      options
+      { browserLayout: true }
     );
 
     expect(xml.match(/<w:tblLayout w:type="fixed"\/>/g)).toHaveLength(1);

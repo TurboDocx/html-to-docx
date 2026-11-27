@@ -28,7 +28,7 @@ function parseTableIndent(tblPr) {
 }
 
 async function convertTable(tableHtml) {
-  const buffer = await HTMLtoDOCX(tableHtml, null, {}, null);
+  const buffer = await HTMLtoDOCX(tableHtml, null, { browserLayout: true }, null);
   const parsed = await parseDOCX(buffer);
   assertWellFormedXML(parsed.xml, 'document.xml');
   return parsed.xml;
@@ -173,7 +173,7 @@ describe('table indent', () => {
         '<table data-no-spacing-after="true"><tr><td>a</td></tr></table>' +
           '<table><tr><td>b</td></tr></table>',
         null,
-        { table: { addSpacingAfter: false } },
+        { browserLayout: true, table: { addSpacingAfter: false } },
         null
       );
       const parsed = await parseDOCX(buffer);
