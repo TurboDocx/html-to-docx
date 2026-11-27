@@ -38,8 +38,8 @@ import {
   documentFileName,
   imageType,
   defaultDocumentOptions,
-  documentSymbolFont,
-  documentSymbolFallbackFont,
+  defaultSymbolFont,
+  symbolFontAlternative,
 } from './constants';
 import ListStyleBuilder from './utils/list';
 import { fontFamilyToTableObject } from './utils/font-family-conversion';
@@ -259,6 +259,12 @@ class DocxDocument {
     this.tableCellHeadings = Boolean(properties.table && properties.table.cellHeadings);
     // The document editor's layout rules (image caps, exact px borders, cell boxes); stock output when off.
     this.browserLayout = Boolean(properties.browserLayout);
+    // The fonts of the checklist checkboxes and of the symbol bullets (browserLayout only).
+    this.symbolFont = {
+      checkbox:
+        (properties.symbolFont && properties.symbolFont.checkbox) || defaultSymbolFont.checkbox,
+      glyph: (properties.symbolFont && properties.symbolFont.glyph) || defaultSymbolFont.glyph,
+    };
     // A list level's indent and its marker's hanging, in twips: Word's 720 and
     // 360 unless the document names its own (the document editor's 45px level
     // and 25px marker column).
@@ -316,7 +322,7 @@ class DocxDocument {
     // its indents keeps the default ordered-list style.
     this.ListStyleBuilder = new ListStyleBuilder(
       { ...defaultDocumentOptions.numbering, ...(properties.numbering || {}) },
-      { browserLayout: this.browserLayout }
+      { browserLayout: this.browserLayout, symbolBulletFont: this.symbolFont.glyph }
     );
   }
 
@@ -651,13 +657,9 @@ class DocxDocument {
       this.ListStyleBuilder.getUnorderedListFont(
         properties && properties.style,
         properties && properties.attributes
-      ) === documentSymbolFont
+      ) === this.symbolFont.glyph
     ) {
-      this.registerFont({
-        fontName: documentSymbolFont,
-        genericFontName: 'sans-serif',
-        altName: documentSymbolFallbackFont,
-      });
+      this.registerSymbolFont({ kind: 'glyph' });
     }
     this.lastNumberingId += 1;
     this.numberingObjects.push({
@@ -690,6 +692,18 @@ class DocxDocument {
 
   // Adds a font table entry for a font the converter itself uses (rather than
   // one parsed from a CSS font-family list), with an optional alternative name.
+  // Lists a symbol font (kind: 'checkbox' | 'glyph') with the other kind's default as its
+  // alternative, or the first default when they would be the same font.
+  registerSymbolFont({ kind }) {
+    const fontName = this.symbolFont[kind];
+    const alternative = symbolFontAlternative[kind];
+    return this.registerFont({
+      fontName,
+      genericFontName: 'sans-serif',
+      altName: alternative === fontName ? symbolFontAlternative.glyph : alternative,
+    });
+  }
+
   registerFont({ fontName, genericFontName, altName }) {
     if (!this.fontTableObjects.some((fontTableObject) => fontTableObject.fontName === fontName)) {
       this.fontTableObjects.push({ fontName, genericFontName, altName });

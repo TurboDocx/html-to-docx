@@ -50,8 +50,7 @@ import {
   hyperlinkType,
   paragraphBordersObject,
   checklistSymbols,
-  checklistSymbolFont,
-  checklistSymbolFallbackFont,
+  defaultSymbolFont,
   colorlessColors,
   verticalAlignValues,
   imageType,
@@ -2069,16 +2068,16 @@ const checklistHanging = (docxDocumentInstance) =>
   (docxDocumentInstance && docxDocumentInstance.listHangingIndent) ?? 360;
 
 // The checkbox glyph run and the tab that moves the item text to the indent.
-const buildChecklistMarkerRuns = (checked, fontSize) => {
+const buildChecklistMarkerRuns = ({ checked, fontSize, symbolFont }) => {
   const glyphRunFragment = fragment({ namespaceAlias: { w: namespaces.w } });
   const runPropertiesElement = glyphRunFragment
     .ele('@w', 'r')
     .ele('@w', 'rPr')
     .ele('@w', 'rFonts')
-    .att('@w', 'ascii', checklistSymbolFont)
-    .att('@w', 'hAnsi', checklistSymbolFont)
-    .att('@w', 'eastAsia', checklistSymbolFont)
-    .att('@w', 'cs', checklistSymbolFont)
+    .att('@w', 'ascii', symbolFont)
+    .att('@w', 'hAnsi', symbolFont)
+    .att('@w', 'eastAsia', symbolFont)
+    .att('@w', 'cs', symbolFont)
     .up();
   if (typeof fontSize === 'number' && fontSize > 0) {
     runPropertiesElement.ele('@w', 'sz').att('@w', 'val', fontSize).up();
@@ -2796,14 +2795,16 @@ const buildParagraph = async (vNode, attributes, docxDocumentInstance) => {
   }
   const checklistMarkerRuns =
     checklistItem && !attributes.isContinuation
-      ? buildChecklistMarkerRuns(checklistItem.checked, modifiedAttributes.fontSize)
+      ? buildChecklistMarkerRuns({
+          checked: checklistItem.checked,
+          fontSize: modifiedAttributes.fontSize,
+          symbolFont: docxDocumentInstance
+            ? docxDocumentInstance.symbolFont.checkbox
+            : defaultSymbolFont.checkbox,
+        })
       : [];
   if (checklistMarkerRuns.length && docxDocumentInstance) {
-    docxDocumentInstance.registerFont({
-      fontName: checklistSymbolFont,
-      genericFontName: 'sans-serif',
-      altName: checklistSymbolFallbackFont,
-    });
+    docxDocumentInstance.registerSymbolFont({ kind: 'checkbox' });
   }
   // A paragraph that names its own font or size puts them on its mark too.
   // Word lays a paragraph's last line off the tallest of its runs AND its mark,

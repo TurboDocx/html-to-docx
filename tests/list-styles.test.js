@@ -131,12 +131,12 @@ describe('Bullet glyph per list (<ul data-bullet>)', () => {
     ['\u25CF', 'Arial'], // ●
     ['\u25CB', 'Arial'], // ○
     ['\u25A0', 'Arial'], // ■
-    ['\u2756', 'TurboDocx Symbols'], // ❖
-    ['\u27A2', 'TurboDocx Symbols'], // ➢
-    ['\u274F', 'TurboDocx Symbols'], // ❏
-    ['\u2794', 'TurboDocx Symbols'], // ➔
-    ['\u25C6', 'TurboDocx Symbols'], // ◆
-    ['\u2605', 'TurboDocx Symbols'], // ★
+    ['\u2756', 'DejaVu Sans'], // ❖
+    ['\u27A2', 'DejaVu Sans'], // ➢
+    ['\u274F', 'DejaVu Sans'], // ❏
+    ['\u2794', 'DejaVu Sans'], // ➔
+    ['\u25C6', 'DejaVu Sans'], // ◆
+    ['\u2605', 'DejaVu Sans'], // ★
   ])('data-bullet %s draws that glyph in %s at every level', async (glyph, font) => {
     const parsed = await convert(`<ul data-bullet="${glyph}"><li>Item</li></ul>`);
     const { numId } = numberingOf(parsed.paragraphs[0]);
@@ -151,7 +151,7 @@ describe('Bullet glyph per list (<ul data-bullet>)', () => {
   // A symbol bullet's font is listed, with DejaVu Sans as its alternative, so
   // the export can carry it into the Word file (and a reader without it falls
   // back to a font that has the glyph rather than a colour emoji font).
-  test('lists the symbol font a bullet is drawn in, once, with a DejaVu Sans fallback', async () => {
+  test('lists the symbol font a bullet is drawn in, once, with a Segoe UI Symbol fallback', async () => {
     const parsed = await convert(
       '<ul data-bullet="\u2756"><li>One</li></ul><ul data-bullet="\u2605"><li>Two</li></ul>'
     );
@@ -160,10 +160,36 @@ describe('Bullet glyph per list (<ul data-bullet>)', () => {
       '><'
     );
 
-    expect(fontTableXml.match(/<w:font w:name="TurboDocx Symbols">/g)).toHaveLength(1);
+    expect(fontTableXml.match(/<w:font w:name="DejaVu Sans">/g)).toHaveLength(1);
     expect(fontTableXml).toContain(
-      '<w:font w:name="TurboDocx Symbols"><w:altName w:val="DejaVu Sans"/>'
+      '<w:font w:name="DejaVu Sans"><w:altName w:val="Segoe UI Symbol"/>'
     );
+  });
+
+  test('symbolFont.glyph names the font for symbol bullets', async () => {
+    const docx = await HTMLtoDOCX('<ul data-bullet="\u2756"><li>Item</li></ul>', null, {
+      browserLayout: true,
+      symbolFont: { glyph: 'TurboDocx Symbols' },
+    });
+    const parsed = await parseDOCX(docx);
+    const numberingXml = await parsed.zip.file('word/numbering.xml').async('string');
+    const fontTableXml = await parsed.zip.file('word/fontTable.xml').async('string');
+
+    expect(numberingXml).toContain('w:ascii="TurboDocx Symbols"');
+    expect(numberingXml).not.toContain('DejaVu Sans');
+    expect(fontTableXml).toContain('w:name="TurboDocx Symbols"');
+    expect(fontTableXml).not.toContain('w:name="DejaVu Sans"');
+  });
+
+  test('symbolFont.glyph leaves Arial bullets alone', async () => {
+    const docx = await HTMLtoDOCX('<ul data-bullet="\u25CF"><li>Item</li></ul>', null, {
+      browserLayout: true,
+      symbolFont: { glyph: 'TurboDocx Symbols' },
+    });
+    const parsed = await parseDOCX(docx);
+    const fontTableXml = await parsed.zip.file('word/fontTable.xml').async('string');
+
+    expect(fontTableXml).not.toContain('w:name="DejaVu Sans"');
   });
 
   test('does not list the symbol font for a list of Arial bullets', async () => {

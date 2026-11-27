@@ -7,8 +7,8 @@
  *     <li data-checked="false">To do</li>
  *   </ul>
  *
- * Glyphs: U+2610 (unchecked) and U+2611 (checked) in "TurboDocx Symbols" (the
- * symbol font the editor, the PDF and — embedded — Word all draw them in),
+ * Glyphs: U+2610 (unchecked) and U+2611 (checked) in "Segoe UI Symbol" (the
+ * default of the symbolFont.checkbox option),
  * followed by a tab to the hanging indent, like a list marker.
  */
 
@@ -44,7 +44,7 @@ const expectCheckbox = (paragraph, glyph) => {
   const [glyphRun, tabRun] = runsOf(paragraph);
   expect(glyphRun.text).toBe(glyph);
   expect(glyphRun.xml).toContain(
-    '<w:rFonts w:ascii="TurboDocx Symbols" w:hAnsi="TurboDocx Symbols" w:eastAsia="TurboDocx Symbols" w:cs="TurboDocx Symbols"/>'
+    '<w:rFonts w:ascii="Segoe UI Symbol" w:hAnsi="Segoe UI Symbol" w:eastAsia="Segoe UI Symbol" w:cs="Segoe UI Symbol"/>'
   );
   expect(tabRun.tab).toBe(true);
 };
@@ -187,9 +187,9 @@ describe('Checklist symbol font', () => {
     );
     const fontTableXml = compact(await parsed.zip.file('word/fontTable.xml').async('string'));
 
-    expect(fontTableXml.match(/<w:font w:name="TurboDocx Symbols">/g)).toHaveLength(1);
+    expect(fontTableXml.match(/<w:font w:name="Segoe UI Symbol">/g)).toHaveLength(1);
     expect(fontTableXml).toContain(
-      '<w:font w:name="TurboDocx Symbols"><w:altName w:val="DejaVu Sans"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font>'
+      '<w:font w:name="Segoe UI Symbol"><w:altName w:val="DejaVu Sans"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font>'
     );
   });
 
@@ -197,6 +197,34 @@ describe('Checklist symbol font', () => {
     const parsed = await convert('<ul><li>Item</li></ul>');
     const fontTableXml = await parsed.zip.file('word/fontTable.xml').async('string');
 
-    expect(fontTableXml).not.toContain('TurboDocx Symbols');
+    expect(fontTableXml).not.toContain('Segoe UI Symbol');
+  });
+
+  test('symbolFont.checkbox names the font of the checkbox runs and the font table', async () => {
+    const docx = await HTMLtoDOCX(
+      '<ul data-checklist="true"><li data-checked="true">Done</li></ul>',
+      null,
+      { browserLayout: true, symbolFont: { checkbox: 'TurboDocx Symbols' } }
+    );
+    const parsed = await parseDOCX(docx);
+    const [glyphRun] = runsOf(parsed.paragraphs[0]);
+    const fontTableXml = await parsed.zip.file('word/fontTable.xml').async('string');
+
+    expect(glyphRun.xml).toContain('w:ascii="TurboDocx Symbols"');
+    expect(glyphRun.xml).not.toContain('Segoe UI Symbol');
+    expect(fontTableXml).toContain('w:name="TurboDocx Symbols"');
+    expect(fontTableXml).not.toContain('Segoe UI Symbol');
+  });
+
+  test('a symbolFont naming only the glyph font keeps the checkbox default', async () => {
+    const docx = await HTMLtoDOCX(
+      '<ul data-checklist="true"><li data-checked="true">Done</li></ul>',
+      null,
+      { browserLayout: true, symbolFont: { glyph: 'TurboDocx Symbols' } }
+    );
+    const parsed = await parseDOCX(docx);
+    const [glyphRun] = runsOf(parsed.paragraphs[0]);
+
+    expect(glyphRun.xml).toContain('w:ascii="Segoe UI Symbol"');
   });
 });

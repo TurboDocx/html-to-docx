@@ -107,6 +107,17 @@ declare namespace HTMLtoDOCX {
          * features. Off by default, which keeps 1.23.3's output.
          */
         browserLayout?: boolean;
+        /**
+         * Fonts for the glyphs no common text font has, used with browserLayout. `checkbox`
+         * draws the checklist boxes (default "Segoe UI Symbol", with "DejaVu Sans" as its
+         * font table alternative); `glyph` draws data-bullet characters outside Arial's set
+         * (default "DejaVu Sans", with "Segoe UI Symbol" as its alternative). Name your own
+         * font, for instance one you embed or install, to draw them in it.
+         */
+        symbolFont?: {
+            checkbox?: string;
+            glyph?: string;
+        };
         lineNumber?: boolean;
         lineNumberOptions?: LineNumberOptions;
         numbering?: {

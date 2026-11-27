@@ -1,4 +1,4 @@
-import { documentSymbolFont } from '../constants';
+import { defaultSymbolFont } from '../constants';
 
 // Bullet glyphs for an explicit list-style-type on <ul>. Unicode glyphs from
 // the General Punctuation and Geometric Shapes blocks are covered by common
@@ -16,8 +16,7 @@ export const unorderedListBullets = {
 
 // Glyphs Arial carries (its WGL4 set). Any other bullet glyph — the dingbats and
 // symbols Google Docs' presets use: ❖ ➢ ➔ ❏ ◆ ★ — is drawn in the document
-// symbol font (documentSymbolFont), which the editor, the PDF renderer and the
-// Word file (embedded) all have.
+// symbol font (the symbolFont.glyph option).
 const arialBulletGlyphs = new Set([
   '\u2022', // •
   '\u25E6', // ◦
@@ -26,10 +25,9 @@ const arialBulletGlyphs = new Set([
   '\u25CB', // ○
   '\u25A0', // ■
 ]);
-export const symbolBulletFont = documentSymbolFont;
 
 // <ul data-bullet="❖">: the list's own glyph, when it is exactly one character.
-const getDataBullet = (attributes) => {
+const getDataBullet = (attributes, symbolBulletFont) => {
   const value = attributes && attributes['data-bullet'];
   if (typeof value !== 'string' || Array.from(value).length !== 1) {
     return null;
@@ -40,8 +38,8 @@ const getDataBullet = (attributes) => {
   };
 };
 
-const getUnorderedListBullet = (style, attributes) => {
-  const dataBullet = getDataBullet(attributes);
+const getUnorderedListBullet = (style, attributes, symbolBulletFont) => {
+  const dataBullet = getDataBullet(attributes, symbolBulletFont);
   if (dataBullet) {
     return dataBullet;
   }
@@ -59,9 +57,11 @@ class ListStyleBuilder {
   // defaults is an object passed in from constants.js / numbering with the following properties:
   // defaultOrderedListStyleType: 'decimal' (unless otherwise specified)
   // Without browserLayout the bullets, formats and suffixes are 1.23.3's.
-  constructor(defaults, { browserLayout = false } = {}) {
+  constructor(defaults, { browserLayout = false, symbolBulletFont } = {}) {
     this.defaults = defaults || { defaultOrderedListStyleType: 'decimal' };
     this.browserLayout = browserLayout;
+    // The font of the data-bullet glyphs Arial lacks (the symbolFont.glyph option).
+    this.symbolBulletFont = symbolBulletFont || defaultSymbolFont.glyph;
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -140,14 +140,14 @@ class ListStyleBuilder {
       if (listType === 'circle') return 'o';
       return '\uF0B7';
     }
-    const bullet = getUnorderedListBullet(style, attributes);
+    const bullet = getUnorderedListBullet(style, attributes, this.symbolBulletFont);
     return bullet ? bullet.glyph : '\uF0B7';
   }
 
   // Font for the bullet glyph returned by getUnorderedListPrefixSuffix.
   getUnorderedListFont(style, attributes) {
     if (!this.browserLayout) return 'Symbol';
-    const bullet = getUnorderedListBullet(style, attributes);
+    const bullet = getUnorderedListBullet(style, attributes, this.symbolBulletFont);
     return bullet ? bullet.font : 'Symbol';
   }
 }
