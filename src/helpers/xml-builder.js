@@ -2484,6 +2484,9 @@ const calculateAbsoluteValues = (attribute, originalAttributeInEMU) => {
   return originalAttributeInEMU;
 };
 
+// A crop side in thousandths of a percent: a quarter cut off is 25000.
+const cropUnits = (fraction) => Math.round((fraction || 0) * 100000);
+
 /**
  * Computes the final dimensions for an image in EMU units for DOCX rendering.
  *
@@ -2526,12 +2529,13 @@ const imageCropOf = (vNode) => {
     left: side('left'),
   };
   // Two sides that together take the whole picture (or more) leave nothing to
-  // show, so that axis is not cropped.
-  if (crop.left + crop.right >= 1) {
+  // show, so that axis is not cropped. Compared as written (each side is
+  // rounded on its own), so 0.6 + 0.399996 cannot write l=60000 r=40000.
+  if (cropUnits(crop.left) + cropUnits(crop.right) >= 100000) {
     crop.left = 0;
     crop.right = 0;
   }
-  if (crop.top + crop.bottom >= 1) {
+  if (cropUnits(crop.top) + cropUnits(crop.bottom) >= 100000) {
     crop.top = 0;
     crop.bottom = 0;
   }
@@ -5569,8 +5573,7 @@ const buildStretch = () => {
   return stretchFragment;
 };
 
-// In thousandths of a percent: a quarter cut off is 25000.
-const cropPart = (fraction) => String(Math.round((fraction || 0) * 100000));
+const cropPart = (fraction) => String(cropUnits(fraction));
 
 const buildSrcRectFragment = (crop = {}) =>
   fragment({ namespaceAlias: { a: namespaces.a } })

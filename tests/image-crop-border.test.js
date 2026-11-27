@@ -131,3 +131,13 @@ describe("a picture's crop and border", () => {
     expect(xml).toMatch(/<wp:docPr id="\d+" name="[^"]+" descr="Samurai portrait"\/>/);
   });
 });
+
+describe('crop rounding', () => {
+  it('drops an axis whose rounded sides leave nothing', async () => {
+    const xml = await documentXml(
+      `<p><img src="${PIXEL}" width="100" height="50" data-crop-left="0.6" data-crop-right="0.399996"></p>`
+    );
+
+    expect(xml).toMatch(/<a:srcRect b="0" l="0" r="0" t="0"\/>/);
+  });
+});
